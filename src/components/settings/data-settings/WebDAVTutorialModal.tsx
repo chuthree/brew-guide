@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Eye, EyeOff } from 'lucide-react';
+import { SettingInput, SettingRow } from '../atomic';
 import ActionDrawer from '@/components/common/ui/ActionDrawer';
 import { showToast } from '@/components/common/feedback/LightToast';
 import { useModalHistory } from '@/lib/hooks/useModalHistory';
@@ -49,8 +49,6 @@ const WebDAVTutorialModal: React.FC<WebDAVTutorialModalProps> = ({
   });
   // 连接测试状态
   const [isConnecting, setIsConnecting] = useState(false);
-  // 显示密码
-  const [showPassword, setShowPassword] = useState(false);
 
   // 返回上一步
   const goBack = useCallback(() => {
@@ -282,31 +280,26 @@ const WebDAVTutorialModal: React.FC<WebDAVTutorialModalProps> = ({
       </ActionDrawer.Content>
       <div className="flex flex-col gap-2">
         {/* 配置表单 */}
-        <div className="mb-2 space-y-3">
+        <div className="mb-2 overflow-hidden rounded-xl bg-neutral-100 dark:bg-neutral-800/40">
           <CloudProxySetting value={proxyUrl} onChange={onProxyChange} />
 
           {/* 服务器地址 */}
-          <div>
-            <label className="mb-1 block text-xs font-medium text-neutral-600 dark:text-neutral-400">
-              服务器地址
-            </label>
-            <input
+          <SettingRow label="服务器地址" expandControl>
+            <SettingInput
+              aria-label="服务器地址"
               type="url"
               value={formData.url}
               onChange={e =>
                 setFormData(prev => ({ ...prev, url: e.target.value }))
               }
               placeholder="服务器地址"
-              className="w-full rounded-2xl bg-neutral-100 px-4 py-3 text-sm text-neutral-800 placeholder:text-neutral-400 focus:ring-2 focus:ring-neutral-300 focus:outline-none dark:bg-neutral-800 dark:text-white dark:placeholder:text-neutral-500 dark:focus:ring-neutral-600"
             />
-          </div>
+          </SettingRow>
 
           {/* 账号 */}
-          <div>
-            <label className="mb-1 block text-xs font-medium text-neutral-600 dark:text-neutral-400">
-              账号
-            </label>
-            <input
+          <SettingRow label="账号" expandControl>
+            <SettingInput
+              aria-label="账号"
               type="email"
               value={formData.username}
               onChange={e =>
@@ -317,42 +310,25 @@ const WebDAVTutorialModal: React.FC<WebDAVTutorialModalProps> = ({
               }
               placeholder="坚果云登录邮箱"
               autoComplete="email"
-              className="w-full rounded-2xl bg-neutral-100 px-4 py-3 text-sm text-neutral-800 placeholder:text-neutral-400 focus:ring-2 focus:ring-neutral-300 focus:outline-none dark:bg-neutral-800 dark:text-white dark:placeholder:text-neutral-500 dark:focus:ring-neutral-600"
             />
-          </div>
+          </SettingRow>
 
           {/* 应用密码 */}
-          <div>
-            <label className="mb-1 block text-xs font-medium text-neutral-600 dark:text-neutral-400">
-              应用密码
-            </label>
-            <div className="relative">
-              <input
-                type={showPassword ? 'text' : 'password'}
-                value={formData.password}
-                onChange={e =>
-                  setFormData(prev => ({
-                    ...prev,
-                    password: e.target.value,
-                  }))
-                }
-                placeholder="坚果云应用密码"
-                autoComplete="current-password"
-                className="w-full rounded-2xl bg-neutral-100 px-4 py-3 pr-10 text-sm text-neutral-800 placeholder:text-neutral-400 focus:ring-2 focus:ring-neutral-300 focus:outline-none dark:bg-neutral-800 dark:text-white dark:placeholder:text-neutral-500 dark:focus:ring-neutral-600"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute top-1/2 right-3 -translate-y-1/2 transform p-1 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300"
-              >
-                {showPassword ? (
-                  <EyeOff className="h-4 w-4" />
-                ) : (
-                  <Eye className="h-4 w-4" />
-                )}
-              </button>
-            </div>
-          </div>
+          <SettingRow label="应用密码" expandControl isLast>
+            <SettingInput
+              aria-label="应用密码"
+              type="password"
+              value={formData.password}
+              onChange={e =>
+                setFormData(prev => ({
+                  ...prev,
+                  password: e.target.value,
+                }))
+              }
+              placeholder="坚果云应用密码"
+              autoComplete="current-password"
+            />
+          </SettingRow>
         </div>
 
         {/* 操作按钮 */}

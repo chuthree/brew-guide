@@ -216,7 +216,7 @@ export const ContentEditor: React.FC<ContentEditorProps> = ({
             onClick={handleFieldButtonClick}
             className={getFieldButtonClass(field)}
           >
-            <div className="truncate leading-none">
+            <div className="truncate-label leading-none">
               {PRINT_EDITOR_FIELD_LABELS[field]}
             </div>
           </button>

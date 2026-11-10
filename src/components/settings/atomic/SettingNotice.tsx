@@ -43,7 +43,7 @@ export default function SettingNotice({
   }, [message]);
 
   return (
-    <SettingSection contentShape="none" className={className}>
+    <SettingSection unstyled className={className}>
       <div
         id={id}
         className={`flex items-start gap-4 px-3.5 py-3.5 ${isMultiline ? 'rounded-xl' : 'rounded-full'} ${levelStyles[level]}`}
@@ -59,7 +59,7 @@ export default function SettingNotice({
           type="button"
           aria-label="关闭提示"
           onClick={onClose}
-          className="relative mt-0.5 flex size-4 shrink-0 cursor-pointer items-center justify-center rounded-full after:absolute after:-inset-3 active:opacity-70 focus-visible:outline-2 focus-visible:outline-offset-2"
+          className="relative mt-0.5 flex size-4 shrink-0 cursor-pointer items-center justify-center rounded-full after:absolute after:-inset-3 focus-visible:outline-2 focus-visible:outline-offset-2 active:opacity-70"
         >
           <X className="size-4" aria-hidden="true" />
         </button>

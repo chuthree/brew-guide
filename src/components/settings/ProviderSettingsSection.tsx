@@ -81,7 +81,7 @@ function ProviderScopeControls({
     [caller, scope.id, onChange]
   );
   return (
-    <SettingSection title={scope.label} contentShape="card">
+    <SettingSection title={scope.label}>
       <SettingRow label="访问权限" isLast>
         <SettingSelect
           value={caller.scopes[scope.id] ?? 'none'}
@@ -195,7 +195,6 @@ function AndroidProviderSettings() {
       <SettingSection
         title="已申请的应用"
         footer="管理其他应用的数据访问权限。撤销后，该应用将无法继续访问。"
-        contentShape="card"
       >
         {state?.callers.map(caller => (
           <ProviderCallerRow
@@ -236,7 +235,7 @@ function AndroidProviderSettings() {
         <SettingPageLayoutProvider mode="embedded">
           {selected && (
             <>
-              <SettingSection title="调用应用" contentShape="card">
+              <SettingSection title="调用应用">
                 <SettingRow
                   label={selected.packageName}
                   description={`UID ${selected.uid}`}
@@ -259,7 +258,7 @@ function AndroidProviderSettings() {
                   onChange={change}
                 />
               ))}
-              <SettingSection contentShape="card">
+              <SettingSection>
                 <SettingRow
                   label="撤销授权并移除"
                   disabled={busy}

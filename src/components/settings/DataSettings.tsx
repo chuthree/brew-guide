@@ -612,7 +612,6 @@ const DataSettings: React.FC<DataSettingsProps> = ({
       <SettingSection
         title={syncType === 'supabase' ? '手动备份' : '云同步'}
         className={syncType === 'supabase' || showStorageNotice ? '' : '-mt-4'}
-        contentShape="card"
       >
         {syncType === 'supabase' ? backupServiceRow : cloudServiceRow}
         {configuration}
@@ -652,7 +651,6 @@ const DataSettings: React.FC<DataSettingsProps> = ({
         <SettingSection
           title="云同步"
           className={showStorageNotice ? undefined : '-mt-4'}
-          contentShape={syncType === 'none' ? 'capsule' : 'card'}
         >
           {cloudServiceRow}
           {syncType === 'supabase' && (

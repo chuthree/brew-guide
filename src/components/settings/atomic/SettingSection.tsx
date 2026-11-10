@@ -6,7 +6,7 @@ interface SettingSectionProps {
   footer?: string | React.ReactNode;
   children: React.ReactNode;
   className?: string;
-  contentShape?: 'auto' | 'card' | 'capsule' | 'none';
+  unstyled?: boolean;
 }
 
 /**
@@ -18,31 +18,10 @@ const SettingSection: React.FC<SettingSectionProps> = ({
   footer,
   children,
   className = '',
-  contentShape = 'auto',
+  unstyled = false,
 }) => {
   const layoutMode = useSettingPageLayoutMode();
   const sectionPaddingClass = layoutMode === 'embedded' ? 'pl-3 pr-6' : 'px-6';
-
-  // 判断是否需要胶囊样式：只有一个子元素且没有描述
-  const getIsCapsule = () => {
-    if (contentShape !== 'auto') return contentShape === 'capsule';
-
-    const validChildren = React.Children.toArray(children);
-    if (validChildren.length !== 1) return false;
-
-    const child = validChildren[0];
-    if (!React.isValidElement(child)) return false;
-
-    // 如果是原生 div 容器，通常包含复杂内容，不应作为胶囊处理
-    if (child.type === 'div') return false;
-
-    const childProps = child.props as any;
-
-    // 检查 props.description 是否存在
-    return !childProps.description;
-  };
-
-  const isCapsule = getIsCapsule();
 
   // 处理子元素，自动注入 isLast 属性
   const renderChildren = () => {
@@ -80,7 +59,7 @@ const SettingSection: React.FC<SettingSectionProps> = ({
       {title && (
         <div className="mb-3">
           {typeof title === 'string' ? (
-            <h3 className="pl-3.5 text-sm font-semibold tracking-wider text-neutral-500  dark:text-neutral-400">
+            <h3 className="pl-3.5 text-sm font-semibold tracking-wider text-neutral-500 dark:text-neutral-400">
               {title}
             </h3>
           ) : (
@@ -88,14 +67,10 @@ const SettingSection: React.FC<SettingSectionProps> = ({
           )}
         </div>
       )}
-      {contentShape === 'none' ? (
+      {unstyled ? (
         children
       ) : (
-        <div
-          className={`overflow-hidden bg-neutral-100 dark:bg-neutral-800/40 ${
-            isCapsule ? 'rounded-full' : 'rounded-xl'
-          }`}
-        >
+        <div className="setting-surface overflow-hidden bg-neutral-100 dark:bg-neutral-800/40">
           {content}
         </div>
       )}

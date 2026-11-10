@@ -43,9 +43,9 @@ export const SyncHeaderButton: React.FC<SyncHeaderButtonProps> = ({
         type="button"
         onClick={onClick}
         aria-expanded={expanded}
-        className="flex h-4 w-full min-w-0 items-center justify-between gap-3 text-left active:opacity-70"
+        className="setting-control flex w-full min-w-0 items-center justify-between gap-3 text-left active:opacity-70"
       >
-        <span className="truncate text-sm leading-none font-medium text-neutral-800 dark:text-neutral-200">
+        <span className="truncate-label text-sm leading-none font-medium text-neutral-800 dark:text-neutral-200">
           {serviceName} 配置
         </span>
         <span className="flex shrink-0 items-center gap-2">

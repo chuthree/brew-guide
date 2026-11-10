@@ -386,7 +386,7 @@ const GroupEditorDrawer: React.FC<GroupEditorDrawerProps> = ({
             value={name}
             onChange={event => onNameChange(event.target.value)}
             placeholder="输入分组名称"
-            className="w-full bg-transparent text-sm text-neutral-900 outline-none placeholder:text-neutral-400 dark:text-neutral-50 dark:placeholder:text-neutral-500"
+            className="setting-control w-full bg-transparent text-sm text-neutral-900 outline-none placeholder:text-neutral-400 dark:text-neutral-50 dark:placeholder:text-neutral-500"
             autoComplete="off"
             id="bean-group-name-input"
           />
@@ -398,7 +398,7 @@ const GroupEditorDrawer: React.FC<GroupEditorDrawerProps> = ({
           <button
             type="button"
             onClick={onOpenBeanPicker}
-            className="flex w-full cursor-pointer items-center gap-3 px-3.5 py-3.5 text-left transition active:bg-black/5 dark:active:bg-white/5"
+            className="setting-row-body flex w-full cursor-pointer items-center gap-3 px-3.5 text-left transition active:bg-black/5 dark:active:bg-white/5"
           >
             <div className="flex w-9 shrink-0 items-center justify-center text-neutral-500 dark:text-neutral-400">
               <Plus className="h-4 w-4" strokeWidth={2.25} />
@@ -414,7 +414,7 @@ const GroupEditorDrawer: React.FC<GroupEditorDrawerProps> = ({
               <button
                 type="button"
                 onClick={onOpenBeanPicker}
-                className="flex w-full cursor-pointer items-center gap-3 border-b border-black/5 py-3.5 text-left transition active:opacity-70 dark:border-white/5"
+                className="setting-divider setting-row-body flex w-full cursor-pointer items-center gap-3 text-left transition active:opacity-70 dark:border-white/5"
               >
                 <div className="flex w-9 shrink-0 items-center justify-center text-neutral-500 dark:text-neutral-400">
                   <Plus className="h-4 w-4" strokeWidth={2.25} />
@@ -465,7 +465,7 @@ const GroupEditorDrawer: React.FC<GroupEditorDrawerProps> = ({
           <button
             type="button"
             onClick={onDeleteGroup}
-            className={`flex w-full cursor-pointer items-center px-3.5 py-3.5 text-left text-sm font-medium transition active:bg-black/5 dark:active:bg-white/5 ${
+            className={`setting-row-body flex w-full cursor-pointer items-center px-3.5 text-left text-sm font-medium transition active:bg-black/5 dark:active:bg-white/5 ${
               isDeleteConfirming
                 ? 'text-red-500 dark:text-red-400'
                 : 'text-neutral-600 dark:text-neutral-300'
@@ -787,9 +787,7 @@ const BeanPickerDrawer: React.FC<BeanPickerDrawerProps> = ({
                                     ·
                                   </span>
                                 )}
-                                <span className="inline">
-                                  {part}
-                                </span>
+                                <span className="inline">{part}</span>
                               </React.Fragment>
                             ))}
                           </div>
@@ -1129,7 +1127,7 @@ const CoffeeBeanGroupSettings: React.FC<CoffeeBeanGroupSettingsProps> = ({
             <button
               type="button"
               onClick={openCreateDrawer}
-              className="flex w-full cursor-pointer items-center px-3.5 py-3.5 text-left transition active:bg-black/5 dark:active:bg-white/5"
+              className="setting-row-body flex w-full cursor-pointer items-center px-3.5 text-left transition active:bg-black/5 dark:active:bg-white/5"
             >
               <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100">
                 创建分组
@@ -1141,7 +1139,7 @@ const CoffeeBeanGroupSettings: React.FC<CoffeeBeanGroupSettingsProps> = ({
                 <button
                   type="button"
                   onClick={openCreateDrawer}
-                  className="flex w-full cursor-pointer items-center border-b border-black/5 py-3.5 text-left transition active:opacity-70 dark:border-white/5"
+                  className="setting-divider setting-row-body flex w-full cursor-pointer items-center text-left transition active:opacity-70 dark:border-white/5"
                 >
                   <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100">
                     创建分组

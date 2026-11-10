@@ -588,7 +588,7 @@ export function ElasticSlider({
           data-slot="elastic-slider-label"
           aria-hidden="true"
           className={cn(
-            'pointer-events-none absolute top-1/2 left-3 inline-flex max-w-[calc(100%-5rem)] -translate-y-1/2 items-center truncate text-sm leading-none font-medium text-neutral-500 transition-colors dark:text-neutral-400',
+            'pointer-events-none absolute top-1/2 left-3 max-w-[calc(100%-5rem)] -translate-y-1/2 truncate py-[0.25em] text-sm leading-none font-medium text-neutral-500 transition-colors dark:text-neutral-400',
             textClassName,
             labelClassName
           )}

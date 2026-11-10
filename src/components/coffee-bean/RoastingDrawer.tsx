@@ -157,9 +157,7 @@ export default function RoastingDrawer({
   }, [isOpen, flavorScrollElement]);
   const flavors =
     customFlavors ??
-    normalizeFlavorList(
-      sources.flatMap(source => source?.flavor ?? [])
-    );
+    normalizeFlavorList(sources.flatMap(source => source?.flavor ?? []));
   useEffect(() => {
     if (!isOpen) return;
     const frame = requestAnimationFrame(() => {
@@ -339,7 +337,7 @@ export default function RoastingDrawer({
         />
         <SettingPageLayoutProvider mode="overlay">
           <fieldset disabled={saving} className="min-w-0">
-            <SettingSection contentShape="card" className="pb-3!">
+            <SettingSection className="pb-3!">
               {roasterFieldEnabled && (
                 <SettingRow label="烘焙商" expandControl>
                   <SettingInput
@@ -372,7 +370,7 @@ export default function RoastingDrawer({
                 />
               </SettingRow>
             </SettingSection>
-            <SettingSection contentShape="card" className="pb-3!">
+            <SettingSection className="pb-3!">
               {sources.map((source, index) => {
                 const id = sourceIds[index];
                 const grams = inputs[index].amount;
@@ -473,7 +471,7 @@ export default function RoastingDrawer({
                 </div>
               </SettingRow>
             </SettingSection>
-            <SettingSection contentShape="card" className="pb-3!">
+            <SettingSection className="pb-3!">
               <SettingRow label="烘焙度">
                 <SettingSelect
                   ariaLabel="烘焙度"

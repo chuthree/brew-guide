@@ -200,7 +200,7 @@ const FlavorPeriodSettings: React.FC<FlavorPeriodSettingsProps> = ({
     placeholderStart: string,
     placeholderEnd: string
   ) => (
-    <div className="flex items-center space-x-3">
+    <div className="flex min-w-0 flex-wrap items-center justify-end gap-3">
       <div className="flex items-center space-x-1">
         <span className="text-sm text-neutral-500 dark:text-neutral-400">
           养豆
@@ -219,7 +219,7 @@ const FlavorPeriodSettings: React.FC<FlavorPeriodSettingsProps> = ({
               e.target.value === '' ? 0 : parseInt(e.target.value) || 0;
             onStartChange(value);
           }}
-          className="w-12 rounded border border-neutral-200/50 bg-neutral-100 px-2 py-1 text-center text-xs focus:ring-1 focus:ring-neutral-500 focus:outline-hidden dark:border-neutral-700 dark:bg-neutral-800"
+          className="setting-control w-12 rounded border border-neutral-200/50 bg-neutral-100 px-2 text-center text-sm focus:ring-1 focus:ring-neutral-500 focus:outline-hidden dark:border-neutral-700 dark:bg-neutral-800"
         />
         <span className="text-sm text-neutral-500 dark:text-neutral-400">
           天
@@ -243,7 +243,7 @@ const FlavorPeriodSettings: React.FC<FlavorPeriodSettingsProps> = ({
               e.target.value === '' ? 0 : parseInt(e.target.value) || 0;
             onEndChange(value);
           }}
-          className="w-12 rounded border border-neutral-200/50 bg-neutral-100 px-2 py-1 text-center text-xs focus:ring-1 focus:ring-neutral-500 focus:outline-hidden dark:border-neutral-700 dark:bg-neutral-800"
+          className="setting-control w-12 rounded border border-neutral-200/50 bg-neutral-100 px-2 text-center text-sm focus:ring-1 focus:ring-neutral-500 focus:outline-hidden dark:border-neutral-700 dark:bg-neutral-800"
         />
         <span className="text-sm text-neutral-500 dark:text-neutral-400">
           天
@@ -322,7 +322,6 @@ const FlavorPeriodSettings: React.FC<FlavorPeriodSettingsProps> = ({
             <SettingSection
               title={`烘焙商特定预设 (${filteredRoasters.length})`}
               className={hasSearchQuery ? '-mt-4' : undefined}
-              contentShape="card"
               footer={
                 hasSearchQuery
                   ? undefined
@@ -351,10 +350,10 @@ const FlavorPeriodSettings: React.FC<FlavorPeriodSettingsProps> = ({
                       <button
                         type="button"
                         onClick={() => toggleExpand(roaster)}
-                        className="relative flex w-full items-center justify-between py-3.5 pr-3.5 pl-3.5"
+                        className="setting-row-body relative flex w-full items-center justify-between pr-3.5 pl-3.5"
                       >
-                        <div className="flex flex-col items-start">
-                          <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
+                        <div className="flex min-w-0 flex-1 flex-col items-start">
+                          <span className="text-sm font-medium wrap-anywhere text-neutral-800 dark:text-neutral-200">
                             {roaster}
                           </span>
                         </div>
@@ -382,8 +381,8 @@ const FlavorPeriodSettings: React.FC<FlavorPeriodSettingsProps> = ({
                         <div className="overflow-hidden">
                           <div className="px-3.5 pb-3.5">
                             <div className="space-y-2.5 border-t border-black/5 pt-3 dark:border-white/5">
-                              <div className="flex items-center justify-between">
-                                <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
+                              <div className="flex flex-wrap items-center justify-between gap-3">
+                                <span className="text-sm font-medium wrap-anywhere text-neutral-800 dark:text-neutral-200">
                                   浅烘
                                 </span>
                                 {renderFlavorInputs(
@@ -407,8 +406,8 @@ const FlavorPeriodSettings: React.FC<FlavorPeriodSettingsProps> = ({
                                   '默认'
                                 )}
                               </div>
-                              <div className="flex items-center justify-between">
-                                <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
+                              <div className="flex flex-wrap items-center justify-between gap-3">
+                                <span className="text-sm font-medium wrap-anywhere text-neutral-800 dark:text-neutral-200">
                                   中烘
                                 </span>
                                 {renderFlavorInputs(
@@ -432,8 +431,8 @@ const FlavorPeriodSettings: React.FC<FlavorPeriodSettingsProps> = ({
                                   '默认'
                                 )}
                               </div>
-                              <div className="flex items-center justify-between">
-                                <span className="text-sm font-medium text-neutral-800 dark:text-neutral-200">
+                              <div className="flex flex-wrap items-center justify-between gap-3">
+                                <span className="text-sm font-medium wrap-anywhere text-neutral-800 dark:text-neutral-200">
                                   深烘
                                 </span>
                                 {renderFlavorInputs(

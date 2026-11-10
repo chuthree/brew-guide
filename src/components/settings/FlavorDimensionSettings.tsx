@@ -95,7 +95,7 @@ const DimensionEditorDrawer: React.FC<DimensionEditorDrawerProps> = ({
                 }
               }}
               placeholder="输入评分维度名称"
-              className="w-full bg-transparent text-sm text-neutral-900 outline-none placeholder:text-neutral-400 dark:text-neutral-50 dark:placeholder:text-neutral-500"
+              className="setting-control w-full bg-transparent text-sm text-neutral-900 outline-none placeholder:text-neutral-400 dark:text-neutral-50 dark:placeholder:text-neutral-500"
               autoComplete="off"
               id="flavor-dimension-name-input"
             />
@@ -107,7 +107,7 @@ const DimensionEditorDrawer: React.FC<DimensionEditorDrawerProps> = ({
             <button
               type="button"
               onClick={onDelete}
-              className="flex w-full cursor-pointer items-center px-3.5 py-3.5 text-left text-sm font-medium text-neutral-600 transition active:bg-black/5 dark:text-neutral-300 dark:active:bg-white/5"
+              className="setting-row-body flex w-full cursor-pointer items-center px-3.5 text-left text-sm font-medium text-neutral-600 transition active:bg-black/5 dark:text-neutral-300 dark:active:bg-white/5"
             >
               删除维度
             </button>
@@ -308,7 +308,7 @@ const FlavorDimensionSettings: React.FC<FlavorDimensionSettingsProps> = ({
             <button
               type="button"
               onClick={openCreateDrawer}
-              className="flex w-full cursor-pointer items-center px-3.5 py-3.5 text-left transition active:bg-black/5 dark:active:bg-white/5"
+              className="setting-row-body flex w-full cursor-pointer items-center px-3.5 text-left transition active:bg-black/5 dark:active:bg-white/5"
             >
               <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100">
                 新建维度
@@ -320,7 +320,7 @@ const FlavorDimensionSettings: React.FC<FlavorDimensionSettingsProps> = ({
                 <button
                   type="button"
                   onClick={openCreateDrawer}
-                  className="flex w-full cursor-pointer items-center border-b border-black/5 py-3.5 text-left transition active:opacity-70 dark:border-white/5"
+                  className="setting-divider setting-row-body flex w-full cursor-pointer items-center text-left transition active:opacity-70"
                 >
                   <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100">
                     新建维度
@@ -358,7 +358,7 @@ const FlavorDimensionSettings: React.FC<FlavorDimensionSettingsProps> = ({
           <button
             type="button"
             onClick={() => setShowResetConfirm(true)}
-            className="flex w-full cursor-pointer items-center px-3.5 py-3.5 text-left text-sm font-medium text-neutral-600 transition active:bg-black/5 dark:text-neutral-300 dark:active:bg-white/5"
+            className="setting-row-body flex w-full cursor-pointer items-center px-3.5 text-left text-sm font-medium text-neutral-600 transition active:bg-black/5 dark:text-neutral-300 dark:active:bg-white/5"
           >
             重置为默认维度
           </button>

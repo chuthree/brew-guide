@@ -485,7 +485,6 @@ const RoasterLogoSettings: React.FC<RoasterLogoSettingsProps> = ({
           </div>
         }
         className="-mt-4"
-        contentShape="card"
         footer={
           isEditingRoasters
             ? hasInvalidDraftRoasterName
@@ -525,7 +524,7 @@ const RoasterLogoSettings: React.FC<RoasterLogoSettingsProps> = ({
                 vertical
                 isLast={index === filteredRoasters.length - 1}
               >
-                <div className="flex h-4 min-w-0 items-center justify-between gap-3">
+                <div className="setting-control flex min-w-0 items-center justify-between gap-3">
                   <div className="flex min-w-0 flex-1 items-center gap-2">
                     {logoData ? (
                       <button
@@ -559,7 +558,7 @@ const RoasterLogoSettings: React.FC<RoasterLogoSettingsProps> = ({
                       </span>
                     )}
                     {isEditingRoasters ? (
-                      <div className="relative flex h-4 min-w-0 flex-1 items-center">
+                      <div className="setting-control relative flex min-w-0 flex-1 items-center">
                         <input
                           ref={el => {
                             if (el) {
@@ -585,7 +584,7 @@ const RoasterLogoSettings: React.FC<RoasterLogoSettingsProps> = ({
                             }))
                           }
                           disabled={isSavingRoasters}
-                          className={`block h-4 w-full min-w-0 bg-transparent p-0 text-sm leading-none font-medium text-neutral-800 transition-[color,opacity] duration-150 outline-none placeholder:text-neutral-400 disabled:opacity-60 dark:text-neutral-200 dark:placeholder:text-neutral-600 ${
+                          className={`setting-control block w-full min-w-0 bg-transparent p-0 text-sm leading-5 font-medium text-neutral-800 transition-[color,opacity] duration-150 outline-none placeholder:text-neutral-400 disabled:opacity-60 dark:text-neutral-200 dark:placeholder:text-neutral-600 ${
                             shouldShowRenamePreview
                               ? 'pointer-events-none opacity-0'
                               : 'opacity-100'
@@ -604,7 +603,7 @@ const RoasterLogoSettings: React.FC<RoasterLogoSettingsProps> = ({
                             className="roaster-rename-preview absolute inset-0 flex min-w-0 cursor-text items-center gap-2 text-left"
                             aria-label={`继续编辑 ${roaster}，当前目标名称为 ${normalizedDraftName}`}
                           >
-                            <span className="roaster-rename-preview-old relative max-w-[42%] min-w-0 truncate text-sm leading-none font-medium text-neutral-500/60 dark:text-neutral-400/60">
+                            <span className="roaster-rename-preview-old truncate-label relative max-w-[42%] min-w-0 text-sm leading-5 font-medium text-neutral-500/60 dark:text-neutral-400/60">
                               {roaster}
                               <span
                                 aria-hidden="true"
@@ -615,20 +614,20 @@ const RoasterLogoSettings: React.FC<RoasterLogoSettingsProps> = ({
                               aria-hidden="true"
                               className="h-px w-3 shrink-0 bg-neutral-300/70 dark:bg-neutral-600/70"
                             />
-                            <span className="roaster-rename-preview-new min-w-0 flex-1 truncate text-sm leading-none font-medium text-neutral-800 dark:text-neutral-200">
+                            <span className="roaster-rename-preview-new truncate-label min-w-0 flex-1 text-sm leading-5 font-medium text-neutral-800 dark:text-neutral-200">
                               {normalizedDraftName}
                             </span>
                           </button>
                         )}
                       </div>
                     ) : (
-                      <span className="min-w-0 truncate text-sm leading-none font-medium text-neutral-800 dark:text-neutral-200">
+                      <span className="truncate-label min-w-0 text-sm leading-5 font-medium text-neutral-800 dark:text-neutral-200">
                         {roaster}
                       </span>
                     )}
                   </div>
                   {!isEditingRoasters && (
-                    <div className="flex h-4 shrink-0 items-center gap-3">
+                    <div className="setting-control flex shrink-0 items-center gap-3">
                       {logoData && (
                         <button
                           type="button"
@@ -672,7 +671,7 @@ const RoasterLogoSettings: React.FC<RoasterLogoSettingsProps> = ({
         )}
       </SettingSection>
       {roasters.length > 0 && !isEditingRoasters && !searchQuery.trim() && (
-        <SettingSection title="图标管理" contentShape="card">
+        <SettingSection title="图标管理">
           <SettingRow
             label="导入图标"
             onClick={handleOpenImport}

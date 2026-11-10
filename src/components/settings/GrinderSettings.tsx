@@ -154,7 +154,7 @@ const GrinderSettings: React.FC<GrinderSettingsProps> = ({ onClose }) => {
             isLast={grinders.length === 0}
             settingId={makeSettingRowSearchId('添加磨豆机')}
           >
-            <div className="flex h-4 min-w-0 items-center gap-2">
+            <div className="setting-control flex min-w-0 items-center gap-2">
               <input
                 type="text"
                 value={newGrinderName}
@@ -175,7 +175,7 @@ const GrinderSettings: React.FC<GrinderSettingsProps> = ({ onClose }) => {
                 aria-label="磨豆机名称"
                 placeholder="输入磨豆机名称"
                 autoFocus
-                className="h-4 min-w-0 flex-1 appearance-none bg-transparent p-0 text-sm leading-none font-medium text-neutral-900 placeholder:text-neutral-400 focus:outline-none dark:text-neutral-100 dark:placeholder:text-neutral-500"
+                className="setting-control min-w-0 flex-1 appearance-none bg-transparent p-0 text-sm leading-5 font-medium text-neutral-900 placeholder:text-neutral-400 focus:outline-none dark:text-neutral-100 dark:placeholder:text-neutral-500"
               />
               <button
                 type="button"
@@ -183,7 +183,7 @@ const GrinderSettings: React.FC<GrinderSettingsProps> = ({ onClose }) => {
                   newGrinderName.trim() && setAddingStep('grindSize')
                 }
                 disabled={!newGrinderName.trim()}
-                className="shrink-0 cursor-pointer text-sm leading-none font-medium text-neutral-600 active:opacity-70 disabled:cursor-not-allowed disabled:opacity-40 dark:text-neutral-300"
+                className="shrink-0 cursor-pointer text-sm leading-5 font-medium text-neutral-600 active:opacity-70 disabled:cursor-not-allowed disabled:opacity-40 dark:text-neutral-300"
               >
                 下一步
               </button>
@@ -195,11 +195,11 @@ const GrinderSettings: React.FC<GrinderSettingsProps> = ({ onClose }) => {
             isLast={grinders.length === 0}
             settingId={makeSettingRowSearchId('添加磨豆机')}
           >
-            <div className="flex h-4 min-w-0 items-center gap-2">
-              <span className="max-w-[50%] truncate text-sm leading-none font-medium text-neutral-900 dark:text-neutral-100">
+            <div className="setting-control flex min-w-0 items-center gap-2">
+              <span className="truncate-label max-w-[50%] text-sm leading-5 font-medium text-neutral-900 dark:text-neutral-100">
                 {newGrinderName}
               </span>
-              <span className="shrink-0 text-sm leading-none font-medium text-neutral-900 dark:text-neutral-100">
+              <span className="shrink-0 text-sm leading-5 font-medium text-neutral-900 dark:text-neutral-100">
                 ·
               </span>
               <input
@@ -222,13 +222,13 @@ const GrinderSettings: React.FC<GrinderSettingsProps> = ({ onClose }) => {
                 aria-label="当前刻度"
                 placeholder="输入当前刻度"
                 autoFocus
-                className="h-4 min-w-0 flex-1 appearance-none bg-transparent p-0 text-sm leading-none font-medium text-neutral-900 placeholder:text-neutral-400 focus:outline-none dark:text-neutral-100 dark:placeholder:text-neutral-500"
+                className="setting-control min-w-0 flex-1 appearance-none bg-transparent p-0 text-sm leading-5 font-medium text-neutral-900 placeholder:text-neutral-400 focus:outline-none dark:text-neutral-100 dark:placeholder:text-neutral-500"
               />
               <button
                 type="button"
                 onClick={handleAddGrinder}
                 disabled={!newGrindSize.trim()}
-                className="ml-auto shrink-0 cursor-pointer text-sm leading-none font-medium text-neutral-600 active:opacity-70 disabled:cursor-not-allowed disabled:opacity-40 dark:text-neutral-300"
+                className="ml-auto shrink-0 cursor-pointer text-sm leading-5 font-medium text-neutral-600 active:opacity-70 disabled:cursor-not-allowed disabled:opacity-40 dark:text-neutral-300"
               >
                 添加
               </button>
@@ -240,7 +240,7 @@ const GrinderSettings: React.FC<GrinderSettingsProps> = ({ onClose }) => {
             onClick={() => setAddingStep('name')}
             isLast={grinders.length === 0}
           >
-            <span className="flex h-4 items-center text-sm leading-none font-medium text-neutral-900 dark:text-neutral-100">
+            <span className="setting-control flex items-center text-sm leading-5 font-medium text-neutral-900 dark:text-neutral-100">
               添加磨豆机
             </span>
           </SettingRow>
@@ -254,9 +254,11 @@ const GrinderSettings: React.FC<GrinderSettingsProps> = ({ onClose }) => {
             vertical
             isLast={index === grinders.length - 1}
           >
-            <div className="flex h-4 min-w-0 items-center justify-between gap-3 text-sm leading-none font-medium text-neutral-900 dark:text-neutral-100">
+            <div className="setting-control flex min-w-0 items-center justify-between gap-3 text-sm leading-5 font-medium text-neutral-900 dark:text-neutral-100">
               <div className="flex min-w-0 flex-1 items-center gap-2">
-                <span className="max-w-[50%] truncate">{grinder.name}</span>
+                <span className="truncate-label max-w-[50%]">
+                  {grinder.name}
+                </span>
                 <span>·</span>
                 {editingId === grinder.id ? (
                   <input
@@ -276,7 +278,7 @@ const GrinderSettings: React.FC<GrinderSettingsProps> = ({ onClose }) => {
                     aria-label={`${grinder.name} 的当前刻度`}
                     placeholder="当前刻度"
                     autoFocus
-                    className="h-4 min-w-0 flex-1 appearance-none bg-transparent p-0 text-sm leading-none font-medium text-neutral-900 placeholder:text-neutral-400 focus:outline-none dark:text-neutral-100 dark:placeholder:text-neutral-500"
+                    className="setting-control min-w-0 flex-1 appearance-none bg-transparent p-0 text-sm leading-5 font-medium text-neutral-900 placeholder:text-neutral-400 focus:outline-none dark:text-neutral-100 dark:placeholder:text-neutral-500"
                   />
                 ) : (
                   <button
@@ -287,7 +289,7 @@ const GrinderSettings: React.FC<GrinderSettingsProps> = ({ onClose }) => {
                       tempGrindSizeRef.current[grinder.id] =
                         grinder.currentGrindSize || '';
                     }}
-                    className="min-w-0 truncate text-left active:opacity-70"
+                    className="truncate-label min-w-0 text-left active:opacity-70"
                   >
                     {grinder.currentGrindSize || '点击设置刻度'}
                   </button>
@@ -304,7 +306,7 @@ const GrinderSettings: React.FC<GrinderSettingsProps> = ({ onClose }) => {
                     setDeletingId(grinder.id);
                   }
                 }}
-                className={`shrink-0 cursor-pointer text-sm leading-none font-medium active:opacity-70 ${
+                className={`shrink-0 cursor-pointer text-sm leading-5 font-medium active:opacity-70 ${
                   deletingId === grinder.id
                     ? 'text-red-500 dark:text-red-400'
                     : 'text-neutral-600 dark:text-neutral-300'

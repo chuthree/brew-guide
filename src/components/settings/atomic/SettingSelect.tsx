@@ -34,7 +34,7 @@ function SettingSelect<T extends string>({
     >
       <Select.Trigger
         aria-label={ariaLabel}
-        className="flex h-4 cursor-pointer items-center justify-end gap-2 rounded-sm p-0 text-sm leading-none font-normal whitespace-nowrap text-neutral-600 outline-none focus-visible:ring-2 focus-visible:ring-neutral-400/60 disabled:cursor-not-allowed disabled:opacity-40 dark:text-neutral-300"
+        className="setting-control flex max-w-full min-w-0 cursor-pointer items-center justify-end gap-2 rounded-sm p-0 text-right text-sm font-normal wrap-anywhere whitespace-normal text-neutral-600 outline-none focus-visible:ring-2 focus-visible:ring-neutral-400/60 disabled:cursor-not-allowed disabled:opacity-40 dark:text-neutral-300"
       >
         <Select.Value />
         <Select.Icon asChild>

@@ -20,7 +20,6 @@ export {
 
 // 控件组件
 export { default as SettingToggle } from './SettingToggle';
-export { default as SettingSelector } from './SettingSelector';
 export { default as SettingSelect } from './SettingSelect';
 export { default as SettingInput } from './SettingInput';
 export { default as SettingCombobox } from './SettingCombobox';

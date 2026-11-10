@@ -64,19 +64,20 @@ const SettingRow: React.FC<SettingRowProps> = ({
     return (
       <div
         ref={rowRef}
+        data-setting-row=""
         data-settings-search-id={resolvedSettingId || undefined}
         className={`flex w-full flex-col px-3.5 transition-colors duration-200 ${
           isHighlighted ? 'bg-neutral-200/70 dark:bg-neutral-700/45' : ''
         } ${className}`}
       >
         <div
-          className={`flex flex-col py-3.5 ${
-            !isLast ? 'border-b border-black/5 dark:border-white/5' : ''
+          className={`setting-row-body flex min-w-0 flex-col ${
+            !isLast ? 'setting-divider' : ''
           }`}
         >
           {label && (
             <div className="mb-3">
-              <span className="text-sm leading-none font-medium text-neutral-800 dark:text-neutral-200">
+              <span className="text-sm leading-5 font-medium wrap-anywhere text-neutral-800 dark:text-neutral-200">
                 {label}
                 {required && (
                   <sup
@@ -88,18 +89,18 @@ const SettingRow: React.FC<SettingRowProps> = ({
                 )}
               </span>
               {description && (
-                <span className="mt-1.5 block text-xs font-normal text-neutral-500 dark:text-neutral-400">
+                <span className="mt-1.5 block text-xs font-normal wrap-anywhere text-neutral-500 dark:text-neutral-400">
                   {description}
                 </span>
               )}
             </div>
           )}
-          <div className="w-full leading-none">{children}</div>
+          <div className="w-full min-w-0">{children}</div>
           {error && (
             <p
               id={errorId}
               role="alert"
-              className="mt-2 text-xs text-red-600 dark:text-red-400"
+              className="mt-2 text-xs wrap-anywhere text-red-600 dark:text-red-400"
             >
               {error}
             </p>
@@ -114,6 +115,7 @@ const SettingRow: React.FC<SettingRowProps> = ({
   return (
     <div
       ref={rowRef}
+      data-setting-row=""
       data-settings-search-id={resolvedSettingId || undefined}
       className={`flex w-full ${error ? 'flex-col' : 'items-stretch'} px-3.5 transition-colors duration-200 ${
         isHighlighted ? 'bg-neutral-200/70 dark:bg-neutral-700/45' : ''
@@ -123,23 +125,23 @@ const SettingRow: React.FC<SettingRowProps> = ({
         type={onClick ? 'button' : undefined}
         onClick={onClick}
         disabled={onClick ? disabled : undefined}
-        className={`flex min-w-0 flex-1 items-center justify-between ${error ? 'pt-3.5 pb-1.5' : 'py-3.5'} text-left ${
+        className={`setting-row-body flex min-w-0 flex-1 items-center justify-between gap-4 text-left ${
           onClick
             ? 'cursor-pointer transition-opacity active:opacity-70 disabled:cursor-not-allowed disabled:opacity-40'
             : ''
-        } ${!isLast && !error ? 'border-b border-black/5 dark:border-white/5' : ''}`}
+        } ${!isLast && !error ? 'setting-divider' : ''}`}
       >
         {label && (
           <div
-            className={`mr-4 flex min-w-0 flex-col ${expandControl ? 'max-w-[50%] shrink-0' : 'flex-1'}`}
+            className={`flex min-w-0 flex-col ${expandControl ? 'max-w-[50%] shrink-0' : 'flex-1'}`}
           >
-            <span className="flex min-w-0 items-center text-sm leading-none font-medium text-neutral-800 dark:text-neutral-200">
+            <span className="flex min-w-0 items-center text-sm leading-5 font-medium text-neutral-800 dark:text-neutral-200">
               {isSubSetting && (
                 <span className="mr-1.5 inline-block text-neutral-500 opacity-50 dark:text-neutral-400">
                   —
                 </span>
               )}
-              <span className="truncate">{label}</span>
+              <span className="min-w-0 wrap-anywhere">{label}</span>
               {required && (
                 <sup
                   aria-hidden="true"
@@ -151,14 +153,14 @@ const SettingRow: React.FC<SettingRowProps> = ({
               {labelSuffix && <span className="shrink-0">{labelSuffix}</span>}
             </span>
             {description && (
-              <span className="mt-1.5 text-xs font-normal text-neutral-500 dark:text-neutral-400">
+              <span className="mt-1.5 text-xs font-normal wrap-anywhere text-neutral-500 dark:text-neutral-400">
                 {description}
               </span>
             )}
           </div>
         )}
         <div
-          className={`flex items-center ${expandControl ? 'min-w-0 flex-1' : 'shrink-0'}`}
+          className={`setting-control flex min-w-0 items-center ${expandControl || !label ? 'flex-1' : 'max-w-[60%] shrink-0'}`}
         >
           {children}
         </div>
@@ -167,7 +169,7 @@ const SettingRow: React.FC<SettingRowProps> = ({
         <p
           id={errorId}
           role="alert"
-          className={`pb-3.5 text-xs text-red-600 dark:text-red-400 ${!isLast ? 'border-b border-black/5 dark:border-white/5' : ''}`}
+          className={`pb-2.5 text-xs wrap-anywhere text-red-600 dark:text-red-400 ${!isLast ? 'setting-divider' : ''}`}
         >
           {error}
         </p>

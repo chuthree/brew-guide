@@ -61,7 +61,7 @@ function SettingCardSelector<T extends string | number = string>({
               onClick={() => onChange(option.value)}
               className="mb-2 flex min-h-5 w-full min-w-0 cursor-pointer items-center gap-2 text-left focus-visible:ring-2 focus-visible:ring-neutral-400/60 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 dark:focus-visible:ring-neutral-500/70"
             >
-              <span className="min-w-0 flex-1 truncate text-sm leading-none font-medium text-neutral-800 dark:text-neutral-200">
+              <span className="truncate-label min-w-0 flex-1 text-sm leading-none font-medium text-neutral-800 dark:text-neutral-200">
                 {option.label}
               </span>
               <SettingSelectionIndicator

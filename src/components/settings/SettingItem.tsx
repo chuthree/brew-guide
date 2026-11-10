@@ -86,16 +86,16 @@ const SettingGroup: React.FC<SettingGroupProps> = ({
                   </div>
                 </div>
                 <div
-                  className={`flex min-w-0 flex-1 items-center justify-between border-b py-3.5 ${
-                    !isLast && !isExpanded
-                      ? 'border-black/5 dark:border-white/5'
-                      : 'border-transparent'
+                  className={`setting-row-body flex min-w-0 flex-1 items-center justify-between gap-4 ${
+                    !isLast && !isExpanded ? 'setting-divider' : ''
                   }`}
                 >
-                  <div className="flex flex-col items-start gap-0.5 overflow-hidden">
-                    <span className="truncate leading-none">{item.label}</span>
+                  <div className="flex min-w-0 flex-col items-start gap-0.5">
+                    <span className="max-w-full leading-5 wrap-anywhere">
+                      {item.label}
+                    </span>
                     {description && (
-                      <span className="truncate text-xs font-normal text-neutral-400 dark:text-neutral-500">
+                      <span className="max-w-full text-xs font-normal wrap-anywhere text-neutral-400 dark:text-neutral-500">
                         {description}
                       </span>
                     )}
@@ -112,25 +112,26 @@ const SettingGroup: React.FC<SettingGroupProps> = ({
                         }
                       }}
                       data-placeholder={placeholder}
-                      className="ml-4 max-w-[150px] cursor-text text-right text-sm text-neutral-600 outline-none empty:before:text-neutral-400 empty:before:content-[attr(data-placeholder)] dark:text-neutral-300 dark:empty:before:text-neutral-500"
+                      className="setting-control max-w-[50%] min-w-0 cursor-text text-right text-sm wrap-anywhere text-neutral-600 outline-none empty:before:text-neutral-400 empty:before:content-[attr(data-placeholder)] dark:text-neutral-300 dark:empty:before:text-neutral-500"
                       style={{ minHeight: '1.25em' }}
                     >
                       {item.value}
                     </div>
                   ) : isSwitch ? (
                     <SettingToggle
+                      ariaLabel={item.label}
                       checked={checked || false}
                       onChange={onChange || (() => {})}
                     />
                   ) : (
-                    <div className="flex items-center gap-2">
+                    <div className="flex max-w-[60%] min-w-0 items-center gap-2">
                       {item.value && (
-                        <span className="text-sm text-neutral-400 dark:text-neutral-500">
+                        <span className="text-sm wrap-anywhere text-neutral-400 dark:text-neutral-500">
                           {item.value}
                         </span>
                       )}
                       <ChevronRight
-                        className={`h-4 w-4 text-neutral-400/60 transition-transform duration-200 ${
+                        className={`h-4 w-4 shrink-0 text-neutral-400/60 transition-transform duration-200 ${
                           isExpanded ? 'rotate-90' : ''
                         }`}
                       />

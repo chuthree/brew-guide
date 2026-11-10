@@ -146,9 +146,8 @@ const GreenBeanSettings: React.FC<GreenBeanSettingsProps> = ({ onClose }) => {
     highlightedSettingId === makeSettingRowSearchId('预设快捷烘焙量');
   const [hasRevealedSearchDetails, setHasRevealedSearchDetails] =
     React.useState(false);
-  const shouldRevealSearchDetails = shouldRevealGreenBeanSearchSettings(
-    highlightedSettingId
-  );
+  const shouldRevealSearchDetails =
+    shouldRevealGreenBeanSearchSettings(highlightedSettingId);
 
   React.useEffect(() => {
     if (shouldRevealSearchDetails) {
@@ -157,8 +156,7 @@ const GreenBeanSettings: React.FC<GreenBeanSettingsProps> = ({ onClose }) => {
   }, [shouldRevealSearchDetails]);
 
   const showGreenBeanDetails =
-    Boolean(settings.enableGreenBeanInventory) ||
-    hasRevealedSearchDetails;
+    Boolean(settings.enableGreenBeanInventory) || hasRevealedSearchDetails;
 
   return (
     <SettingPage title="生豆库" isVisible={isVisible} onClose={handleClose}>
@@ -204,7 +202,7 @@ const GreenBeanSettings: React.FC<GreenBeanSettingsProps> = ({ onClose }) => {
             </SettingRow>
           </SettingSection>
 
-          <SettingSection title="预设快捷烘焙量" contentShape="card">
+          <SettingSection title="预设快捷烘焙量">
             <div
               data-settings-search-id={makeSettingRowSearchId('预设快捷烘焙量')}
               className={`transition-colors ${
@@ -214,8 +212,11 @@ const GreenBeanSettings: React.FC<GreenBeanSettingsProps> = ({ onClose }) => {
               }`}
             >
               {isAddingPreset ? (
-                <SettingRow vertical isLast={greenBeanRoastPresets.length === 0}>
-                  <div className="flex h-4 min-w-0 items-center gap-2">
+                <SettingRow
+                  vertical
+                  isLast={greenBeanRoastPresets.length === 0}
+                >
+                  <div className="setting-control flex min-w-0 items-center gap-2">
                     <input
                       type="text"
                       inputMode="decimal"
@@ -229,13 +230,20 @@ const GreenBeanSettings: React.FC<GreenBeanSettingsProps> = ({ onClose }) => {
                             ? value.substring(0, value.lastIndexOf('.'))
                             : value;
                         const dotIndex = sanitizedValue.indexOf('.');
-                        if (dotIndex !== -1 && dotIndex < sanitizedValue.length - 2) {
-                          sanitizedValue = sanitizedValue.substring(0, dotIndex + 2);
+                        if (
+                          dotIndex !== -1 &&
+                          dotIndex < sanitizedValue.length - 2
+                        ) {
+                          sanitizedValue = sanitizedValue.substring(
+                            0,
+                            dotIndex + 2
+                          );
                         }
                         setGreenBeanRoastValue(sanitizedValue);
                       }}
                       onBlur={() => {
-                        if (!greenBeanRoastValue.trim()) setIsAddingPreset(false);
+                        if (!greenBeanRoastValue.trim())
+                          setIsAddingPreset(false);
                       }}
                       onKeyDown={e => {
                         if (e.key === 'Enter') {
@@ -248,7 +256,7 @@ const GreenBeanSettings: React.FC<GreenBeanSettingsProps> = ({ onClose }) => {
                       }}
                       placeholder="输入烘焙克数（g）"
                       autoFocus
-                      className="h-4 min-w-0 flex-1 appearance-none bg-transparent p-0 text-sm leading-none font-medium text-neutral-900 placeholder:text-neutral-400 focus:outline-none dark:text-neutral-100 dark:placeholder:text-neutral-500"
+                      className="setting-control min-w-0 flex-1 appearance-none bg-transparent p-0 text-sm leading-5 font-medium text-neutral-900 placeholder:text-neutral-400 focus:outline-none dark:text-neutral-100 dark:placeholder:text-neutral-500"
                     />
                     <button
                       type="button"
@@ -261,7 +269,7 @@ const GreenBeanSettings: React.FC<GreenBeanSettingsProps> = ({ onClose }) => {
                           parseFloat(parseFloat(greenBeanRoastValue).toFixed(1))
                         )
                       }
-                      className="shrink-0 cursor-pointer text-sm leading-none font-medium text-neutral-600 active:opacity-70 disabled:cursor-not-allowed disabled:opacity-40 dark:text-neutral-300"
+                      className="shrink-0 cursor-pointer text-sm leading-5 font-medium text-neutral-600 active:opacity-70 disabled:cursor-not-allowed disabled:opacity-40 dark:text-neutral-300"
                     >
                       添加
                     </button>
@@ -272,7 +280,7 @@ const GreenBeanSettings: React.FC<GreenBeanSettingsProps> = ({ onClose }) => {
                   onClick={() => setIsAddingPreset(true)}
                   isLast={greenBeanRoastPresets.length === 0}
                 >
-                  <span className="flex h-4 items-center text-sm leading-none font-medium text-neutral-900 dark:text-neutral-100">
+                  <span className="setting-control flex items-center text-sm leading-5 font-medium text-neutral-900 dark:text-neutral-100">
                     添加预设
                   </span>
                 </SettingRow>
@@ -283,8 +291,8 @@ const GreenBeanSettings: React.FC<GreenBeanSettingsProps> = ({ onClose }) => {
                   vertical
                   isLast={index === greenBeanRoastPresets.length - 1}
                 >
-                  <div className="flex h-4 min-w-0 items-center justify-between gap-3 text-sm leading-none font-medium text-neutral-900 dark:text-neutral-100">
-                    <span className="min-w-0 truncate">{value} g</span>
+                  <div className="setting-control flex min-w-0 items-center justify-between gap-3 text-sm leading-5 font-medium text-neutral-900 dark:text-neutral-100">
+                    <span className="truncate-label min-w-0">{value} g</span>
                     <button
                       type="button"
                       aria-label={`${deletingPreset === value ? '确认删除' : '删除'} ${value} g 的烘焙预设`}
@@ -296,7 +304,7 @@ const GreenBeanSettings: React.FC<GreenBeanSettingsProps> = ({ onClose }) => {
                           setDeletingPreset(value);
                         }
                       }}
-                      className={`shrink-0 cursor-pointer text-sm leading-none font-medium active:opacity-70 ${
+                      className={`shrink-0 cursor-pointer text-sm leading-5 font-medium active:opacity-70 ${
                         deletingPreset === value
                           ? 'text-red-500 dark:text-red-400'
                           : 'text-neutral-600 dark:text-neutral-300'

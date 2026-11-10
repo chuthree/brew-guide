@@ -71,9 +71,9 @@ function SettingReorderableRow<T>({
       <div
         ref={rowRef}
         data-settings-search-id={resolvedSettingId}
-        className={`flex items-center py-1 transition-colors duration-200 ${
+        className={`min-h-setting-row flex items-center transition-colors duration-200 ${
           isHighlighted ? 'bg-neutral-200/70 dark:bg-neutral-700/45' : ''
-        } ${isLast ? '' : 'border-b border-black/5 dark:border-white/5'}`}
+        } ${isLast ? '' : 'setting-divider'}`}
       >
         <button
           type="button"
@@ -81,7 +81,7 @@ function SettingReorderableRow<T>({
           disabled={isReorderMode}
           className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 text-left transition-opacity active:opacity-70 disabled:cursor-default disabled:active:opacity-100"
         >
-          <span className="min-w-0 flex-1 truncate text-sm font-medium text-neutral-900 dark:text-neutral-100">
+          <span className="min-w-0 flex-1 text-sm font-medium wrap-anywhere text-neutral-900 dark:text-neutral-100">
             {label}
           </span>
 

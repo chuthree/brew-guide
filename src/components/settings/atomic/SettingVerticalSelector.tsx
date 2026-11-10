@@ -118,12 +118,12 @@ function SettingVerticalSelector<T extends string | number = string>({
           >
             <span
               className={cn(
-                'flex min-w-0 flex-1 items-center gap-3 py-3.5',
-                !isLast && 'border-b border-black/5 dark:border-white/5'
+                'setting-row-body flex min-w-0 flex-1 items-center gap-3',
+                !isLast && 'setting-divider'
               )}
             >
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm leading-none font-medium text-neutral-800 dark:text-neutral-200">
+                <span className="block text-sm leading-5 font-medium wrap-anywhere text-neutral-800 dark:text-neutral-200">
                   {option.label}
                 </span>
                 {option.description && (

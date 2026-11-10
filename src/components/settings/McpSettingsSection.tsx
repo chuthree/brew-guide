@@ -313,7 +313,6 @@ function DesktopMcpSettings() {
     <>
       <SettingSection
         title="MCP 连接"
-        contentShape="card"
         footer="仅限本机客户端，使用时需保持桌面应用运行。查询内容会交给所连接的模型服务处理。"
       >
         <SettingRow label="启用 MCP 连接" isLast={!status?.enabled}>
@@ -370,7 +369,7 @@ function DesktopMcpSettings() {
       </SettingSection>
 
       {serviceError ? (
-        <SettingSection title="连接操作" contentShape="card">
+        <SettingSection title="连接操作">
           <SettingRow
             label="刷新连接状态"
             onClick={handleRefresh}
@@ -429,7 +428,6 @@ function DesktopMcpSettings() {
           <div className="pb-[calc(env(safe-area-inset-bottom)+16px)]">
             <SettingSection
               title="数据范围"
-              contentShape="card"
               footer={`${EDIT_ACCESS_DESCRIPTION} 设置不含账号密钥、同步配置和 MCP 权限。`}
             >
               <div data-settings-search-id={makeSettingRowSearchId('数据范围')}>

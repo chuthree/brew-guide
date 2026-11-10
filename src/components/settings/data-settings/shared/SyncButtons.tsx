@@ -82,7 +82,7 @@ export const SyncButtons: React.FC<SyncButtonsProps> = ({
       }
     >
       <div
-        className={`grid h-4 ${onShowBackups ? 'grid-cols-4' : 'grid-cols-3'}`}
+        className={`grid min-h-setting-control ${onShowBackups ? 'grid-cols-4' : 'grid-cols-3'}`}
       >
         {actions.map(action => (
           <button
@@ -92,9 +92,9 @@ export const SyncButtons: React.FC<SyncButtonsProps> = ({
             aria-label={action.label}
             disabled={isDisabled}
             onClick={action.onClick}
-            className="relative -my-3.5 flex h-11 min-w-0 items-center justify-center px-2 text-sm leading-none font-medium text-neutral-800 before:absolute before:top-3.5 before:bottom-3.5 before:left-0 before:border-l before:border-black/5 first:before:hidden active:opacity-70 disabled:cursor-not-allowed disabled:opacity-40 dark:text-neutral-200 dark:before:border-white/5"
+            className="-my-setting-inset min-h-setting-row relative flex min-w-0 items-center justify-center px-2 text-sm leading-5 font-medium text-neutral-800 before:absolute before:top-setting-inset before:bottom-setting-inset before:left-0 before:border-l before:border-black/5 first:before:hidden active:opacity-70 disabled:cursor-not-allowed disabled:opacity-40 dark:text-neutral-200 dark:before:border-white/5"
           >
-            <span className="truncate">{action.label}</span>
+            <span className="leading-5 wrap-anywhere">{action.label}</span>
           </button>
         ))}
       </div>

@@ -232,7 +232,7 @@ export const DataManagementSection: React.FC<DataManagementSectionProps> = ({
   }
 
   const buttonClass =
-    'h-4 cursor-pointer text-sm leading-none font-medium text-neutral-600 active:opacity-70 disabled:cursor-not-allowed disabled:opacity-40 dark:text-neutral-300';
+    'setting-control cursor-pointer text-sm font-medium text-neutral-600 active:opacity-70 disabled:cursor-not-allowed disabled:opacity-40 dark:text-neutral-300';
   const statusMessage = status.type ? (
     <p
       role={status.type === 'error' ? 'alert' : 'status'}
@@ -258,7 +258,6 @@ export const DataManagementSection: React.FC<DataManagementSectionProps> = ({
           <SettingRow
             label={isExporting ? '导出中…' : '导出数据'}
             settingId={makeSettingRowSearchId('导出数据')}
-            className="min-h-11"
             onClick={handleExport}
             disabled={isExporting}
           >
@@ -268,20 +267,18 @@ export const DataManagementSection: React.FC<DataManagementSectionProps> = ({
             label="导入数据"
             onClick={handleImportClick}
             disabled={importStatus !== null}
-            className="min-h-11"
           >
             {null}
           </SettingRow>
           <SettingRow
             label="重置数据"
-            className="min-h-11"
             onClick={
               showConfirmReset ? undefined : () => setShowConfirmReset(true)
             }
             isLast
           >
             {showConfirmReset ? (
-              <div className="flex h-4 items-center gap-3">
+              <div className="setting-control flex items-center gap-3">
                 <button
                   type="button"
                   onClick={() => void handleReset()}
@@ -348,7 +345,6 @@ export const DataManagementSection: React.FC<DataManagementSectionProps> = ({
           <SettingRow
             label={isRecompressing ? '补压中…' : '图片补压'}
             settingId={makeSettingRowSearchId('图片补压')}
-            className="min-h-11"
             onClick={handleRecompressImages}
             disabled={isRecompressing}
             isLast

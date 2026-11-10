@@ -37,7 +37,7 @@ const SettingToggle: React.FC<SettingToggleProps> = ({
   };
 
   return (
-    <label className="relative inline-flex h-0 w-12 cursor-pointer items-center">
+    <label className="setting-control relative inline-flex w-12 shrink-0 cursor-pointer items-center">
       <input
         type="checkbox"
         aria-label={ariaLabel}
@@ -46,7 +46,7 @@ const SettingToggle: React.FC<SettingToggleProps> = ({
         disabled={disabled}
         className="peer sr-only"
       />
-      <div className="absolute top-1/2 left-0 h-6 w-12 -translate-y-1/2 rounded-full bg-neutral-200 transition-colors duration-200 peer-checked:bg-neutral-600 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 after:absolute after:top-0.5 after:left-0.5 after:h-5 after:w-7 after:rounded-full after:bg-white after:transition-transform after:duration-200 after:content-[''] peer-checked:after:translate-x-4 dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
+      <div className="absolute inset-0 rounded-full bg-neutral-200 transition-colors duration-200 peer-checked:bg-neutral-600 peer-focus-visible:ring-2 peer-focus-visible:ring-neutral-400 peer-focus-visible:ring-offset-2 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 after:absolute after:top-0.5 after:left-0.5 after:h-5 after:w-7 after:rounded-full after:bg-white after:transition-transform after:duration-200 after:content-[''] peer-checked:after:translate-x-4 dark:bg-neutral-700 dark:peer-checked:bg-neutral-500"></div>
     </label>
   );
 };

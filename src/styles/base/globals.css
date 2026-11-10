@@ -25,6 +25,46 @@
   }
 }
 
+@utility truncate-label {
+  @apply truncate;
+  /* Give glyphs room inside the clip without increasing row height. */
+  padding-block: 0.25em;
+  margin-block: -0.25em;
+}
+
+@theme {
+  --spacing-setting-row: 2.75rem;
+  --spacing-setting-control: 1.5rem;
+  --spacing-setting-inset: calc(
+    (var(--spacing-setting-row) - var(--spacing-setting-control)) / 2
+  );
+}
+
+@utility setting-surface {
+  @apply rounded-xl;
+  &:has(> :is([data-setting-row], .setting-row-body):only-child) {
+    border-radius: calc(var(--spacing-setting-row) / 2);
+  }
+}
+
+@utility setting-row-body {
+  min-height: var(--spacing-setting-row);
+  padding-block: var(--spacing-setting-inset);
+  line-height: 1.25rem;
+}
+
+@utility setting-control {
+  min-height: var(--spacing-setting-control);
+  line-height: 1.25rem;
+}
+
+@utility setting-divider {
+  box-shadow: inset 0 -1px rgb(0 0 0 / 5%);
+  @variant dark {
+    box-shadow: inset 0 -1px rgb(255 255 255 / 5%);
+  }
+}
+
 @utility fade-mask-to-t {
   -webkit-mask-image: linear-gradient(to top, #000, transparent);
   mask-image: linear-gradient(to top, #000, transparent);

@@ -158,8 +158,8 @@ const ActionRow: React.FC<{
       }`}
     >
       <span
-        className={`flex min-w-0 flex-1 items-center gap-3 py-3.5 ${
-          !isLast ? 'border-b border-black/5 dark:border-white/5' : ''
+        className={`setting-row-body flex min-w-0 flex-1 items-center gap-3 ${
+          !isLast ? 'setting-divider' : ''
         }`}
       >
         {Icon ? (
@@ -171,7 +171,7 @@ const ActionRow: React.FC<{
           </span>
         ) : null}
         <span
-          className={`min-w-0 flex-1 truncate text-sm font-medium ${
+          className={`min-w-0 flex-1 text-sm font-medium wrap-anywhere ${
             danger
               ? 'text-red-500 dark:text-red-400'
               : 'text-neutral-900 dark:text-neutral-100'
@@ -230,8 +230,8 @@ const MethodRow: React.FC<{
       }`}
     >
       <div
-        className={`flex min-w-0 flex-1 items-center gap-3 py-1 ${
-          !isLast ? 'border-b border-black/5 dark:border-white/5' : ''
+        className={`min-h-setting-row flex min-w-0 flex-1 items-center gap-3 ${
+          !isLast ? 'setting-divider' : ''
         }`}
       >
         <button
@@ -240,7 +240,7 @@ const MethodRow: React.FC<{
           disabled={isManageMode}
           className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 text-left transition-opacity active:opacity-70 disabled:cursor-default disabled:active:opacity-100"
         >
-          <span className="min-w-0 flex-1 truncate text-sm font-medium text-neutral-900 dark:text-neutral-100">
+          <span className="min-w-0 flex-1 text-sm font-medium wrap-anywhere text-neutral-900 dark:text-neutral-100">
             {method.name}
           </span>
 

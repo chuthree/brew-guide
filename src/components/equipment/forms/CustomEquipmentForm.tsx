@@ -1100,7 +1100,7 @@ const CustomEquipmentForm = forwardRef<
 
           <SettingSection
             title="动画帧"
-            contentShape="none"
+            unstyled
             footer="在画布上绘制水流轨迹，使用帧缩略图切换帧，多帧会按顺序播放。"
           >
             <div
@@ -1135,7 +1135,7 @@ const CustomEquipmentForm = forwardRef<
             </div>
           </SettingSection>
 
-          <SettingSection contentShape="none">
+          <SettingSection unstyled>
             <div className="flex justify-between">
               <div className="flex items-center gap-3">
                 <button
@@ -1701,7 +1701,7 @@ const CustomEquipmentForm = forwardRef<
 
     const renderEquipmentPickerContent = () => (
       <div>
-        <SettingSection contentShape="card">
+        <SettingSection>
           <SettingVerticalSelector
             ariaLabel="器具类型"
             value={selectedPreset}
@@ -1768,7 +1768,7 @@ const CustomEquipmentForm = forwardRef<
         )}
 
         {shouldShowCustomShapeControls && (
-          <SettingSection title="杯型" contentShape="none">
+          <SettingSection title="杯型" unstyled>
             <SettingCardSelector<CupShapeType>
               ariaLabel="杯型"
               value={cupShapeType}
@@ -1852,7 +1852,7 @@ const CustomEquipmentForm = forwardRef<
         )}
 
         {shouldShowPourAnimationControls && (
-          <SettingSection title="注水方式" contentShape="none">
+          <SettingSection title="注水方式" unstyled>
             {customPourAnimations.length === 0 && (
               <p className="mb-3 text-xs text-neutral-500 dark:text-neutral-400">
                 自定义器具不继承预设注水动画。请为当前杯型添加注水方式，再在方案中选择。
@@ -1865,7 +1865,7 @@ const CustomEquipmentForm = forwardRef<
                   className="flex min-w-0 flex-col rounded-lg bg-neutral-100 p-2.5 text-left dark:bg-neutral-800/80"
                 >
                   <div className="mb-2 flex min-h-5 min-w-0 items-center gap-2">
-                    <span className="min-w-0 flex-1 truncate text-sm leading-none font-medium text-neutral-800 dark:text-neutral-200">
+                    <span className="truncate-label min-w-0 flex-1 text-sm leading-none font-medium text-neutral-800 dark:text-neutral-200">
                       {animation.name || '未命名注水方式'}
                     </span>
                     {animation.isSystemDefault && (
@@ -1911,7 +1911,7 @@ const CustomEquipmentForm = forwardRef<
 
               <div className="flex min-w-0 flex-col rounded-lg bg-neutral-100 p-2.5 text-left dark:bg-neutral-800/80">
                 <div className="mb-2 flex min-h-5 min-w-0 items-center gap-2">
-                  <span className="min-w-0 flex-1 truncate text-sm leading-none font-medium text-neutral-800 dark:text-neutral-200">
+                  <span className="truncate-label min-w-0 flex-1 text-sm leading-none font-medium text-neutral-800 dark:text-neutral-200">
                     添加注水方式
                   </span>
                 </div>

@@ -176,7 +176,7 @@ export default function SettingCombobox({
       <div
         ref={setReference}
         data-vaul-no-drag
-        className="flex h-4 w-full min-w-0 items-center gap-2"
+        className="setting-control flex w-full min-w-0 items-center gap-2"
       >
         <input
           {...getReferenceProps()}
@@ -199,7 +199,7 @@ export default function SettingCombobox({
           spellCheck={false}
           placeholder={placeholder}
           disabled={disabled}
-          className="h-4 min-w-0 flex-1 rounded-none border-0 bg-transparent p-0 text-right text-sm leading-none font-normal text-neutral-600 shadow-none select-text placeholder:text-neutral-400 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-neutral-600 disabled:opacity-40 dark:text-neutral-300 dark:placeholder:text-neutral-500 dark:focus-visible:outline-neutral-300"
+          className="setting-control min-w-0 flex-1 rounded-none border-0 bg-transparent p-0 text-right text-sm font-normal text-neutral-600 shadow-none select-text placeholder:text-neutral-400 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-neutral-600 disabled:opacity-40 dark:text-neutral-300 dark:placeholder:text-neutral-500 dark:focus-visible:outline-neutral-300"
         />
         <button
           type="button"
@@ -248,7 +248,7 @@ export default function SettingCombobox({
                   }
                   className={`w-full text-right hover:bg-neutral-200/60 dark:hover:bg-neutral-700/60 ${settingMenuItem}`}
                 >
-                  <span className="min-w-0 truncate">{option.label}</span>
+                  <span className="min-w-0 wrap-anywhere">{option.label}</span>
                   {value === option.value && (
                     <Check className="absolute right-2 size-4 text-neutral-600 dark:text-neutral-300" />
                   )}

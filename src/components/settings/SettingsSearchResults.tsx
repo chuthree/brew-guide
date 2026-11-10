@@ -36,14 +36,16 @@ const SettingsSearchResultRow: React.FC<{
       </div>
 
       <div
-        className={`flex min-w-0 flex-1 items-center justify-between border-b py-3.5 ${
-          !isLast ? 'border-black/5 dark:border-white/5' : 'border-transparent'
+        className={`setting-row-body flex min-w-0 flex-1 items-center justify-between ${
+          !isLast ? 'setting-divider' : ''
         }`}
       >
         <div className="flex min-w-0 flex-col items-start gap-0.5">
-          <span className="max-w-full truncate leading-none">{item.label}</span>
+          <span className="max-w-full leading-5 wrap-anywhere">
+            {item.label}
+          </span>
           {entryPath && (
-            <span className="max-w-full truncate text-xs font-normal text-neutral-400 dark:text-neutral-500">
+            <span className="max-w-full text-xs font-normal wrap-anywhere text-neutral-400 dark:text-neutral-500">
               {entryPath}
             </span>
           )}

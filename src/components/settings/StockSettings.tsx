@@ -159,7 +159,7 @@ const StockSettings: React.FC<StockSettingsProps> = ({ onClose }) => {
         </SettingRow>
       </SettingSection>
 
-      <SettingSection title="预设快捷扣除量" contentShape="card">
+      <SettingSection title="预设快捷扣除量">
         <div
           data-settings-search-id={makeSettingRowSearchId('预设快捷扣除量')}
           className={`transition-colors ${
@@ -170,7 +170,7 @@ const StockSettings: React.FC<StockSettingsProps> = ({ onClose }) => {
         >
           {isAddingPreset ? (
             <SettingRow vertical isLast={decrementPresets.length === 0}>
-              <div className="flex h-4 min-w-0 items-center gap-2">
+              <div className="setting-control flex min-w-0 items-center gap-2">
                 <input
                   type="text"
                   inputMode="decimal"
@@ -184,8 +184,14 @@ const StockSettings: React.FC<StockSettingsProps> = ({ onClose }) => {
                         ? value.substring(0, value.lastIndexOf('.'))
                         : value;
                     const dotIndex = sanitizedValue.indexOf('.');
-                    if (dotIndex !== -1 && dotIndex < sanitizedValue.length - 2) {
-                      sanitizedValue = sanitizedValue.substring(0, dotIndex + 2);
+                    if (
+                      dotIndex !== -1 &&
+                      dotIndex < sanitizedValue.length - 2
+                    ) {
+                      sanitizedValue = sanitizedValue.substring(
+                        0,
+                        dotIndex + 2
+                      );
                     }
                     setDecrementValue(sanitizedValue);
                   }}
@@ -203,7 +209,7 @@ const StockSettings: React.FC<StockSettingsProps> = ({ onClose }) => {
                   }}
                   placeholder="输入扣除克数（g）"
                   autoFocus
-                  className="h-4 min-w-0 flex-1 appearance-none bg-transparent p-0 text-sm leading-none font-medium text-neutral-900 placeholder:text-neutral-400 focus:outline-none dark:text-neutral-100 dark:placeholder:text-neutral-500"
+                  className="setting-control min-w-0 flex-1 appearance-none bg-transparent p-0 text-sm leading-5 font-medium text-neutral-900 placeholder:text-neutral-400 focus:outline-none dark:text-neutral-100 dark:placeholder:text-neutral-500"
                 />
                 <button
                   type="button"
@@ -216,7 +222,7 @@ const StockSettings: React.FC<StockSettingsProps> = ({ onClose }) => {
                       parseFloat(parseFloat(decrementValue).toFixed(1))
                     )
                   }
-                  className="shrink-0 cursor-pointer text-sm leading-none font-medium text-neutral-600 active:opacity-70 disabled:cursor-not-allowed disabled:opacity-40 dark:text-neutral-300"
+                  className="shrink-0 cursor-pointer text-sm leading-5 font-medium text-neutral-600 active:opacity-70 disabled:cursor-not-allowed disabled:opacity-40 dark:text-neutral-300"
                 >
                   添加
                 </button>
@@ -227,7 +233,7 @@ const StockSettings: React.FC<StockSettingsProps> = ({ onClose }) => {
               onClick={() => setIsAddingPreset(true)}
               isLast={decrementPresets.length === 0}
             >
-              <span className="flex h-4 items-center text-sm leading-none font-medium text-neutral-900 dark:text-neutral-100">
+              <span className="setting-control flex items-center text-sm leading-5 font-medium text-neutral-900 dark:text-neutral-100">
                 添加预设
               </span>
             </SettingRow>
@@ -238,8 +244,8 @@ const StockSettings: React.FC<StockSettingsProps> = ({ onClose }) => {
               vertical
               isLast={index === decrementPresets.length - 1}
             >
-              <div className="flex h-4 min-w-0 items-center justify-between gap-3 text-sm leading-none font-medium text-neutral-900 dark:text-neutral-100">
-                <span className="min-w-0 truncate">{value} g</span>
+              <div className="setting-control flex min-w-0 items-center justify-between gap-3 text-sm leading-5 font-medium text-neutral-900 dark:text-neutral-100">
+                <span className="truncate-label min-w-0">{value} g</span>
                 <button
                   type="button"
                   aria-label={`${deletingPreset === value ? '确认删除' : '删除'} ${value} g 的扣除预设`}
@@ -251,7 +257,7 @@ const StockSettings: React.FC<StockSettingsProps> = ({ onClose }) => {
                       setDeletingPreset(value);
                     }
                   }}
-                  className={`shrink-0 cursor-pointer text-sm leading-none font-medium active:opacity-70 ${
+                  className={`shrink-0 cursor-pointer text-sm leading-5 font-medium active:opacity-70 ${
                     deletingPreset === value
                       ? 'text-red-500 dark:text-red-400'
                       : 'text-neutral-600 dark:text-neutral-300'
