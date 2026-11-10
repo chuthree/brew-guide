@@ -213,7 +213,7 @@ describe('atomic SQLite backup import', () => {
   it('keeps old files until commit and removes only unreferenced files afterwards', async () => {
     const oldKeys = [...files.keys()];
     const transaction = database.driver.transaction.bind(database.driver);
-    vi.spyOn(database.driver, 'transaction').mockImplementation(work =>
+    vi.spyOn(database.driver, 'transaction').mockImplementationOnce(work =>
       transaction(async tx => {
         const result = await work(tx);
         for (const key of oldKeys) expect(files.has(key)).toBe(true);

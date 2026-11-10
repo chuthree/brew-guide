@@ -78,14 +78,26 @@ export async function initializeDataLayer(): Promise<void> {
     // 3. 并行初始化所有 Store
     console.log('📦 Step 3: 初始化 Stores...');
     recordCrashCheckpoint('data-layer:stores:init');
-    await Promise.all([
-      useSettingsStore.getState().loadSettings(),
-      useCoffeeBeanStore.getState().loadBeans(),
-      useBrewingNoteStore.getState().loadNotes(),
-      useCustomEquipmentStore.getState().loadEquipments(),
-      useCustomMethodStore.getState().loadMethods(),
-      useGrinderStore.getState().initialize(),
-    ]);
+    const initializers = [
+      ['应用设置', useSettingsStore.getState().loadSettings],
+      ['咖啡豆', useCoffeeBeanStore.getState().loadBeans],
+      ['冲煮笔记', useBrewingNoteStore.getState().loadNotes],
+      ['自定义器具', useCustomEquipmentStore.getState().loadEquipments],
+      ['自定义方案', useCustomMethodStore.getState().loadMethods],
+      ['磨豆机', useGrinderStore.getState().initialize],
+    ] as const;
+    await Promise.all(
+      initializers.map(async ([name, initialize]) => {
+        try {
+          await initialize();
+        } catch (cause) {
+          throw new Error(
+            `${name}加载失败: ${cause instanceof Error ? cause.message : String(cause)}`,
+            { cause }
+          );
+        }
+      })
+    );
 
     // 4. 同步初始化 UI 状态 Store（不需要 await，不涉及异步操作）
     recordCrashCheckpoint('data-layer:ui-store:init');

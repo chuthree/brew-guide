@@ -1,5 +1,46 @@
 import type { SqliteExecutor, SqlValue } from '../driver';
 
+export const SQLITE_TEXT_CHUNK_SIZE = 256 * 1024;
+
+/** Read a single TEXT column aliased as value, within the caller's transaction. */
+export async function readChunkedText(
+  executor: SqliteExecutor,
+  sourceSql: string,
+  params: readonly SqlValue[]
+): Promise<string | undefined> {
+  // SQLite substr offsets count codepoints; each result fits Android's CursorWindow.
+  const first = await queryOptionalRow(
+    executor,
+    `SELECT substr(value, 1, ${SQLITE_TEXT_CHUNK_SIZE}) AS value,
+            length(value) AS total, instr(value, char(0)) AS nul_position
+     FROM (${sourceSql})`,
+    params
+  );
+  if (!first) return undefined;
+  if (
+    first.nul_position !== 0 ||
+    typeof first.total !== 'number' ||
+    typeof first.value !== 'string'
+  )
+    throw new Error('Invalid SQLite chunked text');
+  const chunks = [first.value];
+  for (
+    let position = SQLITE_TEXT_CHUNK_SIZE + 1;
+    position <= first.total;
+    position += SQLITE_TEXT_CHUNK_SIZE
+  ) {
+    const row = await queryOptionalRow(
+      executor,
+      `SELECT substr(value, ${position}, ${SQLITE_TEXT_CHUNK_SIZE}) AS value FROM (${sourceSql})`,
+      params
+    );
+    if (!row || typeof row.value !== 'string')
+      throw new Error('SQLite text disappeared during read');
+    chunks.push(row.value);
+  }
+  return chunks.join('');
+}
+
 export async function queryOptionalRow(
   executor: SqliteExecutor,
   sql: string,

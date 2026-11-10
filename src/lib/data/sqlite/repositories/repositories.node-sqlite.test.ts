@@ -116,6 +116,53 @@ describeNodeSqlite(`${nodeSqliteLabel} repository integration`, () => {
       );
       await expect(repository.get()).rejects.toThrow(/JSON|record/i);
     });
+
+    it('reads an existing oversized settings row in bounded chunks without modifying it', async () => {
+      const driver = getDatabase().driver;
+      const settings = appSettings({
+        roasterConfigs: [
+          {
+            roasterName: '大图',
+            logoData: 'data:image/png;base64,' + 'A'.repeat(3 * 1024 * 1024),
+          },
+        ],
+        unicode: '🌱咖啡'.repeat(150000),
+        tail: '末尾\u0000保留',
+      });
+      const json = JSON.stringify(settings);
+      await driver.execute(
+        'INSERT INTO app_settings (id, data_json) VALUES (?, ?)',
+        ['main', json]
+      );
+      let reads = 0;
+      const bounded = createSqliteAppSettingsRepository({
+        ...driver,
+        transaction: work =>
+          driver.transaction(tx =>
+            work({
+              ...tx,
+              async query(sql, params) {
+                const rows = await tx.query(sql, params);
+                reads++;
+                expect(Buffer.byteLength(JSON.stringify(rows))).toBeLessThan(
+                  2 * 1024 * 1024
+                );
+                return rows;
+              },
+            })
+          ),
+      });
+      expect(await bounded.get()).toEqual(settings);
+      expect(reads).toBeGreaterThan(1);
+      expect(
+        (
+          await driver.query(
+            'SELECT data_json FROM app_settings WHERE id = ?',
+            ['main']
+          )
+        )[0].data_json
+      ).toBe(json);
+    });
   });
 
   describe('LegacySettingsRepository', () => {
@@ -257,7 +304,7 @@ describeNodeSqlite(`${nodeSqliteLabel} repository integration`, () => {
       );
       const key = 'cloud-sync-base-v1:corrupt';
       await repository.set(key, '{"data":{}}\u0000corrupt');
-      await expect(repository.get(key)).rejects.toThrow('baseline');
+      await expect(repository.get(key)).rejects.toThrow('chunked text');
     });
   });
 

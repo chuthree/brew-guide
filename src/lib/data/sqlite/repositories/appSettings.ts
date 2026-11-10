@@ -3,7 +3,7 @@ import type { AppSettings } from '@/lib/data/models';
 import { decodeAppSettings, encodeAppSettings } from '../codecs';
 import type { AppSettingsRow } from '../schemaV1';
 import type { SqliteDriver, SqliteExecutor } from '../driver';
-import { countTable, queryOptionalRow } from './sqlHelpers';
+import { countTable, readChunkedText } from './sqlHelpers';
 
 const MAIN_SETTINGS_ID = 'main';
 
@@ -11,13 +11,16 @@ const MAIN_SETTINGS_ID = 'main';
 export async function getAppSettings(
   executor: SqliteExecutor
 ): Promise<AppSettings | undefined> {
-  const row = await queryOptionalRow(
+  const data = await readChunkedText(
     executor,
-    'SELECT id, data_json FROM app_settings WHERE id = ?',
+    'SELECT data_json AS value FROM app_settings WHERE id = ?',
     [MAIN_SETTINGS_ID]
   );
-  if (!row) return undefined;
-  return decodeAppSettings(row as unknown as AppSettingsRow).data;
+  if (data === undefined) return undefined;
+  return decodeAppSettings({
+    id: MAIN_SETTINGS_ID,
+    data_json: data,
+  } satisfies AppSettingsRow).data;
 }
 
 export async function saveAppSettings(
@@ -41,7 +44,7 @@ export function createSqliteAppSettingsRepository(
   driver: SqliteDriver
 ): AppSettingsRepository {
   return {
-    get: () => getAppSettings(driver),
+    get: () => driver.transaction(getAppSettings),
     save: settings => saveAppSettings(driver, settings),
     count: () => countTable(driver, 'app_settings'),
     clear: () => clearAppSettings(driver),

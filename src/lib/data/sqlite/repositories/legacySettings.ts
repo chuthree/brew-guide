@@ -5,9 +5,12 @@ import type {
 import { decodeLegacySetting, encodeLegacySetting } from '../codecs';
 import type { LegacySettingsRow } from '../schemaV1';
 import type { SqliteDriver, SqliteExecutor } from '../driver';
-import { countTable, queryOptionalRow } from './sqlHelpers';
-
-const BASELINE_CHUNK_SIZE = 256 * 1024;
+import {
+  countTable,
+  queryOptionalRow,
+  readChunkedText,
+  SQLITE_TEXT_CHUNK_SIZE as BASELINE_CHUNK_SIZE,
+} from './sqlHelpers';
 
 async function getLegacySetting(
   executor: SqliteExecutor,
@@ -26,35 +29,11 @@ async function getSyncBaseline(
   executor: SqliteExecutor,
   key: string
 ): Promise<string | undefined> {
-  // Bound both CursorWindow rows and bridge responses; offsets count SQLite codepoints.
-  const first = await queryOptionalRow(
+  return readChunkedText(
     executor,
-    `SELECT key, substr(value, 1, ?) AS value, length(value) AS total,
-            instr(value, char(0)) AS nul_position
-     FROM legacy_settings WHERE key = ?`,
-    [BASELINE_CHUNK_SIZE, key]
+    'SELECT value FROM legacy_settings WHERE key = ?',
+    [key]
   );
-  if (!first) return undefined;
-  if (first.nul_position !== 0 || typeof first.total !== 'number') {
-    throw new Error('Invalid SQLite sync baseline text');
-  }
-  const chunks = [
-    decodeLegacySetting(first as unknown as LegacySettingsRow).value,
-  ];
-  for (
-    let position = BASELINE_CHUNK_SIZE + 1;
-    position <= first.total;
-    position += BASELINE_CHUNK_SIZE
-  ) {
-    const row = await queryOptionalRow(
-      executor,
-      'SELECT key, substr(value, ?, ?) AS value FROM legacy_settings WHERE key = ?',
-      [position, BASELINE_CHUNK_SIZE, key]
-    );
-    if (!row) throw new Error('SQLite sync baseline disappeared during read');
-    chunks.push(decodeLegacySetting(row as unknown as LegacySettingsRow).value);
-  }
-  return chunks.join('');
 }
 
 async function setLegacySetting(
