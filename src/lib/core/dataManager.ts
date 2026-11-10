@@ -463,6 +463,8 @@ export const DataManager = {
             )
           )
             throw new Error(`${key} 格式无效，应为包含有效 id 的记录数组`);
+          if (new Set(records.map(record => record.id)).size !== records.length)
+            throw new Error(`${key} 中存在重复 id`);
         }
         if (Array.isArray(data.coffeeBeans)) {
           plan.coffeeBeans = normalizeCoffeeBeans(
@@ -541,6 +543,11 @@ export const DataManager = {
             plan.grinders = legacyGrinders.filter(
               g => g && typeof g === 'object' && g.id && g.name
             );
+            if (
+              new Set(plan.grinders.map(grinder => grinder.id)).size !==
+              plan.grinders.length
+            )
+              throw new Error('grinders 中存在重复 id');
           }
           plan.settings = normalizeImportedSettings(
             settings as _SettingsOptions
