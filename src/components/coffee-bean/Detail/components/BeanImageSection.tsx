@@ -44,11 +44,6 @@ interface BeanImageSectionProps {
   ) => void;
 }
 
-type ImageLoadError = {
-  source: string | null;
-  failed: boolean;
-};
-
 type ImageErrorHandlers = {
   hasImageError: (source: string | null | undefined) => boolean;
   markImageError: (source: string | null | undefined) => void;
@@ -59,10 +54,7 @@ export const BeanImageSmall: React.FC<{
   bean: CoffeeBean;
   onClick?: (sourceElement: HTMLElement) => void;
 }> = ({ bean, onClick }) => {
-  const [imageError, setImageError] = useState<ImageLoadError>({
-    source: null,
-    failed: false,
-  });
+  const [failedImage, setFailedImage] = useState<string | null>(null);
 
   // 获取烘焙商字段设置
   const roasterFieldEnabled = useSettingsStore(
@@ -99,7 +91,7 @@ export const BeanImageSmall: React.FC<{
     return null;
   }, [bean.name, beanImage, configuredRoasterLogo, roasterName]);
   const hasImageError = (source: string | null | undefined) =>
-    Boolean(source && imageError.source === source && imageError.failed);
+    Boolean(source && failedImage === source);
 
   return (
     <div
@@ -119,7 +111,7 @@ export const BeanImageSmall: React.FC<{
           className="object-cover"
           sizes="40px"
           loading="eager"
-          onError={() => setImageError({ source: beanImage, failed: true })}
+          onError={() => setFailedImage(beanImage)}
         />
       ) : roasterLogo && !hasImageError(roasterLogo) ? (
         <Image
@@ -129,7 +121,7 @@ export const BeanImageSmall: React.FC<{
           className="object-cover"
           sizes="40px"
           loading="eager"
-          onError={() => setImageError({ source: roasterLogo, failed: true })}
+          onError={() => setFailedImage(roasterLogo)}
         />
       ) : (
         <div className="flex h-full w-full items-center justify-center text-[10px] font-medium text-neutral-400 dark:text-neutral-600">
@@ -163,15 +155,14 @@ const BeanImageSection: React.FC<BeanImageSectionProps> = ({
     }),
     [roasterFieldEnabled, roasterSeparator]
   );
-  const [imageError, setImageError] = useState<ImageLoadError>({
-    source: null,
-    failed: false,
-  });
+  const [failedImages, setFailedImages] = useState<Set<string>>(
+    () => new Set()
+  );
   const hasImageError = (source: string | null | undefined) =>
-    Boolean(source && imageError.source === source && imageError.failed);
+    Boolean(source && failedImages.has(source));
   const markImageError = (source: string | null | undefined) => {
     if (source) {
-      setImageError({ source, failed: true });
+      setFailedImages(current => new Set(current).add(source));
     }
   };
   const storedFrontImage = useCoffeeBeanImage(bean?.id, {
@@ -373,10 +364,39 @@ const AddModeImages: React.FC<{
       ? tempBean.backImage
       : undefined;
 
-  // 状态: 用户正面图 + 用户背面图
-  if (tempFrontImage && tempBackImage) {
+  const displayRoasterLogo =
+    roasterLogo && !hasImageError(roasterLogo) ? roasterLogo : undefined;
+
+  if (!tempFrontImage && !tempBackImage && !displayRoasterLogo) {
     return (
       <>
+        <div className="relative h-20 shrink-0 overflow-hidden bg-neutral-200/50 dark:bg-neutral-800">
+          <button
+            type="button"
+            onClick={() => handleImageSelect('camera', 'front')}
+            className="flex h-full w-20 items-center justify-center transition-colors hover:bg-neutral-200/80 dark:hover:bg-neutral-700/80"
+            title="拍照"
+          >
+            <Camera className="h-5 w-5 text-neutral-300 dark:text-neutral-600" />
+          </button>
+        </div>
+        <div className="relative h-32 overflow-hidden bg-neutral-200/50 dark:bg-neutral-800">
+          <button
+            type="button"
+            onClick={() => handleImageSelect('gallery', 'front')}
+            className="flex h-full w-32 items-center justify-center transition-colors hover:bg-neutral-200/80 dark:hover:bg-neutral-700/80"
+            title="从相册选择"
+          >
+            <ImageIcon className="h-6 w-6 text-neutral-300 dark:text-neutral-600" />
+          </button>
+        </div>
+      </>
+    );
+  }
+
+  return (
+    <>
+      {tempFrontImage ? (
         <div className="relative h-32 overflow-hidden bg-neutral-100 dark:bg-neutral-800">
           <Image
             src={tempFrontImage}
@@ -387,11 +407,9 @@ const AddModeImages: React.FC<{
             sizes="192px"
             loading="eager"
             onError={() => markImageError(tempFrontImage)}
-            onClick={e => {
-              if (!hasImageError(tempFrontImage)) {
-                onImageClick(tempFrontImage, tempBackImage, e.currentTarget);
-              }
-            }}
+            onClick={e =>
+              onImageClick(tempFrontImage, tempBackImage, e.currentTarget)
+            }
           />
           <button
             type="button"
@@ -404,86 +422,7 @@ const AddModeImages: React.FC<{
             <span className="text-xs">×</span>
           </button>
         </div>
-        <div className="relative h-20 shrink-0 self-end overflow-hidden bg-neutral-100 dark:bg-neutral-800">
-          <Image
-            src={tempBackImage}
-            alt={tempBean.name || '咖啡豆背面'}
-            height={80}
-            width={80}
-            className="h-full w-auto object-cover"
-            sizes="80px"
-            loading="eager"
-            onError={() => markImageError(tempBackImage)}
-            onClick={e => {
-              if (!hasImageError(tempBackImage)) {
-                onImageClick(tempBackImage, tempFrontImage, e.currentTarget);
-              }
-            }}
-          />
-          <button
-            type="button"
-            onClick={e => {
-              e.stopPropagation();
-              setTempBean(prev => ({ ...prev, backImage: '' }));
-            }}
-            className="absolute top-1 right-1 flex h-5 w-5 items-center justify-center rounded-full bg-neutral-800/80 text-white transition-colors hover:bg-red-500"
-          >
-            <span className="text-xs">×</span>
-          </button>
-        </div>
-      </>
-    );
-  }
-
-  // 状态: 用户正面图 + 添加背面按钮
-  if (tempFrontImage && !tempBackImage) {
-    return (
-      <>
-        <div className="relative h-32 overflow-hidden bg-neutral-100 dark:bg-neutral-800">
-          <Image
-            src={tempFrontImage}
-            alt={tempBean.name || '咖啡豆正面'}
-            height={192}
-            width={192}
-            className="h-full w-auto object-cover"
-            sizes="192px"
-            loading="eager"
-            onError={() => markImageError(tempFrontImage)}
-            onClick={e => {
-              if (!hasImageError(tempFrontImage)) {
-                onImageClick(tempFrontImage, undefined, e.currentTarget);
-              }
-            }}
-          />
-          <button
-            type="button"
-            onClick={e => {
-              e.stopPropagation();
-              setTempBean(prev => ({ ...prev, image: '' }));
-            }}
-            className="absolute top-1 right-1 flex h-5 w-5 items-center justify-center rounded-full bg-neutral-800/80 text-white transition-colors hover:bg-red-500"
-          >
-            <span className="text-xs">×</span>
-          </button>
-        </div>
-        <div className="relative h-20 w-20 shrink-0 self-end overflow-hidden bg-neutral-200/50 dark:bg-neutral-800">
-          <button
-            type="button"
-            onClick={() => handleImageSelect('gallery', 'back')}
-            className="flex h-full w-full items-center justify-center transition-colors hover:bg-neutral-200/80 dark:hover:bg-neutral-700/80"
-            title="添加背面图片"
-          >
-            <ImageIcon className="h-5 w-5 text-neutral-300 dark:text-neutral-600" />
-          </button>
-        </div>
-      </>
-    );
-  }
-
-  // 状态: 烘焙商图标作为正面
-  if (!tempFrontImage && roasterLogo && !hasImageError(roasterLogo)) {
-    return (
-      <>
+      ) : displayRoasterLogo ? (
         <button
           type="button"
           className="relative block h-32 cursor-pointer overflow-hidden bg-neutral-100 p-0 dark:bg-neutral-800"
@@ -491,67 +430,20 @@ const AddModeImages: React.FC<{
           title="点击替换为自定义图片"
         >
           <Image
-            src={roasterLogo}
+            src={displayRoasterLogo}
             alt={getRoasterAltText(tempBean, roasterSettings)}
             height={192}
             width={192}
             className="h-full w-auto object-cover"
             sizes="192px"
             loading="eager"
-            onError={() => markImageError(roasterLogo)}
+            onError={() => markImageError(displayRoasterLogo)}
           />
           <div className="absolute inset-0 flex items-center justify-center bg-black/20 opacity-0 transition-opacity hover:opacity-100">
             <Camera className="h-6 w-6 text-white drop-shadow-md" />
           </div>
         </button>
-        {tempBackImage ? (
-          <div className="relative h-20 shrink-0 self-end overflow-hidden bg-neutral-100 dark:bg-neutral-800">
-            <Image
-              src={tempBackImage}
-              alt={tempBean.name || '咖啡豆背面'}
-              height={80}
-              width={80}
-              className="h-full w-auto object-cover"
-              sizes="80px"
-              loading="eager"
-              onError={() => markImageError(tempBackImage)}
-              onClick={e => {
-                if (!hasImageError(tempBackImage)) {
-                  onImageClick(tempBackImage, roasterLogo, e.currentTarget);
-                }
-              }}
-            />
-            <button
-              type="button"
-              onClick={e => {
-                e.stopPropagation();
-                setTempBean(prev => ({ ...prev, backImage: '' }));
-              }}
-              className="absolute top-1 right-1 flex h-5 w-5 items-center justify-center rounded-full bg-neutral-800/80 text-white transition-colors hover:bg-red-500"
-            >
-              <span className="text-xs">×</span>
-            </button>
-          </div>
-        ) : (
-          <div className="relative h-20 w-20 shrink-0 self-end overflow-hidden bg-neutral-200/50 dark:bg-neutral-800">
-            <button
-              type="button"
-              onClick={() => handleImageSelect('gallery', 'back')}
-              className="flex h-full w-full items-center justify-center transition-colors hover:bg-neutral-200/80 dark:hover:bg-neutral-700/80"
-              title="添加背面图片"
-            >
-              <ImageIcon className="h-5 w-5 text-neutral-300 dark:text-neutral-600" />
-            </button>
-          </div>
-        )}
-      </>
-    );
-  }
-
-  // 状态: 无正面图 + 有用户背面图
-  if (!tempFrontImage && tempBackImage) {
-    return (
-      <>
+      ) : (
         <div className="relative h-32 overflow-hidden bg-neutral-200/50 dark:bg-neutral-800">
           <button
             type="button"
@@ -562,6 +454,8 @@ const AddModeImages: React.FC<{
             <ImageIcon className="h-6 w-6 text-neutral-300 dark:text-neutral-600" />
           </button>
         </div>
+      )}
+      {tempBackImage ? (
         <div className="relative h-20 shrink-0 self-end overflow-hidden bg-neutral-100 dark:bg-neutral-800">
           <Image
             src={tempBackImage}
@@ -572,11 +466,13 @@ const AddModeImages: React.FC<{
             sizes="80px"
             loading="eager"
             onError={() => markImageError(tempBackImage)}
-            onClick={e => {
-              if (!hasImageError(tempBackImage)) {
-                onImageClick(tempBackImage, undefined, e.currentTarget);
-              }
-            }}
+            onClick={e =>
+              onImageClick(
+                tempBackImage,
+                tempFrontImage || displayRoasterLogo,
+                e.currentTarget
+              )
+            }
           />
           <button
             type="button"
@@ -589,33 +485,18 @@ const AddModeImages: React.FC<{
             <span className="text-xs">×</span>
           </button>
         </div>
-      </>
-    );
-  }
-
-  // 状态: 无任何图片 → 拍照 + 相册
-  return (
-    <>
-      <div className="relative h-20 shrink-0 overflow-hidden bg-neutral-200/50 dark:bg-neutral-800">
-        <button
-          type="button"
-          onClick={() => handleImageSelect('camera', 'front')}
-          className="flex h-full w-20 items-center justify-center transition-colors hover:bg-neutral-200/80 dark:hover:bg-neutral-700/80"
-          title="拍照"
-        >
-          <Camera className="h-5 w-5 text-neutral-300 dark:text-neutral-600" />
-        </button>
-      </div>
-      <div className="relative h-32 overflow-hidden bg-neutral-200/50 dark:bg-neutral-800">
-        <button
-          type="button"
-          onClick={() => handleImageSelect('gallery', 'front')}
-          className="flex h-full w-32 items-center justify-center transition-colors hover:bg-neutral-200/80 dark:hover:bg-neutral-700/80"
-          title="从相册选择"
-        >
-          <ImageIcon className="h-6 w-6 text-neutral-300 dark:text-neutral-600" />
-        </button>
-      </div>
+      ) : (
+        <div className="relative h-20 w-20 shrink-0 self-end overflow-hidden bg-neutral-200/50 dark:bg-neutral-800">
+          <button
+            type="button"
+            onClick={() => handleImageSelect('gallery', 'back')}
+            className="flex h-full w-full items-center justify-center transition-colors hover:bg-neutral-200/80 dark:hover:bg-neutral-700/80"
+            title="添加背面图片"
+          >
+            <ImageIcon className="h-5 w-5 text-neutral-300 dark:text-neutral-600" />
+          </button>
+        </div>
+      )}
     </>
   );
 };
@@ -641,93 +522,56 @@ const ViewModeImages: React.FC<{
   onRoasterLogoClick,
   roasterSettings,
 }) => {
-  if (bean?.image && !hasImageError(bean.image)) {
-    return (
-      <>
-        <div className="relative h-32 overflow-hidden bg-neutral-100 dark:bg-neutral-800">
+  const frontImage =
+    bean?.image && !hasImageError(bean.image) ? bean.image : undefined;
+  const displayImage =
+    frontImage ||
+    (roasterLogo && !hasImageError(roasterLogo) ? roasterLogo : undefined);
+
+  if (!displayImage) return null;
+
+  return (
+    <>
+      <div className="relative h-32 overflow-hidden bg-neutral-100 dark:bg-neutral-800">
+        <Image
+          src={displayImage}
+          alt={
+            frontImage
+              ? bean?.name || '咖啡豆正面'
+              : getRoasterAltText(bean, roasterSettings)
+          }
+          height={192}
+          width={192}
+          className="h-full w-auto object-cover"
+          sizes="192px"
+          loading="eager"
+          onError={() => markImageError(displayImage)}
+          onClick={e => {
+            if (frontImage) {
+              onStoredImageClick('front', e.currentTarget);
+            } else {
+              onRoasterLogoClick(e.currentTarget);
+            }
+          }}
+        />
+      </div>
+      {bean?.backImage && !hasImageError(bean.backImage) && (
+        <div className="relative h-20 shrink-0 self-end overflow-hidden bg-neutral-100 dark:bg-neutral-800">
           <Image
-            src={bean.image}
-            alt={bean.name || '咖啡豆正面'}
-            height={192}
-            width={192}
+            src={bean.backImage}
+            alt={bean.name || '咖啡豆背面'}
+            height={80}
+            width={80}
             className="h-full w-auto object-cover"
-            sizes="192px"
+            sizes="80px"
             loading="eager"
-            onError={() => markImageError(bean.image)}
-            onClick={e => {
-              if (bean.image && !hasImageError(bean.image)) {
-                onStoredImageClick('front', e.currentTarget);
-              }
-            }}
+            onError={() => markImageError(bean.backImage)}
+            onClick={e => onStoredImageClick('back', e.currentTarget)}
           />
         </div>
-        {bean.backImage && !hasImageError(bean.backImage) && (
-          <div className="relative h-20 shrink-0 self-end overflow-hidden bg-neutral-100 dark:bg-neutral-800">
-            <Image
-              src={bean.backImage}
-              alt={bean.name || '咖啡豆背面'}
-              height={80}
-              width={80}
-              className="h-full w-auto object-cover"
-              sizes="80px"
-              loading="eager"
-              onError={() => markImageError(bean.backImage)}
-              onClick={e => {
-                if (bean.backImage && !hasImageError(bean.backImage)) {
-                  onStoredImageClick('back', e.currentTarget);
-                }
-              }}
-            />
-          </div>
-        )}
-      </>
-    );
-  }
-
-  if (roasterLogo && !hasImageError(roasterLogo)) {
-    return (
-      <>
-        <div className="relative h-32 overflow-hidden bg-neutral-100 dark:bg-neutral-800">
-          <Image
-            src={roasterLogo}
-            alt={getRoasterAltText(bean, roasterSettings)}
-            height={192}
-            width={192}
-            className="h-full w-auto object-cover"
-            sizes="192px"
-            loading="eager"
-            onError={() => markImageError(roasterLogo)}
-            onClick={e => {
-              if (roasterLogo && !hasImageError(roasterLogo)) {
-                onRoasterLogoClick(e.currentTarget);
-              }
-            }}
-          />
-        </div>
-        {bean?.backImage && !hasImageError(bean.backImage) && (
-          <div className="relative h-20 shrink-0 self-end overflow-hidden bg-neutral-100 dark:bg-neutral-800">
-            <Image
-              src={bean.backImage}
-              alt={bean.name || '咖啡豆背面'}
-              height={80}
-              width={80}
-              className="h-full w-auto object-cover"
-              sizes="80px"
-              loading="eager"
-              onError={() => markImageError(bean.backImage)}
-              onClick={e => {
-                if (bean.backImage && !hasImageError(bean.backImage)) {
-                  onStoredImageClick('back', e.currentTarget);
-                }
-              }}
-            />
-          </div>
-        )}
-      </>
-    );
-  }
-
-  return null;
+      )}
+    </>
+  );
 };
 
 export default BeanImageSection;
