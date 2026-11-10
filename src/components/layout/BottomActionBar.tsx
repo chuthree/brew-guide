@@ -1,9 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import {
-  useIsDesktopLayout,
-  useIsLargeScreen,
-  pageStackManager,
-} from '@/lib/navigation/pageTransition';
+import React from 'react';
 
 export interface ButtonConfig {
   text: string;
@@ -23,25 +18,9 @@ const BottomActionBar: React.FC<BottomActionBarProps> = ({
   className = '',
   bottomHint,
 }) => {
-  const isDesktopLayout = useIsDesktopLayout();
-  const isLargeScreen = useIsLargeScreen();
-  const [hasDetailPanel, setHasDetailPanel] = useState(false);
-
-  // 监听详情面板状态变化
-  useEffect(() => {
-    return pageStackManager.subscribe(setHasDetailPanel);
-  }, []);
-
   return (
     <div
-      className={`fixed bottom-0 left-0 transition-[right,left] duration-350 ease-in-out md:transition-none ${className}`}
-      style={{
-        left: isDesktopLayout ? 'var(--nav-panel-width, 144px)' : 0,
-        right:
-          isLargeScreen && hasDetailPanel
-            ? 'var(--detail-panel-width, 384px)'
-            : 0,
-      }}
+      className={`fixed inset-x-0 bottom-0 md:right-[var(--detail-panel-offset,0px)] md:left-[var(--nav-panel-width,144px)] ${className}`}
     >
       <div className="fade-mask-to-t pointer-events-none absolute right-0 bottom-full left-0 h-12 bg-neutral-50 dark:bg-neutral-900"></div>
       <div className="pb-safe-bottom bg-neutral-50 dark:bg-neutral-900">
