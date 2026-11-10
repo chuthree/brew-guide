@@ -30,10 +30,12 @@ export function createDexieGrinderRepository(
     },
 
     async replaceAll(grinders) {
-      await table.clear();
-      if (grinders.length > 0) {
-        await table.bulkPut(grinders);
-      }
+      await table.db.transaction('rw', table, async () => {
+        await table.clear();
+        if (grinders.length > 0) {
+          await table.bulkPut(grinders);
+        }
+      });
     },
 
     async clear() {

@@ -356,7 +356,7 @@ describeNodeSqlite(`${nodeSqliteLabel} repository integration`, () => {
       expect((await repository.list()).map(item => item.id)).toEqual(['first']);
     });
 
-    it('clears before sequential replaceAll and does not roll back a later failure', async () => {
+    it('preserves the old grinder set when replaceAll fails', async () => {
       const repository = createSqliteGrinderRepository(getDatabase().driver);
       await repository.upsertMany([
         grinder('old-a', 'Old A'),
@@ -371,7 +371,10 @@ describeNodeSqlite(`${nodeSqliteLabel} repository integration`, () => {
           grinder('new-c', 'New C'),
         ])
       ).rejects.toThrow(/grinders|name/i);
-      expect((await repository.list()).map(item => item.id)).toEqual(['new-a']);
+      expect((await repository.list()).map(item => item.id)).toEqual([
+        'old-a',
+        'old-b',
+      ]);
 
       await repository.clear();
       expect(await repository.count()).toBe(0);

@@ -58,8 +58,10 @@ export function createSqliteGrinderRepository(
     upsertMany: grinders => upsertGrinders(driver, grinders),
     delete: id => deleteGrinder(driver, id),
     async replaceAll(grinders) {
-      await clearGrinders(driver);
-      await upsertGrinders(driver, grinders);
+      await driver.transaction(async tx => {
+        await clearGrinders(tx);
+        await upsertGrinders(tx, grinders);
+      });
     },
     clear: () => clearGrinders(driver),
   };
