@@ -106,7 +106,7 @@ describe('StorageUtils IndexedDB reads', () => {
     expect(mocks.deleteLegacySetting).toHaveBeenCalledWith('customEquipments');
   });
 
-  it('keeps onboarding completion on Preferences as the primary storage path', async () => {
+  it('reads legacy onboarding preferences but saves new values in the database', async () => {
     mocks.isNativePlatform.mockReturnValue(true);
     mocks.preferencesGet.mockResolvedValue({ value: 'true' });
 
@@ -118,12 +118,27 @@ describe('StorageUtils IndexedDB reads', () => {
     expect(mocks.preferencesGet).toHaveBeenCalledWith({
       key: 'onboardingCompleted',
     });
-    expect(mocks.preferencesSet).toHaveBeenCalledWith({
-      key: 'onboardingCompleted',
-      value: 'true',
-    });
-    expect(mocks.getLegacySetting).not.toHaveBeenCalled();
-    expect(mocks.setLegacySetting).not.toHaveBeenCalled();
+    expect(mocks.preferencesSet).not.toHaveBeenCalled();
+    expect(mocks.getLegacySetting).toHaveBeenCalledWith('onboardingCompleted');
+    expect(mocks.setLegacySetting).toHaveBeenCalledWith(
+      'onboardingCompleted',
+      'true'
+    );
+  });
+
+  it('prefers imported database preferences and masks old values after deletion', async () => {
+    mocks.isNativePlatform.mockReturnValue(true);
+    mocks.getLegacySetting.mockResolvedValueOnce('false');
+    expect(await StorageUtils.getData('onboardingCompleted')).toBe('false');
+    expect(mocks.preferencesGet).not.toHaveBeenCalled();
+    await StorageUtils.removeData('onboardingCompleted');
+    expect(mocks.setLegacySetting).toHaveBeenCalledWith(
+      'onboardingCompleted',
+      ''
+    );
+    mocks.getLegacySetting.mockResolvedValueOnce('');
+    expect(await StorageUtils.getData('onboardingCompleted')).toBe('');
+    expect(mocks.preferencesGet).not.toHaveBeenCalled();
   });
 
   it('clears backend data before native Preferences', async () => {

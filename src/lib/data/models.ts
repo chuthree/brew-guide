@@ -103,6 +103,8 @@ export interface CoffeeBeanGroup {
 export interface AppSettings {
   // 通用设置
   notificationSound: boolean;
+  /** Database-backed presets; absent keys still read the legacy local values. */
+  customPresets?: Record<string, string[]>;
   hapticFeedback: boolean;
   showUpdatePrompt?: boolean;
   textZoomLevel: number;

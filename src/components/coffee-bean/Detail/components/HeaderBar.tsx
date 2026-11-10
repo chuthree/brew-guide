@@ -185,6 +185,7 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
 
     try {
       // 保存自定义的预设值
+      const presetWrites: Promise<void>[] = [];
       const addPresetValues = (
         key: BlendPresetKey,
         defaultValues: string[],
@@ -192,7 +193,7 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
       ) => {
         normalizeDelimitedTextList(value).forEach(item => {
           if (!defaultValues.includes(item)) {
-            addCustomPreset(key, item);
+            presetWrites.push(addCustomPreset(key, item));
           }
         });
       };
@@ -210,16 +211,17 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
       });
 
       if (tempBean.roaster?.trim()) {
-        addCustomPreset('roasters', tempBean.roaster);
+        presetWrites.push(addCustomPreset('roasters', tempBean.roaster));
       }
 
       if (tempBean.roastLevel?.trim()) {
-        addCustomPreset('roastLevels', tempBean.roastLevel);
+        presetWrites.push(addCustomPreset('roastLevels', tempBean.roastLevel));
       }
 
       tempBean.flavor?.forEach(flavor => {
-        addCustomPreset('flavors', flavor);
+        presetWrites.push(addCustomPreset('flavors', flavor));
       });
+      await Promise.all(presetWrites);
 
       const beanToSave = prepareCoffeeBeanRoasterFieldsForSave(
         tempBean as Omit<CoffeeBean, 'id' | 'timestamp'>,

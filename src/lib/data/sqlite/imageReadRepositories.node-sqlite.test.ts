@@ -301,7 +301,25 @@ describeNodeSqlite(
         (await createSqliteCoffeeBeanRepository(driver).get('bean-cloud'))!
       );
       const upsert = vi.fn(async (_row: unknown) => ({ error: null }));
-      const client = { from: vi.fn(() => ({ upsert })) };
+      const client = {
+        from: vi.fn(() => ({
+          select: () => ({
+            eq: () => ({
+              eq: () => ({
+                maybeSingle: async () => ({ data: null, error: null }),
+              }),
+            }),
+          }),
+          insert: (row: Record<string, unknown>) => ({
+            select: () => ({
+              maybeSingle: async () => ({
+                ...(await upsert(row)),
+                data: { id: row.id },
+              }),
+            }),
+          }),
+        })),
+      };
 
       const result = await upsertRecords(
         client as never,

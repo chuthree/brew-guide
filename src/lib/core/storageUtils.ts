@@ -36,12 +36,21 @@ const STORAGE_TYPE_MAPPING: Record<string, StorageType> = {
   // 如果有其他大数据量的键，可以添加到这里
 };
 
+const DATABASE_PREFERENCE_KEYS = [
+  'customMethods',
+  'brewingNotesVersion',
+  'equipmentOrder',
+  'onboardingCompleted',
+  'backupReminderSettings',
+];
+
 /**
  * 获取指定键的存储类型
  * @param key 存储键名
  * @returns 存储类型
  */
 export const getStorageType = (key: string): StorageType => {
+  if (DATABASE_PREFERENCE_KEYS.includes(key)) return StorageType.INDEXED_DB;
   // 直接在映射中找到的键
   if (STORAGE_TYPE_MAPPING[key]) {
     return STORAGE_TYPE_MAPPING[key];
@@ -194,7 +203,11 @@ export const StorageUtils = coordinateStoreActions(
           // 其他使用IndexedDB的键
           const data = await legacySettingsRepository.get(key);
           // 兼容曾保存在 Preferences/localStorage 中的同步基线。
-          if (data == null && key.startsWith('cloud-sync-base-v1:')) {
+          if (
+            data == null &&
+            (key.startsWith('cloud-sync-base-v1:') ||
+              DATABASE_PREFERENCE_KEYS.includes(key))
+          ) {
             if (Capacitor.isNativePlatform()) {
               return (await Preferences.get({ key })).value;
             }
@@ -236,7 +249,12 @@ export const StorageUtils = coordinateStoreActions(
           await coffeeBeanPersistence.clearWithImages();
         } else {
           // 其他使用IndexedDB的键
-          await legacySettingsRepository.delete(key);
+          if (DATABASE_PREFERENCE_KEYS.includes(key)) {
+            // An empty value masks the old preference without a cross-store delete.
+            await legacySettingsRepository.set(key, '');
+          } else {
+            await legacySettingsRepository.delete(key);
+          }
           if (key.startsWith('cloud-sync-base-v1:')) {
             if (Capacitor.isNativePlatform()) {
               await Preferences.remove({ key });

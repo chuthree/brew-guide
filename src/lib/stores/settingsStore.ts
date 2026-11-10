@@ -180,6 +180,9 @@ const mergeSettingsWithDefaults = (
   };
 };
 
+export const normalizeImportedSettings = (settings: AppSettings): AppSettings =>
+  mergeSettingsWithDefaults(normalizeSyncSettings(settings));
+
 const normalizeLayoutSettings = (
   layout?: Partial<NonNullable<AppSettings['layoutSettings']>> | null
 ): NonNullable<AppSettings['layoutSettings']> => {
@@ -670,9 +673,7 @@ export const useSettingsStore = create<SettingsStore>()(
         },
 
         importSettings: async settings => {
-          const mergedSettings = mergeSettingsWithDefaults(
-            normalizeSyncSettings(settings)
-          );
+          const mergedSettings = normalizeImportedSettings(settings);
           try {
             await appSettingsRepository.save(mergedSettings);
             set({ settings: mergedSettings });

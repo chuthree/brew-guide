@@ -56,7 +56,6 @@ import {
 } from '@/components/layout/NavigationControls';
 import { SettingsOptions } from '@/components/settings/Settings';
 import { useSettingsStore, getSettingsStore } from '@/lib/stores/settingsStore';
-import { legacySettingsRepository } from '@/lib/data/repositories';
 import {
   selectIsSyncing,
   useSyncStatusStore,
@@ -1249,17 +1248,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         try {
           const { Storage } = await import('@/lib/core/storage');
           const onboardingCompleted = await Storage.get('onboardingCompleted');
-          let isCompleted = onboardingCompleted === 'true';
-          if (!isCompleted) {
-            try {
-              const fallback = await legacySettingsRepository.get(
-                'onboardingCompleted'
-              );
-              isCompleted = fallback === 'true';
-            } catch {
-              // 静默处理错误
-            }
-          }
+          const isCompleted = onboardingCompleted === 'true';
           if (isMounted) {
             const shouldShowOnboarding = !isCompleted;
             setShowOnboarding(shouldShowOnboarding);

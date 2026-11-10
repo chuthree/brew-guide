@@ -10,6 +10,7 @@ import { db } from '@/lib/core/db';
 import type { CoffeeBean } from '@/types/app';
 import type { BrewingNote } from '@/lib/core/config';
 import { createSqliteImageDataServices } from '@/lib/data/sqlite/imageDataServices';
+import { createSqliteDataImportPersistence } from '@/lib/data/sqlite/dataImportPersistence';
 import type { SqliteImageDataServices } from '@/lib/data/sqlite/imageDataServices';
 import {
   coffeeBeanImageRepository as dexieCoffeeBeanImages,
@@ -40,6 +41,7 @@ const mocks = vi.hoisted(() => {
     storageSet: vi.fn(async () => undefined),
     storageGet: vi.fn(async () => null),
     repositoryServices: {
+      dataImportPersistence: { importData: vi.fn() },
       appSettingsRepository: {
         clear: vi.fn(async () => undefined),
         save: vi.fn(async () => undefined),
@@ -159,6 +161,8 @@ vi.mock('@/lib/core/storage', () => ({
   },
 }));
 vi.mock('@/lib/stores/settingsStore', () => ({
+  normalizeImportedSettings: (settings: unknown) => settings,
+  useSettingsStore: { setState: vi.fn() },
   getRoasterConfigsSync: vi.fn(() => []),
   getSettingsStore: vi.fn(() => ({ ...mocks.settingsStore })),
 }));
@@ -184,7 +188,8 @@ vi.mock('@/lib/stores/grinderStore', () => ({
   })),
 }));
 vi.mock('@/lib/data/repositories', () => mocks.repositoryServices);
-vi.mock('@/lib/utils/coffeeBeanUtils', () => ({
+vi.mock('@/lib/utils/coffeeBeanUtils', async importOriginal => ({
+  ...(await importOriginal<typeof import('@/lib/utils/coffeeBeanUtils')>()),
   normalizeCoffeeBeans: mocks.normalizeCoffeeBeans,
 }));
 vi.mock('@/lib/app/dataIntegrity', () => ({
@@ -201,7 +206,6 @@ vi.mock('@/lib/supabase/realtime', () => ({
 }));
 
 import { DataManager } from './dataManager';
-import * as businessHistoryMaintenance from '@/lib/data/business/maintenance';
 
 class FakeNativeImageFileStore implements NativeImageFileStore {
   readonly objects = new Map<string, Uint8Array>();
@@ -276,6 +280,9 @@ describeNodeSqlite(
       database = await createNodeSqliteTestDatabase();
       fileStore = new FakeNativeImageFileStore();
       services = createSqliteImageDataServices(database.driver, fileStore);
+      mocks.repositoryServices.dataImportPersistence.importData.mockImplementation(
+        createSqliteDataImportPersistence(database.driver, fileStore).importData
+      );
       mocks.nativeRuntime.services = services;
     });
 
@@ -594,54 +601,45 @@ describeNodeSqlite(
     });
 
     it.each([false, true])(
-      'invalidates actual Native sources after a partial import (cleanup failure: %s)',
+      'rolls back all sources after a late failure (file cleanup failure: %s)',
       async cleanupFails => {
-        await services.coffeeBeanPersistence.saveWithImages(bean('old-bean'), {
-          generateThumbnails: false,
-        });
-        await services.brewingNotePersistence.saveWithImages(note('old-note'));
-        mocks.repositoryServices.coffeeBeanPersistence.replaceAllWithImages.mockRejectedValueOnce(
-          new Error('Native bean replacement failed')
+        const originalImage = image('image/png', [1, 2, 3]);
+        await services.coffeeBeanPersistence.saveWithImages(
+          bean('old-bean', { image: originalImage }),
+          { generateThumbnails: false }
         );
-        if (cleanupFails) {
-          vi.spyOn(
-            businessHistoryMaintenance,
-            'invalidateWebBusinessHistoryInMutation'
-          )
-            .mockResolvedValueOnce(undefined)
-            .mockRejectedValueOnce(new Error('History cleanup failed'));
-        }
-
-        // APP_DATA_KEYS replaces notes before beans. The first real SQLite
-        // transaction commits, then the later table replacement fails.
-        const imported = DataManager.importAllData(
+        await services.brewingNotePersistence.saveWithImages(note('old-note'));
+        await database!.driver.execute(
+          "ALTER TABLE legacy_settings ADD COLUMN import_guard INTEGER CHECK (key != 'brewingNotesVersion')"
+        );
+        if (cleanupFails)
+          vi.spyOn(fileStore, 'delete').mockRejectedValue(
+            new Error('cleanup failed')
+          );
+        const result = await DataManager.importAllData(
           JSON.stringify({
             data: {
+              coffeeBeans: [
+                bean('replacement-bean', {
+                  image: image('image/png', [4, 5, 6]),
+                }),
+              ],
               brewingNotes: [note('replacement-note')],
-              coffeeBeans: [bean('replacement-bean')],
+              brewingNotesVersion: 'next',
             },
           })
         );
-        if (cleanupFails) {
-          // Keep the existing cleanup failure outcome, but never lose the
-          // source notification when that cleanup itself fails.
-          await expect(imported).rejects.toThrow('History cleanup failed');
-        } else {
-          await expect(imported).resolves.toEqual({
-            success: false,
-            message: '导入数据失败: Native bean replacement failed',
-          });
-        }
-
-        expect(storageChanges).toEqual([
-          { key: 'allData', action: 'invalidate' },
+        expect(result).toEqual({
+          success: false,
+          message: expect.stringContaining('CHECK constraint failed'),
+        });
+        expect(storageChanges).toEqual([]);
+        expect(await services.coffeeBeanImageRepository.exportAll()).toEqual([
+          expect.objectContaining({ id: 'old-bean', image: originalImage }),
         ]);
         expect(
           await createSqliteBrewingNoteRepository(database!.driver).list()
-        ).toEqual([expect.objectContaining({ id: 'replacement-note' })]);
-        expect(
-          await createSqliteCoffeeBeanRepository(database!.driver).list()
-        ).toEqual([expect.objectContaining({ id: 'old-bean' })]);
+        ).toEqual([expect.objectContaining({ id: 'old-note' })]);
       }
     );
 

@@ -390,7 +390,11 @@ async function collectLocalSettingsSyncData(): Promise<{
   if (storage) {
     const presets: Record<string, unknown> = {};
     for (const k of PRESETS_KEYS) {
-      const v = storage.getItem(`${PRESETS_PREFIX}${k}`);
+      const saved = appSettings?.customPresets?.[k];
+      const v =
+        saved === undefined
+          ? storage.getItem(`${PRESETS_PREFIX}${k}`)
+          : JSON.stringify(saved);
       if (v) {
         try {
           presets[k] = JSON.parse(v);
@@ -1026,6 +1030,7 @@ export async function downloadSettingsData(
     let count = 0;
     await withDataMutation(async () => {
       const settingsData = row.data as Record<string, unknown>;
+      let importedSettings: AppSettings | undefined;
 
       // 恢复应用设置
       if (settingsData.appSettings) {
@@ -1057,9 +1062,10 @@ export async function downloadSettingsData(
             localSettings.roasterConfigs
           ),
         };
-        await appSettingsRepository.save(
-          preserveDeviceSettings(mergedSettings, localSettings) as AppSettings
-        );
+        importedSettings = preserveDeviceSettings(
+          mergedSettings,
+          localSettings
+        ) as AppSettings;
         count++;
       }
 
@@ -1079,7 +1085,7 @@ export async function downloadSettingsData(
         count++;
       }
 
-      // 恢复自定义预设（localStorage）
+      // Presets share the app settings row; legacy localStorage is read-only fallback.
       if (typeof window !== 'undefined') {
         if (hasOwnSettingSection(settingsData, 'customPresets')) {
           currentSection = 'customPresets';
@@ -1092,19 +1098,35 @@ export async function downloadSettingsData(
           }
 
           const presets = settingsData.customPresets as Record<string, unknown>;
+          const settings =
+            importedSettings ?? (await appSettingsRepository.get());
+          if (!settings) throw new Error('无法恢复预设：应用设置尚未初始化');
+          const customPresets = { ...settings.customPresets };
           for (const k of PRESETS_KEYS) {
             if (hasOwnSettingSection(presets, k) && presets[k] !== undefined) {
-              localStorage.setItem(
-                `${PRESETS_PREFIX}${k}`,
-                JSON.stringify(presets[k])
-              );
+              if (
+                !Array.isArray(presets[k]) ||
+                (presets[k] as unknown[]).some(
+                  value => typeof value !== 'string'
+                )
+              )
+                throw new Error('云端自定义预设格式无效');
+              customPresets[k] = presets[k] as string[];
               count++;
             } else {
-              localStorage.removeItem(`${PRESETS_PREFIX}${k}`);
+              customPresets[k] = [];
             }
           }
+          importedSettings = { ...settings, customPresets };
         }
+      }
+      if (importedSettings) {
+        await appSettingsRepository.save(importedSettings);
+        const { useSettingsStore } = await import('@/lib/stores/settingsStore');
+        useSettingsStore.setState({ settings: importedSettings });
+      }
 
+      if (typeof window !== 'undefined') {
         // 触发 UI 刷新
         window.dispatchEvent(
           new CustomEvent('settingsChanged', { detail: { source: 'remote' } })

@@ -101,6 +101,37 @@ public class ProviderDatabaseTest {
     }
   }
 
+  @Test(timeout = 75000)
+  public void uiLeaseSurvivesImageIoBeyondFormerIdleTimeout() throws Exception {
+    try (ProviderDatabase.Lease ignored = db.acquire("ui:import", 1000)) {
+      db.begin("ui:import");
+      db.execute("ui:import", "INSERT INTO sample VALUES ('kept', 1, NULL)", new JSONArray());
+      db.commit("ui:import");
+      // Exercise real elapsed time without adding a production clock abstraction.
+      android.os.SystemClock.sleep(60100);
+      ExecutorService callers = Executors.newSingleThreadExecutor();
+      try {
+        assertTrue(
+            callers.submit(
+                () -> {
+                  try (ProviderDatabase.Lease other = db.acquire("provider:caller", 50)) {
+                    return false;
+                  } catch (IllegalStateException error) {
+                    return "DATABASE_BUSY".equals(error.getMessage());
+                  }
+                }).get());
+      } finally {
+        callers.shutdownNow();
+      }
+      db.begin("ui:import");
+      db.execute("ui:import", "INSERT INTO sample VALUES ('next', 2, NULL)", new JSONArray());
+      db.commit("ui:import");
+    }
+    try (ProviderDatabase.Lease ignored = db.acquire("provider:caller", 1000)) {
+      assertEquals(2, db.query("provider:caller", "SELECT * FROM sample", new JSONArray()).length());
+    }
+  }
+
   @Test
   public void wrongOwnerRejectedAndResetInvalidatesEngineEpoch() {
     try (ProviderDatabase.Lease ignored = db.acquire("ui:reset", 1000)) {

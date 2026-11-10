@@ -1,4 +1,8 @@
 import { ROAST_LEVELS } from '@/lib/utils/roastProfileUtils';
+import {
+  readCustomPresets,
+  changeCustomPresets,
+} from '@/lib/settings/customPresets';
 
 // 预设选项
 // 产区：咖啡生产国家及子产区
@@ -579,28 +583,10 @@ export const getCustomPresets = (key: CoffeeBeanPresetKey): string[] => {
   if (!isBrowser) return []; // 服务器端渲染时返回空数组
 
   try {
-    const stored = localStorage.getItem(`brew-guide:custom-presets:${key}`);
-    return stored ? JSON.parse(stored) : [];
+    return readCustomPresets(key);
   } catch (e) {
     console.error(`获取自定义${key}失败:`, e);
     return [];
-  }
-};
-
-// 保存自定义预设到本地存储
-const saveCustomPresets = (
-  key: CoffeeBeanPresetKey,
-  presets: string[]
-): void => {
-  if (!isBrowser) return; // 服务器端渲染时不执行
-
-  try {
-    localStorage.setItem(
-      `brew-guide:custom-presets:${key}`,
-      JSON.stringify(presets)
-    );
-  } catch (e) {
-    console.error(`保存自定义${key}失败:`, e);
   }
 };
 
@@ -678,10 +664,10 @@ const unhidePreset = (key: CoffeeBeanPresetKey, value: string): void => {
 };
 
 // 添加自定义预设
-export const addCustomPreset = (
+export const addCustomPreset = async (
   key: CoffeeBeanPresetKey,
   value: string
-): void => {
+): Promise<void> => {
   const normalizedValue = normalizePresetValue(value);
   if (!isBrowser || !normalizedValue || isDefaultPreset(key, normalizedValue)) {
     return;
@@ -689,29 +675,24 @@ export const addCustomPreset = (
 
   unhidePreset(key, normalizedValue);
 
-  const presets = getCustomPresets(key);
-  if (!presets.includes(normalizedValue)) {
-    // 将新预设添加到数组开头，这样最新的预设会优先显示
-    presets.unshift(normalizedValue);
-    saveCustomPresets(key, presets);
-  }
+  await changeCustomPresets(key, presets =>
+    presets.includes(normalizedValue) ? presets : [normalizedValue, ...presets]
+  );
 };
 
 // 删除自定义预设
-export const removeCustomPreset = (
+export const removeCustomPreset = async (
   key: CoffeeBeanPresetKey,
   value: string
-): void => {
+): Promise<void> => {
   const normalizedValue = normalizePresetValue(value);
   if (!isBrowser || !normalizedValue || isDefaultPreset(key, normalizedValue)) {
     return;
   }
 
-  const presets = getCustomPresets(key);
-  const nextPresets = presets.filter(preset => preset !== normalizedValue);
-  if (nextPresets.length !== presets.length) {
-    saveCustomPresets(key, nextPresets);
-  }
+  await changeCustomPresets(key, presets =>
+    presets.filter(preset => preset !== normalizedValue)
+  );
 
   const hiddenPresets = getHiddenPresets(key);
   if (!hiddenPresets.includes(normalizedValue)) {

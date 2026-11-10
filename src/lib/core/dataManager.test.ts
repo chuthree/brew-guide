@@ -12,9 +12,13 @@ const mocks = vi.hoisted(() => {
   return {
     storageSet,
     normalizeCoffeeBeans: vi.fn((beans: unknown[]) => beans),
-    replaceCoffeeBeansWithSplitImages: vi.fn(() => Promise.resolve(true)),
-    replaceBrewingNotesWithSplitImages: vi.fn(() => Promise.resolve(true)),
-    replaceGrinders: vi.fn(() => Promise.resolve()),
+    replaceCoffeeBeansWithSplitImages: vi.fn(
+      (_records: unknown, _options: unknown) => Promise.resolve(true)
+    ),
+    replaceBrewingNotesWithSplitImages: vi.fn(
+      (_records: unknown, _options: unknown) => Promise.resolve(true)
+    ),
+    replaceGrinders: vi.fn((_records: unknown) => Promise.resolve()),
     exportCoffeeBeansWithImages: vi.fn(() => Promise.resolve([])),
     exportBrewingNotesWithImages: vi.fn(() => Promise.resolve([])),
     clearLegacySettings: vi.fn(() => Promise.resolve()),
@@ -99,7 +103,8 @@ vi.mock('@/lib/supabase/realtime', () => ({
   }),
 }));
 
-vi.mock('@/lib/utils/coffeeBeanUtils', () => ({
+vi.mock('@/lib/utils/coffeeBeanUtils', async importOriginal => ({
+  ...(await importOriginal<typeof import('@/lib/utils/coffeeBeanUtils')>()),
   normalizeCoffeeBeans: mocks.normalizeCoffeeBeans,
 }));
 
@@ -112,6 +117,21 @@ vi.mock('@/lib/utils/roasterMigration', () => ({
 }));
 
 vi.mock('@/lib/data/repositories', () => ({
+  dataImportPersistence: {
+    importData: async (
+      plan: import('@/lib/data/importData').DataImportPlan
+    ) => {
+      if (plan.coffeeBeans)
+        await mocks.replaceCoffeeBeansWithSplitImages(plan.coffeeBeans, {
+          allowDestructiveReplace: true,
+        });
+      if (plan.brewingNotes)
+        await mocks.replaceBrewingNotesWithSplitImages(plan.brewingNotes, {
+          allowDestructiveReplace: true,
+        });
+      if (plan.grinders) await mocks.replaceGrinders(plan.grinders);
+    },
+  },
   appSettingsRepository: {
     clear: mocks.clearAppSettings,
     save: vi.fn(() => Promise.resolve()),

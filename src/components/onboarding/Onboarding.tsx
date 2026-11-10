@@ -1,7 +1,5 @@
 'use client';
 
-import { withDataMutation } from '@/lib/data/mutationCoordinator';
-
 import React, { useEffect, useReducer } from 'react';
 import Image from 'next/image';
 import { Capacitor } from '@capacitor/core';
@@ -31,7 +29,6 @@ import {
   getIsWeChat,
 } from '@/lib/utils/pwaInstallEnvironment';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
-import { legacySettingsRepository } from '@/lib/data/repositories';
 
 interface OnboardingProps {
   onSettingsChange: (settings: SettingsOptions) => void;
@@ -220,15 +217,6 @@ const Onboarding: React.FC<OnboardingProps> = ({
 
       const { Storage } = await import('@/lib/core/storage');
       await Storage.set('onboardingCompleted', 'true');
-      Storage.setSync('onboardingCompleted', 'true');
-
-      try {
-        await withDataMutation(() =>
-          legacySettingsRepository.set('onboardingCompleted', 'true')
-        );
-      } catch (error) {
-        console.error('写入引导完成状态到 IndexedDB 失败:', error);
-      }
 
       const selectedSettings: SettingsOptions = {
         ...defaultSettings,

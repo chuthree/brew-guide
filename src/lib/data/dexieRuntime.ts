@@ -1,5 +1,6 @@
 import { configureBusinessHistoryMaintenance } from '@/lib/data/business/maintenance';
 import { dbUtils } from '@/lib/core/db';
+import { createDexieDataImportPersistence } from './adapters/dexie/dataImportPersistence';
 import { recordCrashCheckpoint } from '@/lib/app/crashDiagnostics';
 import { brewingNoteMaintenance as dexieBrewingNoteMaintenance } from '@/lib/data/adapters/dexie/brewingNoteMaintenance';
 import { dexieImageMaintenance } from '@/lib/data/adapters/dexie/imageMaintenance';
@@ -29,6 +30,7 @@ import { configureRepositories } from '@/lib/data/repositories';
 import { roastingPersistence } from './adapters/dexie/roastingPersistence';
 
 const dexieRepositories = {
+  dataImportPersistence: createDexieDataImportPersistence(),
   roastingPersistence,
   appSettingsRepository: dexieAppSettingsRepository,
   grinderRepository: dexieGrinderRepository,

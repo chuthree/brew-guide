@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
+import { showToast } from '@/components/common/feedback/LightToast';
 import {
   CoffeeBeanPresetKey,
   getVisiblePresetSuggestions,
@@ -23,9 +24,14 @@ export function usePresetSuggestions(
   );
 
   const removeSuggestion = useCallback(
-    (value: string) => {
-      removeCustomPreset(key, value);
-      setRevision(current => current + 1);
+    async (value: string) => {
+      try {
+        await removeCustomPreset(key, value);
+        setRevision(current => current + 1);
+      } catch (error) {
+        console.error('删除预设失败:', error);
+        showToast({ type: 'error', title: '删除预设失败，请重试' });
+      }
     },
     [key]
   );

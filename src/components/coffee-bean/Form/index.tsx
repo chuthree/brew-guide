@@ -699,6 +699,7 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
         return;
       }
 
+      const presetWrites: Promise<void>[] = [];
       const addPresetValues = (
         key: BlendPresetKey,
         defaultValues: string[],
@@ -706,7 +707,7 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
       ) => {
         normalizeDelimitedTextList(value).forEach(item => {
           if (!defaultValues.includes(item)) {
-            addCustomPreset(key, item);
+            presetWrites.push(addCustomPreset(key, item));
           }
         });
       };
@@ -725,16 +726,25 @@ const CoffeeBeanForm = forwardRef<CoffeeBeanFormHandle, CoffeeBeanFormProps>(
       });
 
       if (bean.roaster?.trim()) {
-        addCustomPreset('roasters', bean.roaster);
+        presetWrites.push(addCustomPreset('roasters', bean.roaster));
       }
 
       if (bean.roastLevel?.trim()) {
-        addCustomPreset('roastLevels', bean.roastLevel);
+        presetWrites.push(addCustomPreset('roastLevels', bean.roastLevel));
       }
 
       bean.flavor?.forEach(flavor => {
-        addCustomPreset('flavors', flavor);
+        presetWrites.push(addCustomPreset('flavors', flavor));
       });
+      try {
+        await Promise.all(presetWrites);
+      } catch (error) {
+        console.error('保存预设失败:', error);
+        const { showToast } =
+          await import('@/components/common/feedback/LightToast');
+        showToast({ type: 'error', title: '保存预设失败，请重试' });
+        return;
+      }
 
       // 准备保存的数据
       const finalBean = prepareCoffeeBeanRoasterFieldsForSave(

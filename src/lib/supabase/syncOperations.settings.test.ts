@@ -522,9 +522,11 @@ describe('settings sync fingerprint', () => {
     expect(result).toMatchObject({ success: true });
     expect(repositoryMocks.saveAppSettings).toHaveBeenCalledOnce();
     expect(repositoryMocks.replaceAllGrinders).toHaveBeenCalledWith([]);
-    expect(
-      localStorage.getItem('brew-guide:custom-presets:origins')
-    ).toBeNull();
+    expect(repositoryMocks.saveAppSettings).toHaveBeenCalledWith(
+      expect.objectContaining({
+        customPresets: expect.objectContaining({ origins: [] }),
+      })
+    );
   });
 
   it('passes abort signals to Supabase settings downloads', async () => {

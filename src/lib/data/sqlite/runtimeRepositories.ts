@@ -1,4 +1,5 @@
 import type { DataRepositories } from '@/lib/data/repositories';
+import { createSqliteDataImportPersistence } from './dataImportPersistence';
 import { createSqliteRoastingPersistence } from './persistence/roastingPersistence';
 import type { NativeImageFileStore } from '@/lib/data/images/nativeImageFileStore';
 import type { SqliteDriver } from './driver';
@@ -21,6 +22,7 @@ export function createSqliteRuntimeRepositories(
 ): DataRepositories {
   const imageServices = createSqliteImageDataServices(driver, fileStore);
   const repositories = {
+    dataImportPersistence: createSqliteDataImportPersistence(driver, fileStore),
     roastingPersistence: createSqliteRoastingPersistence(driver, fileStore),
     appSettingsRepository: createSqliteAppSettingsRepository(driver),
     grinderRepository: createSqliteGrinderRepository(driver),

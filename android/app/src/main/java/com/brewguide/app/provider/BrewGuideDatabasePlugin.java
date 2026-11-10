@@ -45,7 +45,7 @@ public final class BrewGuideDatabasePlugin extends Plugin {
     ProviderDatabase.get(getContext()).addListener(revisionListener);
   }
 
-  /** A WebView reload keeps this plugin alive but abandons its JavaScript owners. */
+  /** Page loss releases ownership; time without SQL may be legitimate image I/O. */
   public void clearPageSessions() {
     synchronized (sessions) {
       pageGeneration++;

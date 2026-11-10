@@ -25,6 +25,10 @@ public class MainActivity extends BridgeActivity {
         new WebViewListener() {
           @Override
           public void onPageStarted(WebView webView) {
+            clearDatabaseSessions();
+          }
+
+          private void clearDatabaseSessions() {
             if (bridge == null) return;
             com.getcapacitor.PluginHandle plugin = bridge.getPlugin("BrewGuideDatabase");
             if (plugin != null) {
@@ -36,6 +40,7 @@ public class MainActivity extends BridgeActivity {
           @Override
           public boolean onRenderProcessGone(WebView webView, RenderProcessGoneDetail detail) {
             persistWebViewCrash(detail);
+            clearDatabaseSessions();
 
             if (webView != null) {
               webView.destroy();

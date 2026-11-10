@@ -30,7 +30,6 @@ import org.json.JSONObject;
  */
 public final class ProviderDatabase {
   public static final String MAIN_DATABASE = "brew-guide";
-  private static final long UI_IDLE_TIMEOUT_MS = 60_000L;
   private static final Map<String, ProviderDatabase> INSTANCES = new HashMap<>();
   private final Context context;
   private final String name;
@@ -40,7 +39,6 @@ public final class ProviderDatabase {
   private SQLiteDatabase database;
   private String activeOwner;
   private int references;
-  private long lastActivity;
   private boolean transaction;
   private long revision;
   private long epoch;
@@ -132,12 +130,10 @@ public final class ProviderDatabase {
       throw new IllegalArgumentException("Missing database owner");
     long deadline = SystemClock.elapsedRealtime() + Math.min(Math.max(timeoutMillis, 1), 120_000);
     while (activeOwner != null && !owner.equals(activeOwner)) {
-      expireAbandonedUi();
-      if (activeOwner == null) break;
       long remaining = deadline - SystemClock.elapsedRealtime();
       if (remaining <= 0) throw new IllegalStateException("DATABASE_BUSY");
       try {
-        wait(Math.min(remaining, 1_000));
+        wait(remaining);
       } catch (InterruptedException error) {
         Thread.currentThread().interrupt();
         throw new IllegalStateException("DATABASE_CANCELLED", error);
@@ -145,26 +141,12 @@ public final class ProviderDatabase {
     }
     activeOwner = owner;
     references++;
-    lastActivity = SystemClock.elapsedRealtime();
     return new Lease(owner);
   }
 
-  private void expireAbandonedUi() {
-    if (activeOwner != null
-        && activeOwner.startsWith("ui:")
-        && SystemClock.elapsedRealtime() - lastActivity >= UI_IDLE_TIMEOUT_MS) {
-      if (transaction) rollbackInternal();
-      activeOwner = null;
-      references = 0;
-      notifyAll();
-    }
-  }
-
   private void requireOwner(String owner) {
-    expireAbandonedUi();
     if (owner == null || !owner.equals(activeOwner))
       throw new IllegalStateException("DATABASE_SESSION_EXPIRED");
-    lastActivity = SystemClock.elapsedRealtime();
   }
 
   public synchronized void begin(String owner) {

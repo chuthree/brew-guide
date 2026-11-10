@@ -451,7 +451,7 @@ function replacedFilePaths(
   );
 }
 
-function hasRollbackDiagnostic(error: unknown): boolean {
+export function hasRollbackDiagnostic(error: unknown): boolean {
   return (
     typeof error === 'object' &&
     error !== null &&

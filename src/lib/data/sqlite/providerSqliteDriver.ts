@@ -66,20 +66,29 @@ export async function withAndroidDatabaseMutation<T>(
       mutationSession = result.session;
       return result.session;
     });
+    let failed = false;
     try {
       await prepareMutation?.(session);
       return await work();
+    } catch (error) {
+      failed = true;
+      throw error;
     } finally {
-      await serializeLeaseRequest(async () => {
-        // New unscoped SQL now queues behind release instead of reusing a
-        // session whose native lease is already being closed.
-        mutationSession = undefined;
-        await providerDatabase.command({
-          database: 'brew-guide',
-          operation: 'releaseMutation',
-          session,
+      try {
+        await serializeLeaseRequest(async () => {
+          // New unscoped SQL now queues behind release instead of reusing a
+          // session whose native lease is already being closed.
+          mutationSession = undefined;
+          await providerDatabase.command({
+            database: 'brew-guide',
+            operation: 'releaseMutation',
+            session,
+          });
         });
-      });
+      } catch (cleanupError) {
+        if (!failed) throw cleanupError;
+        console.error('Android database session cleanup failed:', cleanupError);
+      }
     }
   } finally {
     mutationPending = false;

@@ -157,6 +157,52 @@ describe('Android unified provider database driver', () => {
       session: 'ui:outer',
     });
   });
+  it('preserves the work error when release also fails and allows the next mutation', async () => {
+    const { withAndroidDatabaseMutation } =
+      await import('./providerSqliteDriver');
+    const original = new Error('Image write failed');
+    const cleanupError = new Error('DATABASE_SESSION_EXPIRED');
+    const report = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => undefined);
+    const fallback = native.command.getMockImplementation()!;
+    native.command.mockImplementation(async (input: { operation: string }) => {
+      if (input.operation === 'releaseMutation') throw cleanupError;
+      return fallback(input);
+    });
+    try {
+      await expect(
+        withAndroidDatabaseMutation(async () => {
+          throw original;
+        })
+      ).rejects.toBe(original);
+      expect(report).toHaveBeenCalledWith(
+        'Android database session cleanup failed:',
+        cleanupError
+      );
+      native.command.mockImplementation(fallback);
+      await expect(
+        withAndroidDatabaseMutation(async () => 'saved')
+      ).resolves.toBe('saved');
+    } finally {
+      report.mockRestore();
+    }
+  });
+
+  it('reports release failure when the work itself succeeded', async () => {
+    const { withAndroidDatabaseMutation } =
+      await import('./providerSqliteDriver');
+    const cleanupError = new Error('Database bridge has closed');
+    const fallback = native.command.getMockImplementation()!;
+    native.command.mockImplementation(async (input: { operation: string }) => {
+      if (input.operation === 'releaseMutation') throw cleanupError;
+      return fallback(input);
+    });
+    await expect(withAndroidDatabaseMutation(async () => 'saved')).rejects.toBe(
+      cleanupError
+    );
+  });
+
   it('drains an already dispatched unscoped query before acquiring the mutation lease', async () => {
     const { openProviderSqliteDriver, withAndroidDatabaseMutation } =
       await import('./providerSqliteDriver');
