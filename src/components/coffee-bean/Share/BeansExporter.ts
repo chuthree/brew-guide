@@ -2,6 +2,7 @@
 
 import { toPng } from 'html-to-image';
 import { TempFileManager } from '@/lib/utils/tempFileManager';
+import { waitForImages } from '@/lib/utils/waitForImages';
 import { getSettingsStore } from '@/lib/stores/settingsStore';
 import type { CoffeeBean } from '@/types/app';
 import {
@@ -20,40 +21,6 @@ interface BeansExporterProps {
   onError: (message: string) => void;
   onComplete: (completed: boolean) => void;
 }
-
-/**
- * 等待所有图片加载完成的辅助函数
- */
-const waitForImages = (element: HTMLElement): Promise<void> => {
-  return new Promise(resolve => {
-    const images = element.querySelectorAll('img');
-    if (images.length === 0) {
-      resolve();
-      return;
-    }
-
-    let loadedCount = 0;
-    const totalImages = images.length;
-
-    const checkComplete = () => {
-      loadedCount++;
-      if (loadedCount === totalImages) {
-        resolve();
-      }
-    };
-
-    images.forEach(img => {
-      if (img.complete && img.naturalWidth > 0) {
-        checkComplete();
-      } else {
-        img.addEventListener('load', checkComplete);
-        img.addEventListener('error', checkComplete);
-        // 设置超时，避免无限等待
-        setTimeout(checkComplete, 3000);
-      }
-    });
-  });
-};
 
 /**
  * 计算选中咖啡豆的分类剩余量
