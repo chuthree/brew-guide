@@ -23,6 +23,57 @@
   ::file-selector-button {
     border-color: var(--color-gray-200, currentcolor);
   }
+
+  /* 统一鼠标交互默认值，组件的文本、拖拽等 cursor 工具类仍可覆盖。 */
+  @media (any-hover: hover) and (any-pointer: fine) {
+    :where(
+      button,
+      a[href],
+      area[href],
+      summary,
+      select,
+      input[type='button'],
+      input[type='submit'],
+      input[type='reset'],
+      input[type='checkbox'],
+      input[type='radio'],
+      input[type='color'],
+      input[type='range'],
+      [role='button'],
+      [role='link'],
+      [role='tab'],
+      [role='menuitem'],
+      [role='menuitemcheckbox'],
+      [role='menuitemradio'],
+      [role='option'],
+      [role='checkbox'],
+      [role='radio'],
+      [role='switch'],
+      [role='combobox']:not(input, textarea),
+      label:has(input:is([type='checkbox'], [type='radio']):enabled)
+    ):not(
+      :disabled,
+      [aria-disabled='true'],
+      [data-disabled]:not([data-disabled='false'])
+    ) {
+      cursor: pointer;
+    }
+
+    input[type='file']:enabled::file-selector-button {
+      cursor: pointer;
+    }
+  }
+}
+
+@layer utilities {
+  @media (any-hover: hover) and (any-pointer: fine) {
+    /* 覆盖普通 cursor-pointer，但保留组件显式设置的 disabled:cursor-*。 */
+    :disabled,
+    [aria-disabled='true'],
+    [data-disabled]:not([data-disabled='false']) {
+      cursor: not-allowed;
+    }
+  }
 }
 
 @utility truncate-label {
