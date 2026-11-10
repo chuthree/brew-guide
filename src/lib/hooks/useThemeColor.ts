@@ -4,7 +4,7 @@ import { animate, type AnimationPlaybackControls } from 'framer-motion';
 import { useTheme } from 'next-themes';
 import { APP_LAYOUT_BREAKPOINT } from '@/lib/navigation/pageTransition';
 
-export const BROWSER_CHROME_MEDIA = `(width < ${APP_LAYOUT_BREAKPOINT}px)`;
+export const BROWSER_CHROME_MEDIA = `(width < ${APP_LAYOUT_BREAKPOINT}px) and (hover: none) and (pointer: coarse)`;
 
 export const THEME_COLORS = {
   light: { base: '#fafafa' },
