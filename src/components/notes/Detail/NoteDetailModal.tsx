@@ -82,7 +82,7 @@ type MultiImageViewState = {
 
 type MultiImageErrorState = {
   key: string;
-  indexes: Set<number>;
+  sources: Set<string>;
 };
 
 type ImageHeightState = {
@@ -90,7 +90,7 @@ type ImageHeightState = {
   value: number | 'auto';
 };
 
-const EMPTY_MULTI_IMAGE_ERRORS = new Set<number>();
+const EMPTY_MULTI_IMAGE_ERRORS = new Set<string>();
 const MULTI_IMAGE_TILE_SIZE_REM = 6;
 const MULTI_IMAGE_GAP_REM = 0.25;
 
@@ -265,10 +265,11 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
         : initialBeanInfo,
     [note, coffeeBeanLookup, initialBeanInfo]
   );
-  const beanFrontImage = useCoffeeBeanImage(beanInfo?.id, {
+  const beanId = beanInfo?.id;
+  const beanFrontImage = useCoffeeBeanImage(beanId, {
     mode: 'original',
   });
-  const beanBackImage = useCoffeeBeanImage(beanInfo?.id, {
+  const beanBackImage = useCoffeeBeanImage(beanId, {
     side: 'back',
     mode: 'original',
   });
@@ -320,11 +321,11 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
       side: CoffeeBeanImageSide,
       fallback?: string
     ): Promise<string | undefined> => {
-      if (!beanInfo?.id) return fallback;
+      if (!beanId) return fallback;
 
       try {
         return (
-          (await coffeeBeanImageRepository.getSource(beanInfo.id, {
+          (await coffeeBeanImageRepository.getSource(beanId, {
             side,
             mode: 'original',
           })) || fallback
@@ -333,7 +334,7 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
         return fallback;
       }
     },
-    [beanInfo?.id]
+    [beanId]
   );
   const openBeanImage = useCallback(
     async (sourceElement: HTMLElement) => {
@@ -409,7 +410,7 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
   const [multiImageErrorState, setMultiImageErrorState] =
     useState<MultiImageErrorState>({
       key: '',
-      indexes: EMPTY_MULTI_IMAGE_ERRORS,
+      sources: EMPTY_MULTI_IMAGE_ERRORS,
     });
   const defaultImageRef = useRef<HTMLDivElement>(null);
   const multiImageRef = useRef<HTMLDivElement>(null);
@@ -419,11 +420,13 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
   });
 
   // 获取笔记图片列表 - 提前声明以便在效果中使用
+  const inlineImages = note?.images;
+  const inlineImage = note?.image;
   const inlineNoteImages = useMemo(() => {
-    if (note?.images && note.images.length > 0) return note.images;
-    if (note?.image) return [note.image];
+    if (inlineImages && inlineImages.length > 0) return inlineImages;
+    if (inlineImage) return [inlineImage];
     return [];
-  }, [note?.images, note?.image]);
+  }, [inlineImages, inlineImage]);
   const noteImages = useBrewingNoteImages(note?.id, inlineNoteImages);
   const primaryNoteImage = noteImages[0];
   const hasPrimaryNoteImageError =
@@ -434,14 +437,13 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
       sourceElement: HTMLElement,
       sourceElements?: HTMLElement[]
     ) => {
-      const images = noteImages;
-      const selectedImage = images[index] || noteImages[index];
+      const selectedImage = noteImages[index];
       if (!selectedImage) return;
 
       openImageViewer({
         url: selectedImage,
         alt: `笔记图片 ${index + 1}`,
-        items: images.map((url, itemIndex) => ({
+        items: noteImages.map((url, itemIndex) => ({
           url,
           alt: `笔记图片 ${itemIndex + 1}`,
         })),
@@ -463,7 +465,7 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
     multiImageView.key === imageViewKey && multiImageView.isOpen;
   const multiImageErrors =
     multiImageErrorState.key === imageViewKey
-      ? multiImageErrorState.indexes
+      ? multiImageErrorState.sources
       : EMPTY_MULTI_IMAGE_ERRORS;
   const currentHeight =
     imageHeightState.key === imageViewKey ? imageHeightState.value : 'auto';
@@ -671,6 +673,14 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
     [note, getValidTasteRatings]
   );
   const hasTasteRatings = validTasteRatings.length > 0;
+  const tasteRatingTags = validTasteRatings.map(rating => (
+    <span
+      key={rating.id}
+      className="rounded bg-neutral-100 px-1.5 py-0.5 text-xs font-medium text-neutral-700 dark:bg-neutral-800/40 dark:text-neutral-300"
+    >
+      {rating.label} {rating.value}
+    </span>
+  ));
   const beanAgingDays =
     showBeanAgingDaysInNote && note
       ? getNoteBeanAgingDaysForNote(note, beanInfo)
@@ -1064,7 +1074,7 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
                             data-image-index={index}
                             className="relative aspect-square cursor-pointer overflow-hidden rounded-[3px] border border-neutral-200/50 bg-neutral-100 dark:border-neutral-800/50 dark:bg-neutral-800/20"
                             onClick={e => {
-                              if (!multiImageErrors.has(index)) {
+                              if (!multiImageErrors.has(img)) {
                                 const galleryElement =
                                   e.currentTarget.closest('[data-note-images]');
                                 const sourceElements = galleryElement
@@ -1083,7 +1093,7 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
                               }
                             }}
                           >
-                            {multiImageErrors.has(index) ? (
+                            {multiImageErrors.has(img) ? (
                               <div className="flex h-full w-full items-center justify-center text-xs text-neutral-500 dark:text-neutral-400">
                                 加载失败
                               </div>
@@ -1095,12 +1105,12 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
                                 className="block h-full w-full object-cover"
                                 onError={() => {
                                   setMultiImageErrorState(prev => {
-                                    const indexes =
+                                    const sources =
                                       prev.key === imageViewKey
-                                        ? new Set(prev.indexes)
-                                        : new Set<number>();
-                                    indexes.add(index);
-                                    return { key: imageViewKey, indexes };
+                                        ? new Set(prev.sources)
+                                        : new Set<string>();
+                                    sources.add(img);
+                                    return { key: imageViewKey, sources };
                                   });
                                 }}
                                 loading="lazy"
@@ -1224,27 +1234,11 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
                                 onClick={() => setShowRatingRadar(true)}
                                 className="-mt-0.5 flex cursor-pointer flex-wrap items-center gap-1 text-left"
                               >
-                                {validTasteRatings.map(rating => (
-                                  <span
-                                    key={rating.id}
-                                    className="rounded bg-neutral-100 px-1.5 py-0.5 text-xs font-medium text-neutral-700 dark:bg-neutral-800/40 dark:text-neutral-300"
-                                  >
-                                    {rating.label}{' '}
-                                    {rating.value}
-                                  </span>
-                                ))}
+                                {tasteRatingTags}
                               </button>
                             ) : (
                               <div className="-mt-0.5 flex flex-wrap items-center gap-1">
-                                {validTasteRatings.map(rating => (
-                                  <span
-                                    key={rating.id}
-                                    className="rounded bg-neutral-100 px-1.5 py-0.5 text-xs font-medium text-neutral-700 dark:bg-neutral-800/40 dark:text-neutral-300"
-                                  >
-                                    {rating.label}{' '}
-                                    {rating.value}
-                                  </span>
-                                ))}
+                                {tasteRatingTags}
                               </div>
                             )}
                           </InfoRow>
