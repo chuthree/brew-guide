@@ -59,6 +59,7 @@ import {
   normalizeImportedCoffeeBeanPatch,
 } from '@/lib/coffee-beans/beanImport';
 import { getBeanImportContract } from '@/lib/coffee-beans/beanImportContract';
+import { normalizeFlavorList } from '@/lib/utils/coffeeBeanUtils';
 import {
   prepareMcpBeanImageMutation,
   getMcpBeanImageInfo,
@@ -236,9 +237,7 @@ async function beanView(
     remainingGrams: amount(bean.remaining),
     capacity: bean.capacity ?? null,
     remaining: bean.remaining ?? null,
-    flavor: Array.isArray(bean.flavor)
-      ? bean.flavor.filter(value => typeof value === 'string')
-      : [],
+    flavor: normalizeFlavorList(bean.flavor),
     flavorPeriod:
       bean.beanState === 'green'
         ? { phase: '生豆', remainingDays: 0 }

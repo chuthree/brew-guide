@@ -113,13 +113,14 @@ describe('coffeeBeanStore image-aware deletion', () => {
       );
 
     const firstLoad = useCoffeeBeanStore.getState().loadBeans();
+    await Promise.resolve();
     expect(listSpy).toHaveBeenCalledTimes(1);
 
-    await useCoffeeBeanStore.getState().loadBeans();
+    const secondLoad = useCoffeeBeanStore.getState().loadBeans();
     expect(listSpy).toHaveBeenCalledTimes(1);
 
     resolveRead(beans);
-    await firstLoad;
+    await Promise.all([firstLoad, secondLoad]);
 
     expect(listSpy).toHaveBeenCalledTimes(1);
     expect(useCoffeeBeanStore.getState().beans).toHaveLength(beans.length);
@@ -140,15 +141,14 @@ describe('coffeeBeanStore image-aware deletion', () => {
       );
 
     const firstLoad = useCoffeeBeanStore.getState().loadBeans();
-    await useCoffeeBeanStore.getState().refreshBeans();
+    await Promise.resolve();
+    const refresh = useCoffeeBeanStore.getState().refreshBeans();
     resolveRead(beans);
-    await firstLoad;
+    await Promise.all([firstLoad, refresh]);
 
-    await vi.waitFor(() => {
-      expect(listSpy).toHaveBeenCalledTimes(2);
-      expect(useCoffeeBeanStore.getState().isLoading).toBe(false);
-      expect(useCoffeeBeanStore.getState().initialized).toBe(true);
-    });
+    expect(listSpy).toHaveBeenCalledTimes(2);
+    expect(useCoffeeBeanStore.getState().isLoading).toBe(false);
+    expect(useCoffeeBeanStore.getState().initialized).toBe(true);
   });
   it('computes inventory against persisted stock rather than a stale cached balance', async () => {
     const bean = {

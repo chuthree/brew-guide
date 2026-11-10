@@ -62,9 +62,11 @@ export async function notifyStoreDelete(
     if (table === SYNC_TABLES.COFFEE_BEANS) {
       const { useCoffeeBeanStore } =
         await import('@/lib/stores/coffeeBeanStore');
-      useCoffeeBeanStore.setState(s => ({
-        beans: s.beans.filter(b => b.id !== recordId),
-      }));
+      const store = useCoffeeBeanStore.getState();
+      store.setBeans(
+        store.beans.filter(b => b.id !== recordId),
+        store.initialized
+      );
     } else if (table === SYNC_TABLES.BREWING_NOTES) {
       const { useBrewingNoteStore } =
         await import('@/lib/stores/brewingNoteStore');
@@ -104,14 +106,13 @@ export async function notifyStoreUpsert(
       const { useCoffeeBeanStore } =
         await import('@/lib/stores/coffeeBeanStore');
       const bean = data as unknown as CoffeeBean;
-      useCoffeeBeanStore.setState(s => {
-        const exists = s.beans.some(b => b.id === recordId);
-        return {
-          beans: exists
-            ? s.beans.map(b => (b.id === recordId ? bean : b))
-            : [...s.beans, bean],
-        };
-      });
+      const store = useCoffeeBeanStore.getState();
+      store.setBeans(
+        store.beans.some(b => b.id === recordId)
+          ? store.beans.map(b => (b.id === recordId ? bean : b))
+          : [...store.beans, bean],
+        store.initialized
+      );
       // Image hooks read the separate image repository and key caches by ID.
       // Reuse the store's data-change event so they reload after remote writes.
       dispatchRemoteImageRefresh(table, recordId, data);
@@ -164,7 +165,7 @@ export async function refreshAllStores(): Promise<void> {
         const { useCoffeeBeanStore } =
           await import('@/lib/stores/coffeeBeanStore');
         const beans = await coffeeBeanRepository.list();
-        useCoffeeBeanStore.setState({ beans });
+        useCoffeeBeanStore.getState().setBeans(beans);
       })(),
       (async () => {
         const { useBrewingNoteStore } =

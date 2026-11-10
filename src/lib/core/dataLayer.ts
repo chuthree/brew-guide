@@ -268,9 +268,9 @@ async function importAllDataInMutation(data: {
           { allowDestructiveReplace: true }
         );
         if (replaced) {
-          useCoffeeBeanStore.setState({
-            beans: data.coffeeBeans!.map(stripCoffeeBeanImages),
-          });
+          useCoffeeBeanStore
+            .getState()
+            .setBeans(data.coffeeBeans!.map(stripCoffeeBeanImages));
         } else {
           await useCoffeeBeanStore.getState().refreshBeans();
         }

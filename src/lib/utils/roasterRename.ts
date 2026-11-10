@@ -129,7 +129,7 @@ async function renameRoastersInMutation(
   } = changes;
 
   if (updatedBeans.length > 0) {
-    useCoffeeBeanStore.setState({ beans: nextBeans });
+    useCoffeeBeanStore.getState().setBeans(nextBeans);
   }
 
   if (updatedNotes.length > 0) {

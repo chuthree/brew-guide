@@ -15,7 +15,6 @@ import { nanoid } from 'nanoid';
 import {
   findCoffeeBeanByDisplayName,
   findCoffeeBeanByIdentity,
-  hasInvalidFlavorValue,
   normalizeCoffeeBean,
   normalizeCoffeeBeans,
 } from '@/lib/utils/coffeeBeanUtils';
@@ -45,7 +44,7 @@ interface CoffeeBeanStore {
     updates: Partial<CoffeeBean>
   ) => Promise<CoffeeBean | null>;
   deleteBean: (id: string) => Promise<boolean>;
-  setBeans: (beans: CoffeeBean[]) => void;
+  setBeans: (beans: CoffeeBean[], initialized?: boolean) => void;
   upsertBean: (bean: CoffeeBean) => Promise<void>;
   removeBean: (id: string) => Promise<void>;
   getBeanById: (id: string) => CoffeeBean | undefined;
@@ -87,7 +86,7 @@ const getImageRecordCountForDiagnostics = async (): Promise<
 };
 
 let beanMutationVersion = 0;
-let refreshRequestedWhileLoading = false;
+let beanLoadPromise: Promise<void> | null = null;
 
 export const useCoffeeBeanStore = create<CoffeeBeanStore>()(
   subscribeWithSelector((set, get) => {
@@ -165,65 +164,43 @@ export const useCoffeeBeanStore = create<CoffeeBeanStore>()(
         error: null,
         initialized: false,
 
-        loadBeans: async () => {
-          if (get().isLoading) return;
+        loadBeans: () => {
+          if (beanLoadPromise) return beanLoadPromise;
+          beanLoadPromise = Promise.resolve().then(async () => {
+            set({ isLoading: true, error: null });
+            try {
+              while (true) {
+                const loadVersion = beanMutationVersion;
+                const rawBeans = await coffeeBeanRepository.list();
+                const imageRecordCount =
+                  await getImageRecordCountForDiagnostics();
+                recordCrashCheckpoint('coffee-beans:raw-loaded', {
+                  ...collectBeanPayloadMetrics(rawBeans as CoffeeBean[]),
+                  imageRecordCount,
+                });
+                const beans = normalizeCoffeeBeans(rawBeans, {
+                  ensureFlavorArray: true,
+                }).map(stripCoffeeBeanImages);
+                // Read again if a write or explicit refresh overtook this snapshot.
+                if (loadVersion !== beanMutationVersion) continue;
 
-          const loadVersion = beanMutationVersion;
-          const finishLoading = () => {
-            set({ isLoading: false });
-            if (refreshRequestedWhileLoading) {
-              refreshRequestedWhileLoading = false;
-              void get().loadBeans();
+                recordCrashCheckpoint('coffee-beans:normalized', {
+                  beanCount: beans.length,
+                  imageRecordCount,
+                });
+                set({ beans, initialized: true });
+                return;
+              }
+            } catch (error) {
+              console.error('[CoffeeBeanStore] loadBeans failed:', error);
+              set({ error: '加载咖啡豆失败', initialized: false });
+              throw error;
+            } finally {
+              beanLoadPromise = null;
+              set({ isLoading: false });
             }
-          };
-
-          set({ isLoading: true, error: null });
-          try {
-            const rawBeans = await coffeeBeanRepository.list();
-            recordCrashCheckpoint('coffee-beans:raw-loaded', {
-              ...collectBeanPayloadMetrics(rawBeans as CoffeeBean[]),
-              imageRecordCount: await getImageRecordCountForDiagnostics(),
-            });
-            const beans = normalizeCoffeeBeans(rawBeans, {
-              ensureFlavorArray: true,
-            }).map(stripCoffeeBeanImages);
-            const repairedBeans = rawBeans
-              .filter(bean => hasInvalidFlavorValue(bean.flavor))
-              .map(bean =>
-                stripCoffeeBeanImages(
-                  normalizeCoffeeBean(bean, { ensureFlavorArray: true })
-                )
-              );
-
-            if (repairedBeans.length > 0) {
-              await coffeeBeanRepository.upsertMany(repairedBeans);
-            }
-
-            const imageRecordCount = await getImageRecordCountForDiagnostics();
-            // A local write may finish while this read is in flight. Never let
-            // that older snapshot overwrite the newer Zustand state.
-            if (loadVersion !== beanMutationVersion) {
-              finishLoading();
-              return;
-            }
-
-            recordCrashCheckpoint('coffee-beans:normalized', {
-              beanCount: beans.length,
-              repairedBeanCount: repairedBeans.length,
-              imageRecordCount,
-            });
-            set({ beans, initialized: true });
-            finishLoading();
-          } catch (error) {
-            console.error('[CoffeeBeanStore] loadBeans failed:', error);
-            refreshRequestedWhileLoading = false;
-            set({
-              error: '加载咖啡豆失败',
-              isLoading: false,
-              initialized: false,
-            });
-            throw error;
-          }
+          });
+          return beanLoadPromise;
         },
 
         addBean: async beanData => {
@@ -241,7 +218,12 @@ export const useCoffeeBeanStore = create<CoffeeBeanStore>()(
               await coffeeBeanPersistence.saveWithImages(newBean);
             await clearExpectedCoreDataDeletion();
             beanMutationVersion += 1;
-            set(state => ({ beans: [...state.beans, beanForStore] }));
+            set(state => ({
+              beans: [
+                ...state.beans.filter(bean => bean.id !== beanForStore.id),
+                beanForStore,
+              ],
+            }));
 
             if (typeof window !== 'undefined') {
               window.dispatchEvent(
@@ -288,9 +270,12 @@ export const useCoffeeBeanStore = create<CoffeeBeanStore>()(
             )
         ),
 
-        setBeans: beans => {
+        setBeans: (beans, initialized = true) => {
           beanMutationVersion += 1;
-          set({ beans, initialized: true });
+          set({
+            beans: normalizeCoffeeBeans(beans, { ensureFlavorArray: true }),
+            initialized,
+          });
         },
 
         upsertBean: async bean => {
@@ -335,11 +320,8 @@ export const useCoffeeBeanStore = create<CoffeeBeanStore>()(
         },
 
         refreshBeans: async () => {
+          beanMutationVersion += 1;
           set({ initialized: false });
-          if (get().isLoading) {
-            refreshRequestedWhileLoading = true;
-            return;
-          }
           await get().loadBeans();
         },
       },
