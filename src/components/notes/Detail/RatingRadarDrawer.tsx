@@ -1,6 +1,12 @@
 'use client';
 
-import React, { useMemo, useState, useEffect, useRef } from 'react';
+import React, {
+  useCallback,
+  useMemo,
+  useState,
+  useEffect,
+  useRef,
+} from 'react';
 import ActionDrawer from '@/components/common/ui/ActionDrawer';
 import SegmentedControl from '@/components/ui/SegmentedControl';
 import Slider from '@/components/ui/Slider';
@@ -502,19 +508,24 @@ const RatingRadarDrawer: React.FC<RatingRadarDrawerProps> = ({
   };
 
   // 长按处理
-  const handleLongPressStart = () => {
-    if (availableCompareNotes.length === 0) return;
-    longPressTimer.current = setTimeout(() => {
-      setIsComparing(true);
-      setIsAdjusting(false);
-    }, 500);
-  };
-
-  const handleLongPressEnd = () => {
+  const handleLongPressEnd = useCallback(() => {
     if (longPressTimer.current) {
       clearTimeout(longPressTimer.current);
       longPressTimer.current = null;
     }
+  }, []);
+
+  // 关闭或卸载抽屉时取消尚未触发的长按。
+  useEffect(() => handleLongPressEnd, [isOpen, handleLongPressEnd]);
+
+  const handleLongPressStart = () => {
+    handleLongPressEnd();
+    if (availableCompareNotes.length === 0) return;
+    longPressTimer.current = setTimeout(() => {
+      longPressTimer.current = null;
+      setIsComparing(true);
+      setIsAdjusting(false);
+    }, 500);
   };
 
   const handleScaleChange = (newScale: number) => {
@@ -530,6 +541,7 @@ const RatingRadarDrawer: React.FC<RatingRadarDrawerProps> = ({
   };
 
   const handleClose = () => {
+    handleLongPressEnd();
     setIsAdjusting(false);
     setIsComparing(false);
     onClose();
@@ -602,6 +614,7 @@ const RatingRadarDrawer: React.FC<RatingRadarDrawerProps> = ({
                 onPointerDown={handleLongPressStart}
                 onPointerUp={handleLongPressEnd}
                 onPointerLeave={handleLongPressEnd}
+                onPointerCancel={handleLongPressEnd}
                 onContextMenu={e => e.preventDefault()}
               >
                 <Expand size={18} />
