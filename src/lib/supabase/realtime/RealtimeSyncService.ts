@@ -67,6 +67,7 @@ import {
   coffeeBeanRepository,
   customEquipmentRepository,
   customMethodRepository,
+  offlineQueueRepository,
 } from '@/lib/data/repositories';
 import { withDataMutation } from '@/lib/data/mutationCoordinator';
 import {
@@ -889,9 +890,13 @@ export class RealtimeSyncService {
     }
 
     const processor = async (op: PendingOperation): Promise<boolean> => {
-      const record = await withDataMutation(() =>
-        this.prepareRecordForUpload(op.table, op.recordId)
-      );
+      const record = await withDataMutation(async () => {
+        const current = await offlineQueueRepository.get(op.id);
+        if (!current || current.timestamp !== op.timestamp) return undefined;
+        return this.prepareRecordForUpload(op.table, op.recordId);
+      });
+      // An invalidated queue item is not a valid deletion of a missing record.
+      if (record === undefined) return true;
       if (!record) {
         if (op.type !== 'delete') return true;
         const result = await markRecordsAsDeleted(

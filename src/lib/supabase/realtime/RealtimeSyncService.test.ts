@@ -40,8 +40,15 @@ vi.mock('./offlineQueue', () => ({
       processor: (operation: PendingOperation) => Promise<boolean>
     ) => {
       let processed = 0;
-      for (const operation of queuedOperations.splice(0)) {
-        if (await processor(operation)) processed++;
+      for (const operation of [...queuedOperations]) {
+        if (await processor(operation)) {
+          processed++;
+          const index = queuedOperations.findIndex(
+            item =>
+              item.id === operation.id && item.timestamp === operation.timestamp
+          );
+          if (index >= 0) queuedOperations.splice(index, 1);
+        }
       }
       return { processed, failed: 0, blocked: 0 };
     },
@@ -67,6 +74,9 @@ vi.mock('@/lib/data/repositories', async importOriginal => {
 
   return {
     ...actual,
+    offlineQueueRepository: {
+      get: async (id: string) => queuedOperations.find(item => item.id === id),
+    },
     coffeeBeanImageRepository: { mergeBean: mergeBeanImagesMock },
     brewingNoteImageRepository: { mergeNote: mergeNoteImagesMock },
     coffeeBeanRepository: { ...actual.coffeeBeanRepository, get: getBeanMock },
