@@ -53,11 +53,7 @@ import {
 import { getRelatedNotesForBean } from '@/lib/notes/relatedNotes';
 import { deriveNavigationSettings } from '@/lib/navigation/navigationSettings';
 
-import {
-  BeanDetailModalProps,
-  isSimpleChangeRecord,
-  isRoastingRecord,
-} from './types';
+import { BeanDetailModalProps } from './types';
 import { blurBeanDetailEditorOnEscape } from './utils';
 import HeaderBar from './components/HeaderBar';
 import BeanImageSection from './components/BeanImageSection';
@@ -68,7 +64,9 @@ import BlendComponentsSection, {
 } from './components/BlendComponentsSection';
 import FlavorNotesSection from './components/FlavorNotesSection';
 import RatingSection from './components/RatingSection';
-import RelatedRecordsSection from './components/RelatedRecordsSection';
+import RelatedRecordsSection, {
+  type RelatedRecordTab,
+} from './components/RelatedRecordsSection';
 import { useCoffeeBeanDraft } from './hooks/useCoffeeBeanDraft';
 
 const BeanPrintModal = dynamic(
@@ -80,8 +78,6 @@ const BeanRatingModal = dynamic(
   () => import('@/components/coffee-bean/Rating/Modal'),
   { ssr: false }
 );
-
-type RelatedRecordsTab = 'primary' | 'change' | 'green';
 
 const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
   isOpen: open,
@@ -263,7 +259,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
   const showRatingDivider = hasBeanProfileSection && hasRatingSection;
   const [relatedRecordsTabOverride, setRelatedRecordsTabOverride] = useState<{
     beanId: string;
-    tab: RelatedRecordsTab;
+    tab: RelatedRecordTab;
   } | null>(null);
   const [editingCapacity, setEditingCapacity] = useState(false);
   const [editingRemaining, setEditingRemaining] = useState(false);
@@ -279,124 +275,16 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
     setPrintModalOpen(false);
   }
 
-  // 记录显示状态
-  const relatedRecordAvailability = useMemo(() => {
-    const isGreen = bean?.beanState === 'green';
-    const roastingRecords = relatedNotes.filter(note => isRoastingRecord(note));
-    const brewingRecords = relatedNotes.filter(
-      note => !isSimpleChangeRecord(note) && !isRoastingRecord(note)
-    );
-    const changeRecords = relatedNotes.filter(note =>
-      isSimpleChangeRecord(note)
-    );
-    const primaryRecords = isGreen ? roastingRecords : brewingRecords;
-    const hasSourceGreenBean = !isGreen && relatedBeans.length > 0;
-
-    return {
-      hasPrimaryRecords: primaryRecords.length > 0,
-      hasChangeRecords: changeRecords.length > 0,
-      hasSourceGreenBean,
-    };
-  }, [bean?.beanState, relatedBeans.length, relatedNotes]);
-
-  const defaultRelatedRecordsTab: RelatedRecordsTab =
-    relatedRecordAvailability.hasPrimaryRecords
-      ? 'primary'
-      : relatedRecordAvailability.hasChangeRecords
-        ? 'change'
-        : relatedRecordAvailability.hasSourceGreenBean
-          ? 'green'
-          : 'primary';
-
-  const relatedRecordsTab = useMemo<RelatedRecordsTab>(() => {
-    const currentBeanId = bean?.id;
-    const overrideTab =
-      currentBeanId && relatedRecordsTabOverride?.beanId === currentBeanId
-        ? relatedRecordsTabOverride.tab
-        : null;
-
-    if (
-      overrideTab === 'primary' &&
-      relatedRecordAvailability.hasPrimaryRecords
-    ) {
-      return overrideTab;
-    }
-    if (
-      overrideTab === 'change' &&
-      relatedRecordAvailability.hasChangeRecords
-    ) {
-      return overrideTab;
-    }
-    if (
-      overrideTab === 'green' &&
-      relatedRecordAvailability.hasSourceGreenBean
-    ) {
-      return overrideTab;
-    }
-
-    return defaultRelatedRecordsTab;
-  }, [
-    bean?.id,
-    defaultRelatedRecordsTab,
-    relatedRecordAvailability,
-    relatedRecordsTabOverride,
-  ]);
-
-  const showChangeRecords = relatedRecordsTab === 'change';
-  const showGreenBeanRecords = relatedRecordsTab === 'green';
-
+  const relatedRecordsTab =
+    currentBeanId && relatedRecordsTabOverride?.beanId === currentBeanId
+      ? relatedRecordsTabOverride.tab
+      : null;
   const setRelatedRecordsTabForCurrentBean = React.useCallback(
-    (tab: RelatedRecordsTab) => {
+    (tab: RelatedRecordTab) => {
       if (!currentBeanId) return;
       setRelatedRecordsTabOverride({ beanId: currentBeanId, tab });
     },
     [currentBeanId]
-  );
-
-  const setShowChangeRecords = React.useCallback(
-    (show: boolean) => {
-      if (show) {
-        setRelatedRecordsTabForCurrentBean('change');
-        return;
-      }
-
-      setRelatedRecordsTabOverride(current => {
-        if (
-          current &&
-          current.beanId === currentBeanId &&
-          current.tab === 'change'
-        ) {
-          return currentBeanId
-            ? { beanId: currentBeanId, tab: 'primary' }
-            : null;
-        }
-        return current;
-      });
-    },
-    [currentBeanId, setRelatedRecordsTabForCurrentBean]
-  );
-
-  const setShowGreenBeanRecords = React.useCallback(
-    (show: boolean) => {
-      if (show) {
-        setRelatedRecordsTabForCurrentBean('green');
-        return;
-      }
-
-      setRelatedRecordsTabOverride(current => {
-        if (
-          current &&
-          current.beanId === currentBeanId &&
-          current.tab === 'green'
-        ) {
-          return currentBeanId
-            ? { beanId: currentBeanId, tab: 'primary' }
-            : null;
-        }
-        return current;
-      });
-    },
-    [currentBeanId, setRelatedRecordsTabForCurrentBean]
   );
 
   // 设置加载（优化：移除 isOpen 依赖，避免每次打开都重新设置）
@@ -1036,11 +924,9 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
                       isGreenBean={isGreenBean}
                       allBeans={allBeans}
                       bean={bean}
-                      showChangeRecords={showChangeRecords}
-                      showGreenBeanRecords={showGreenBeanRecords}
+                      selectedTab={relatedRecordsTab}
                       relatedNotesLoading={relatedNotesLoading}
-                      setShowChangeRecords={setShowChangeRecords}
-                      setShowGreenBeanRecords={setShowGreenBeanRecords}
+                      onTabChange={setRelatedRecordsTabForCurrentBean}
                       onOpenNoteDetail={
                         navigationState.visibleTabs.notes
                           ? onOpenRelatedNote

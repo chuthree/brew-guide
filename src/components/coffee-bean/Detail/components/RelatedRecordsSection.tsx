@@ -24,11 +24,9 @@ interface RelatedRecordsSectionProps {
   isGreenBean: boolean;
   allBeans: CoffeeBean[];
   bean: CoffeeBean | null;
-  showChangeRecords: boolean;
-  showGreenBeanRecords: boolean;
+  selectedTab: RelatedRecordTab | null;
   relatedNotesLoading?: boolean;
-  setShowChangeRecords: (show: boolean) => void;
-  setShowGreenBeanRecords: (show: boolean) => void;
+  onTabChange: (tab: RelatedRecordTab) => void;
   onOpenNoteDetail?: (detail: {
     note: BrewingNote;
     equipmentName: string;
@@ -39,13 +37,12 @@ interface RelatedRecordsSectionProps {
   onOpenBeanDetail?: (bean: CoffeeBean) => void;
 }
 
-type RelatedRecordTab = 'primary' | 'change' | 'green';
+export type RelatedRecordTab = 'primary' | 'change' | 'green';
 
 interface RelatedRecordTabPage {
   key: RelatedRecordTab;
   label: string;
   count: number;
-  onSelect: () => void;
 }
 
 const getPageOffsetX = (pageIndex: number, activePageIndex: number) => {
@@ -67,11 +64,9 @@ const RelatedRecordsSection: React.FC<RelatedRecordsSectionProps> = React.memo(
     isGreenBean,
     allBeans,
     bean,
-    showChangeRecords,
-    showGreenBeanRecords,
+    selectedTab,
     relatedNotesLoading = false,
-    setShowChangeRecords,
-    setShowGreenBeanRecords,
+    onTabChange,
     onOpenNoteDetail,
     onEditNote,
     onOpenBeanDetail,
@@ -144,30 +139,15 @@ const RelatedRecordsSection: React.FC<RelatedRecordsSectionProps> = React.memo(
     const showTabs =
       !hasPrimaryRecords || hasSecondaryRecords || hasSourceGreenBean;
     const activeTab =
-      showGreenBeanRecords && hasSourceGreenBean
+      selectedTab === 'green' && hasSourceGreenBean
         ? 'green'
-        : showChangeRecords && hasSecondaryRecords
+        : selectedTab === 'change' && hasSecondaryRecords
           ? 'change'
           : hasPrimaryRecords
             ? 'primary'
             : hasSecondaryRecords
               ? 'change'
               : 'green';
-
-    const showPrimaryRecordTab = useCallback(() => {
-      setShowChangeRecords(false);
-      setShowGreenBeanRecords(false);
-    }, [setShowChangeRecords, setShowGreenBeanRecords]);
-
-    const showChangeRecordTab = useCallback(() => {
-      setShowChangeRecords(true);
-      setShowGreenBeanRecords(false);
-    }, [setShowChangeRecords, setShowGreenBeanRecords]);
-
-    const showGreenBeanRecordTab = useCallback(() => {
-      setShowChangeRecords(false);
-      setShowGreenBeanRecords(true);
-    }, [setShowChangeRecords, setShowGreenBeanRecords]);
 
     const primaryLabel = isGreenBean ? '烘焙记录' : '冲煮记录';
     const secondaryLabel = '变动记录';
@@ -181,7 +161,6 @@ const RelatedRecordsSection: React.FC<RelatedRecordsSectionProps> = React.memo(
           key: 'primary',
           label: primaryLabel,
           count: primaryRecords.length,
-          onSelect: showPrimaryRecordTab,
         });
       }
 
@@ -190,7 +169,6 @@ const RelatedRecordsSection: React.FC<RelatedRecordsSectionProps> = React.memo(
           key: 'change',
           label: secondaryLabel,
           count: secondaryRecords.length,
-          onSelect: showChangeRecordTab,
         });
       }
 
@@ -199,7 +177,6 @@ const RelatedRecordsSection: React.FC<RelatedRecordsSectionProps> = React.memo(
           key: 'green',
           label: greenBeanLabel,
           count: relatedBeans.length,
-          onSelect: showGreenBeanRecordTab,
         });
       }
 
@@ -212,9 +189,6 @@ const RelatedRecordsSection: React.FC<RelatedRecordsSectionProps> = React.memo(
       primaryRecords.length,
       relatedBeans.length,
       secondaryRecords.length,
-      showChangeRecordTab,
-      showGreenBeanRecordTab,
-      showPrimaryRecordTab,
     ]);
 
     const activePageIndex = Math.max(
@@ -281,7 +255,7 @@ const RelatedRecordsSection: React.FC<RelatedRecordsSectionProps> = React.memo(
                 role="tab"
                 aria-selected={activeTab === tab.key}
                 aria-controls={`${sectionId}-panel-${tab.key}`}
-                onClick={tab.onSelect}
+                onClick={() => onTabChange(tab.key)}
                 className={`text-xs font-medium text-neutral-500 tabular-nums transition-[color,opacity] duration-200 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-300 ${
                   activeTab === tab.key ? 'opacity-100' : 'opacity-50'
                 }`}
