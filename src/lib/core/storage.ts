@@ -88,7 +88,7 @@ export const Storage = {
       }
     } catch (_error) {
       console.error('获取所有键失败:', _error);
-      return [];
+      throw _error;
     }
   },
 

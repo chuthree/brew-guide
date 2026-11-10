@@ -77,7 +77,7 @@ interface ExportAllDataOptions {
   excludeDeviceSettings?: boolean;
   pretty?: boolean;
   collectDiagnostics?: boolean;
-  /** 同步时不能把导出失败的数据当作删除。 */
+  /** 默认拒绝不完整备份，避免恢复时把导出失败的数据当作删除。 */
   strict?: boolean;
   /** Upgrade backup: use frozen core data before repositories are bound. */
   snapshot?: Record<string, unknown>;
@@ -157,7 +157,12 @@ export const DataManager = {
    */
   async exportAllData(options: ExportAllDataOptions = {}): Promise<string> {
     try {
-      const { pretty = false, collectDiagnostics = false, snapshot } = options;
+      const {
+        pretty = false,
+        collectDiagnostics = false,
+        strict = true,
+        snapshot,
+      } = options;
       const now = new Date();
       const exportData: ExportData = {
         exportDate: this.formatDateWithTimezone(now),
@@ -310,15 +315,14 @@ export const DataManager = {
                   >
                 )[equipmentId] = methods;
               } catch {
-                if (options.strict)
-                  throw new Error(`自定义方案数据无效: ${key}`);
+                if (strict) throw new Error(`自定义方案数据无效: ${key}`);
                 console.error(`解析自定义方案数据失败: ${key}`);
               }
             }
           }
         }
       } catch (error) {
-        if (options.strict) throw error;
+        if (strict) throw error;
         console.error('导出自定义方案失败:', error);
       }
 
@@ -330,26 +334,12 @@ export const DataManager = {
 
           // 处理每个自定义预设类型
           for (const key of CUSTOM_PRESETS_KEYS) {
-            const presetJson = JSON.stringify(readCustomPresets(key));
-
-            if (presetJson) {
-              try {
-                const presets = JSON.parse(presetJson);
-                // 将当前类型的所有自定义预设添加到导出数据中
-                (exportData.data.customPresets as Record<string, unknown>)[
-                  key
-                ] = presets;
-              } catch {
-                if (options.strict)
-                  throw new Error(`自定义预设数据无效: ${key}`);
-                // 如果JSON解析失败，跳过
-                console.error(`解析自定义预设数据失败: ${key}`);
-              }
-            }
+            (exportData.data.customPresets as Record<string, string[]>)[key] =
+              readCustomPresets(key);
           }
         }
       } catch (error) {
-        if (options.strict) throw error;
+        if (strict) throw error;
         console.error('导出自定义预设失败:', error);
         // 错误处理：即使自定义预设导出失败，也继续导出其他数据
       }
@@ -362,7 +352,7 @@ export const DataManager = {
           exportData.data['roasterConfigs'] = roasterConfigs;
         }
       } catch (error) {
-        if (options.strict) throw error;
+        if (strict) throw error;
         console.error('导出烘焙商配置失败:', error);
       }
 
