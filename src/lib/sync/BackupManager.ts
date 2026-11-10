@@ -8,6 +8,8 @@ import type { BackupRecord } from '@/lib/s3/types';
 
 const BACKUP_DIR = 'backups';
 const MAX_BACKUPS = 5;
+const BACKUP_KEY_PATTERN =
+  /^backups\/backup-\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z(?:-(?:local|remote)-[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12})?\.json$/;
 
 export class BackupManager {
   constructor(private serviceName: string) {}
@@ -38,9 +40,7 @@ export class BackupManager {
         return null;
       }
 
-      console.warn(
-        `✅ [${this.serviceName}] 备份创建成功: ${backupKey}`
-      );
+      console.warn(`✅ [${this.serviceName}] 备份创建成功: ${backupKey}`);
       return { timestamp: Date.now(), key: backupKey, hash };
     } catch (error) {
       console.error(`❌ [${this.serviceName}] 备份创建异常:`, error);
@@ -93,7 +93,10 @@ export class BackupManager {
    * 清理超出数量的旧备份
    */
   async cleanupOldBackups(client: IStorageClient): Promise<void> {
-    const backups = await this.listBackupsFromServer(client);
+    // Keep manually named and nested backups available for recovery.
+    const backups = (await this.listBackupsFromServer(client)).filter(backup =>
+      BACKUP_KEY_PATTERN.test(backup.key)
+    );
     if (backups.length <= MAX_BACKUPS) return;
 
     const toDelete = backups.slice(0, backups.length - MAX_BACKUPS);
