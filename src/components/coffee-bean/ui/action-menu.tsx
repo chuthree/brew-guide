@@ -255,7 +255,10 @@ const ActionMenu: React.FC<ActionMenuProps> = ({
           className={cn(
             'relative flex items-center justify-center overflow-hidden',
             triggerClassName,
-            useDropdown && 'z-50'
+            useDropdown && 'z-50',
+            open &&
+              useDropdown &&
+              'inset-ring inset-ring-neutral-50 dark:inset-ring-neutral-900'
           )}
           initial={false}
           animate={{
