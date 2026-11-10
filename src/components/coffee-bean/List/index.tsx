@@ -1894,7 +1894,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
       );
 
       showToast({
-        type: 'success',
+        type: result.success ? 'success' : 'info',
         title: result.message,
       });
     } catch (error) {
@@ -1992,12 +1992,15 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         onSuccess: message => {
           showToast({ type: 'success', title: message, duration: 2000 });
         },
+        onInfo: message => {
+          showToast({ type: 'info', title: message, duration: 2000 });
+        },
         onError: message => {
           showToast({ type: 'error', title: message, duration: 3000 });
         },
-        onComplete: () => {
+        onComplete: completed => {
           setIsSavingShareImage(false);
-          handleCancelShare();
+          if (completed) handleCancelShare();
         },
       });
     } catch (error) {

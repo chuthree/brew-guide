@@ -8,8 +8,9 @@ interface NotesExporterProps {
   selectedNotes: string[];
   notesContainerRef: React.RefObject<HTMLDivElement | null>;
   onSuccess: (message: string) => void;
+  onInfo: (message: string) => void;
   onError: (message: string) => void;
-  onComplete: () => void;
+  onComplete: (completed: boolean) => void;
 }
 
 const clampRating = (value: number): number => Math.max(0, Math.min(5, value));
@@ -65,6 +66,7 @@ export async function exportSelectedNotes({
   selectedNotes,
   notesContainerRef,
   onSuccess,
+  onInfo,
   onError,
   onComplete,
 }: NotesExporterProps) {
@@ -72,6 +74,9 @@ export async function exportSelectedNotes({
     onError('请选择至少一条笔记');
     return;
   }
+
+  let completed = false;
+  let tempContainer: HTMLDivElement | undefined;
 
   try {
     // 首先，从原始列表中找出选中的笔记元素
@@ -84,7 +89,7 @@ export async function exportSelectedNotes({
       notesContainerRef.current.querySelectorAll('.note-item');
 
     // 创建一个临时容器用于导出
-    const tempContainer = document.createElement('div');
+    tempContainer = document.createElement('div');
     const isDarkMode = document.documentElement.classList.contains('dark');
     const backgroundColor = isDarkMode ? '#171717' : '#fafafa';
 
@@ -339,15 +344,16 @@ export async function exportSelectedNotes({
     );
 
     if (saveOutcome === 'activation-required') {
-      onSuccess('笔记图片已生成，请再次点击分享');
+      onInfo('笔记图片已生成，请再次点击分享');
       return;
     }
 
     if (saveOutcome === 'cancelled') {
-      onSuccess('已取消分享');
+      onInfo('已取消分享');
       return;
     }
 
+    completed = true;
     onSuccess(
       saveOutcome === 'saved'
         ? '已保存到系统相册'
@@ -372,6 +378,7 @@ export async function exportSelectedNotes({
 
     onError(errorMessage);
   } finally {
-    onComplete();
+    tempContainer?.remove();
+    onComplete(completed);
   }
 }

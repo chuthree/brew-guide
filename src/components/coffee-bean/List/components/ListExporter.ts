@@ -224,7 +224,8 @@ export const exportListPreview = async (
     );
 
     return {
-      success: true,
+      success:
+        saveOutcome !== 'cancelled' && saveOutcome !== 'activation-required',
       message:
         saveOutcome === 'activation-required'
           ? '列表预览图已生成，请再次点击分享'

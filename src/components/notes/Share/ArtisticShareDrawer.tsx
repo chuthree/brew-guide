@@ -333,7 +333,10 @@ const ArtisticShareDrawer: React.FC<ArtisticShareDrawerProps> = ({
       );
 
       showToast({
-        type: saveOutcome === 'cancelled' ? 'info' : 'success',
+        type:
+          saveOutcome === 'cancelled' || saveOutcome === 'activation-required'
+            ? 'info'
+            : 'success',
         title:
           saveOutcome === 'activation-required'
             ? '图片已生成，请再次点击分享'

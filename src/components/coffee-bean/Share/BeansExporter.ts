@@ -16,8 +16,9 @@ interface BeansExporterProps {
   beansData: CoffeeBean[];
   beansContainerRef: React.RefObject<HTMLDivElement | null>;
   onSuccess: (message: string) => void;
+  onInfo: (message: string) => void;
   onError: (message: string) => void;
-  onComplete: () => void;
+  onComplete: (completed: boolean) => void;
 }
 
 /**
@@ -112,6 +113,7 @@ export async function exportSelectedBeans({
   beansData,
   beansContainerRef,
   onSuccess,
+  onInfo,
   onError,
   onComplete,
 }: BeansExporterProps) {
@@ -119,6 +121,9 @@ export async function exportSelectedBeans({
     onError('请选择至少一个咖啡豆');
     return;
   }
+
+  let completed = false;
+  let tempContainer: HTMLDivElement | undefined;
 
   try {
     // 从原始列表中找出选中的咖啡豆元素
@@ -131,7 +136,7 @@ export async function exportSelectedBeans({
       beansContainerRef.current.querySelectorAll('[data-bean-item]');
 
     // 创建临时容器用于导出
-    const tempContainer = document.createElement('div');
+    tempContainer = document.createElement('div');
     const isDarkMode = document.documentElement.classList.contains('dark');
     const backgroundColor = isDarkMode ? '#171717' : '#fafafa';
 
@@ -410,15 +415,16 @@ export async function exportSelectedBeans({
     );
 
     if (saveOutcome === 'activation-required') {
-      onSuccess('咖啡豆图片已生成，请再次点击分享');
+      onInfo('咖啡豆图片已生成，请再次点击分享');
       return;
     }
 
     if (saveOutcome === 'cancelled') {
-      onSuccess('已取消分享');
+      onInfo('已取消分享');
       return;
     }
 
+    completed = true;
     onSuccess(
       saveOutcome === 'saved'
         ? '已保存到系统相册'
@@ -442,6 +448,7 @@ export async function exportSelectedBeans({
 
     onError(errorMessage);
   } finally {
-    onComplete();
+    tempContainer?.remove();
+    onComplete(completed);
   }
 }

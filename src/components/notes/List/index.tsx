@@ -838,10 +838,11 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
         selectedNotes,
         notesContainerRef,
         onSuccess: message => showToastMessage(message, 'success'),
+        onInfo: message => showToastMessage(message, 'info'),
         onError: message => showToastMessage(message, 'error'),
-        onComplete: () => {
+        onComplete: completed => {
           setIsSaving(false);
-          handleCancelShare();
+          if (completed) handleCancelShare();
         },
       });
     } catch (error) {
