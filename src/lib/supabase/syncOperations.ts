@@ -23,7 +23,7 @@ import {
   appSettingsRepository,
   grinderRepository,
 } from '@/lib/data/repositories';
-import type { AppSettings, RoasterConfig } from '@/lib/data/models';
+import type { AppSettings, Grinder, RoasterConfig } from '@/lib/data/models';
 import { mergeRoasterLogos } from '@/lib/settings/roasterLogoSync';
 import {
   omitDeviceSettings,
@@ -1031,6 +1031,7 @@ export async function downloadSettingsData(
     await withDataMutation(async () => {
       const settingsData = row.data as Record<string, unknown>;
       let importedSettings: AppSettings | undefined;
+      let importedGrinders: Grinder[] | undefined;
 
       // 恢复应用设置
       if (settingsData.appSettings) {
@@ -1076,13 +1077,24 @@ export async function downloadSettingsData(
           throw new Error('云端 grinders 数据格式无效，应为数组');
         }
 
-        const cloudGrinders = settingsData.grinders as Array<{
-          id: string;
-          name: string;
-          currentGrindSize?: string;
-        }>;
-        await grinderRepository.replaceAll(cloudGrinders);
-        count++;
+        const grinders = settingsData.grinders;
+        if (
+          grinders.some(
+            grinder =>
+              !grinder ||
+              typeof grinder !== 'object' ||
+              Array.isArray(grinder) ||
+              typeof grinder.id !== 'string' ||
+              !grinder.id.trim() ||
+              typeof grinder.name !== 'string'
+          )
+        )
+          throw new Error('云端 grinders 数据格式无效，应包含有效 id 和名称');
+        if (
+          new Set(grinders.map(grinder => grinder.id)).size !== grinders.length
+        )
+          throw new Error('云端 grinders 中存在重复 id');
+        importedGrinders = grinders;
       }
 
       // Presets share the app settings row; legacy localStorage is read-only fallback.
@@ -1120,7 +1132,14 @@ export async function downloadSettingsData(
           importedSettings = { ...settings, customPresets };
         }
       }
+      // Finish validation before replacing any local data.
+      if (importedGrinders) {
+        currentSection = 'grinders';
+        await grinderRepository.replaceAll(importedGrinders);
+        count++;
+      }
       if (importedSettings) {
+        currentSection = 'appSettings';
         await appSettingsRepository.save(importedSettings);
         const { useSettingsStore } = await import('@/lib/stores/settingsStore');
         useSettingsStore.setState({ settings: importedSettings });
