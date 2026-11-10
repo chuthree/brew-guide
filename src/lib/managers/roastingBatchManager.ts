@@ -16,11 +16,13 @@ export async function saveRoastingBatchInMutation(command: RoastingCommand) {
   ]);
   const noteStore = getBrewingNoteStore();
   // Preserve lazy note loading; a partial cache must not become initialized.
-  if (noteStore.initialized)
-    noteStore.setNotes([
+  noteStore.setNotes(
+    [
       ...noteStore.notes.filter(note => note.id !== command.noteId),
       ...(changes.note ? [changes.note] : []),
-    ]);
+    ],
+    noteStore.initialized
+  );
   if (typeof window !== 'undefined') {
     for (const bean of changes.beans)
       window.dispatchEvent(

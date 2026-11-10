@@ -69,13 +69,16 @@ interface BrewingNoteStore {
   ) => Promise<BrewingNote | null>;
   deleteNote: (id: string) => Promise<boolean>;
 
-  setNotes: (notes: BrewingNote[]) => void;
+  setNotes: (notes: BrewingNote[], initialized?: boolean) => void;
   upsertNote: (note: BrewingNote) => Promise<void>;
   removeNote: (id: string) => Promise<void>;
 
   getNoteById: (id: string) => BrewingNote | undefined;
   refreshNotes: () => Promise<void>;
 }
+
+let noteRefreshVersion = 0;
+let noteLoadPromise: Promise<void> | null = null;
 
 export const useBrewingNoteStore = create<BrewingNoteStore>()(
   subscribeWithSelector((set, get) => {
@@ -183,29 +186,47 @@ export const useBrewingNoteStore = create<BrewingNoteStore>()(
         error: null,
         initialized: false,
 
-        loadNotes: async () => {
-          if (get().isLoading) return;
-          set({ isLoading: true, error: null });
-          try {
-            const notes = await brewingNoteRepository.list();
-            recordCrashCheckpoint('brewing-notes:loaded', {
-              noteCount: notes.length,
-            });
-            set({
-              notes: notes.map(note =>
-                stripBrewingNoteImages(normalizeBrewingNote(note).note)
-              ),
-              isLoading: false,
-              initialized: true,
-            });
-          } catch (error) {
-            set({
-              error: '加载笔记失败',
-              isLoading: false,
-              initialized: false,
-            });
-            throw error;
-          }
+        loadNotes: () => {
+          if (noteLoadPromise) return noteLoadPromise;
+          noteLoadPromise = Promise.resolve().then(async () => {
+            set({ isLoading: true, error: null });
+            try {
+              while (true) {
+                const previousNotes = get().notes;
+                const refreshVersion = noteRefreshVersion;
+                const notes = await brewingNoteRepository.list();
+                // A write or explicit refresh can finish while this read is pending.
+                // Read again rather than publishing an older snapshot over it.
+                if (
+                  previousNotes !== get().notes ||
+                  refreshVersion !== noteRefreshVersion
+                ) {
+                  continue;
+                }
+                recordCrashCheckpoint('brewing-notes:loaded', {
+                  noteCount: notes.length,
+                });
+                set({
+                  notes: notes.map(note =>
+                    stripBrewingNoteImages(normalizeBrewingNote(note).note)
+                  ),
+                  isLoading: false,
+                  initialized: true,
+                });
+                return;
+              }
+            } catch (error) {
+              set({
+                error: '加载笔记失败',
+                isLoading: false,
+                initialized: false,
+              });
+              throw error;
+            } finally {
+              noteLoadPromise = null;
+            }
+          });
+          return noteLoadPromise;
         },
 
         addNote: async noteData => {
@@ -222,7 +243,12 @@ export const useBrewingNoteStore = create<BrewingNoteStore>()(
           const noteForStore =
             await brewingNotePersistence.saveWithImages(newNote);
           await clearExpectedCoreDataDeletion();
-          set(state => ({ notes: [noteForStore, ...state.notes] }));
+          set(state => ({
+            notes: [
+              noteForStore,
+              ...state.notes.filter(note => note.id !== noteForStore.id),
+            ],
+          }));
 
           if (typeof window !== 'undefined') {
             window.dispatchEvent(
@@ -291,12 +317,12 @@ export const useBrewingNoteStore = create<BrewingNoteStore>()(
             )
         ),
 
-        setNotes: notes =>
+        setNotes: (notes, initialized = true) =>
           set({
             notes: notes.map(note =>
               stripBrewingNoteImages(normalizeBrewingNote(note).note)
             ),
-            initialized: true,
+            initialized,
           }),
 
         upsertNote: async note => {
@@ -325,6 +351,7 @@ export const useBrewingNoteStore = create<BrewingNoteStore>()(
         getNoteById: id => get().notes.find(n => n.id === id),
 
         refreshNotes: async () => {
+          noteRefreshVersion += 1;
           set({ initialized: false });
           await get().loadNotes();
         },
