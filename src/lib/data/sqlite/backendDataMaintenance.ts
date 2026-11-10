@@ -5,6 +5,7 @@ import type { SqliteDriver } from './driver';
 import { clearOptionalMcpTables } from './mcpMaintenance';
 
 const CLEARED_TABLES = [
+  'pending_operations',
   'brewing_notes',
   'brewing_note_images',
   'coffee_beans',

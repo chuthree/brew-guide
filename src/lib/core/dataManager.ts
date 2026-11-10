@@ -27,6 +27,7 @@ import {
   customMethodRepository,
   grinderRepository,
   legacySettingsRepository,
+  offlineQueueRepository,
   imageSourcePayloadValidator,
   dataImportPersistence,
 } from '@/lib/data/repositories';
@@ -790,6 +791,7 @@ export const DataManager = {
         await markExpectedCoreDataMutation('reset-all-data');
 
         // 清除所有 IndexedDB 数据
+        await offlineQueueRepository.clear();
         await brewingNotePersistence.clearWithImages();
         await coffeeBeanPersistence.clearWithImages();
         await customEquipmentRepository.clear();

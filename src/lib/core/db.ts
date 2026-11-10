@@ -630,6 +630,7 @@ export const dbUtils = {
   async clearAllData(): Promise<void> {
     try {
       // Invalidate old command replays even if a later destructive clear fails.
+      await db.pendingOperations.clear();
       await db.businessOperations.clear();
       await db.businessPublications.clear();
       await db.brewingNotes.clear();

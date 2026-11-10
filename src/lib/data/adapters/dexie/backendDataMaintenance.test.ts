@@ -137,18 +137,16 @@ describe('Dexie backend data maintenance', () => {
     await db.delete();
   });
 
-  it('clears the same database tables through StorageUtils and retains the pending queue', async () => {
+  it('clears the database tables and pending queue through StorageUtils', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
     await StorageUtils.clearAllData();
 
     expect(db.isOpen()).toBe(true);
     expect(await countDatabaseRows()).toEqual([
-      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     ]);
-    expect(await db.pendingOperations.get(pendingOperation.id)).toEqual(
-      pendingOperation
-    );
+    expect(await db.pendingOperations.get(pendingOperation.id)).toBeUndefined();
     expect(warn).toHaveBeenCalledWith('数据库已清空');
     expect(mocks.preferencesClear).not.toHaveBeenCalled();
   });
@@ -191,12 +189,10 @@ describe('Dexie backend data maintenance', () => {
     await expect(StorageUtils.clearAllData()).rejects.toBe(error);
 
     const counts = await countDatabaseRows();
-    expect(counts).toEqual([0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1]);
+    expect(counts).toEqual([0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0]);
     expect(failingClear).toHaveBeenCalledOnce();
     laterClears.forEach(clear => expect(clear).not.toHaveBeenCalled());
-    expect(await db.pendingOperations.get(pendingOperation.id)).toEqual(
-      pendingOperation
-    );
+    expect(await db.pendingOperations.get(pendingOperation.id)).toBeUndefined();
     expect(logError).toHaveBeenCalledWith('清空数据库失败:', error);
     expect(mocks.preferencesClear).not.toHaveBeenCalled();
   });

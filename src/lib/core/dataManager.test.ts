@@ -147,6 +147,7 @@ vi.mock('@/lib/data/repositories', () => ({
   legacySettingsRepository: {
     clear: mocks.clearLegacySettings,
   },
+  offlineQueueRepository: { clear: vi.fn(() => Promise.resolve()) },
   imageSourcePayloadValidator: {
     validateCoffeeBeans: mocks.validateCoffeeBeans,
     validateBrewingNotes: mocks.validateBrewingNotes,

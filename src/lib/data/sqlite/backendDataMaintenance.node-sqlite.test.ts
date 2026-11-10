@@ -90,6 +90,7 @@ describeNodeSqlite('SQLite backend data maintenance (node:sqlite)', () => {
     await createSqliteBackendDataMaintenance(driver, fileStore).clearAllData();
 
     const clearedTables = [
+      'pending_operations',
       'brewing_notes',
       'brewing_note_images',
       'coffee_beans',
@@ -106,11 +107,7 @@ describeNodeSqlite('SQLite backend data maintenance (node:sqlite)', () => {
       );
       expect(row.count, table).toBe(0);
     }
-    for (const table of [
-      'pending_operations',
-      'historical_yearly_reports',
-      'migration_state',
-    ]) {
+    for (const table of ['historical_yearly_reports', 'migration_state']) {
       const [row] = await driver.query(
         `SELECT COUNT(*) AS count FROM ${table}`
       );
