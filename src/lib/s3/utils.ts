@@ -78,6 +78,7 @@ export async function createFilesMetadataFromData(
       filesMetadata[key] = await createFileMetadata(key, content);
     } catch (error) {
       console.error(`创建文件 ${key} 的元数据失败:`, error);
+      throw error;
     }
   }
 

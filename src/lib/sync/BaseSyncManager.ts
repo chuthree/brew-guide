@@ -6,11 +6,7 @@
  */
 
 import { Storage } from '@/lib/core/storage';
-import {
-  createFilesMetadataFromData,
-  generateDeviceId,
-  safeJsonParse,
-} from '@/lib/s3/utils';
+import { createFilesMetadataFromData, generateDeviceId } from '@/lib/s3/utils';
 
 import type {
   SyncResult,
@@ -347,6 +343,9 @@ export abstract class BaseSyncManager {
 
     const { calculateHash } = await import('@/lib/s3/utils');
     const hash = await calculateHash(content);
+    const localFilesMetadata = await createFilesMetadataFromData({
+      'brew-guide-data.json': JSON.parse(content),
+    });
 
     // 1. 先上传主文件
     addLog('正在上传主文件...');
@@ -382,7 +381,6 @@ export abstract class BaseSyncManager {
     }
 
     // 3. 更新元数据
-    const localFilesMetadata = await this.getLocalFilesMetadata();
     const metadataUpdated = await this.updateMetadataAfterSync(
       localFilesMetadata,
       addLog
@@ -490,28 +488,6 @@ export abstract class BaseSyncManager {
       console.error(`❌ [${this.getServiceName()}] 更新元数据失败:`, error);
       addLog?.(`元数据更新失败: ${errorMsg}`);
       return false;
-    }
-  }
-
-  /**
-   * 获取本地文件元数据
-   */
-  protected async getLocalFilesMetadata(): Promise<
-    Record<string, FileMetadata>
-  > {
-    try {
-      const fullExportString = await this.getFileContent(
-        'brew-guide-data.json'
-      );
-      if (!fullExportString) return {};
-      const exportDataObj = safeJsonParse(fullExportString, {});
-      const dataMap: Record<string, unknown> = {
-        'brew-guide-data.json': exportDataObj,
-      };
-      return await createFilesMetadataFromData(dataMap);
-    } catch (error) {
-      console.error(`${this.getServiceName()} 获取本地文件元数据失败:`, error);
-      return {};
     }
   }
 
