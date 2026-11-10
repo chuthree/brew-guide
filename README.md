@@ -76,9 +76,9 @@ Android 版提供 ContentProvider 接口，供其他应用经用户授权后查�
 
 ## 相关项目
 
-[brew-guide-cli](https://github.com/swiftwind0405/brew-guide-cli)：社区维护的命令行工具，用于管理 Brew Guide 的 Supabase 同步数据。
-
-[bookoo-brew](https://github.com/iamzzz774/bookoo-brew)：支持蓝牙连接 BOOKOO 咖啡秤和可选的 MT80 磨豆参数，配合 Brew Guide 管理笔记与库存。
+- [brew-guide-cli](https://github.com/swiftwind0405/brew-guide-cli)：社区维护的命令行工具，用于管理 Brew Guide 的 Supabase 同步数据。
+  - [brew-cli](https://github.com/FabianActor/brew-cli)：较新的分支。
+- [bookoo-brew](https://github.com/iamzzz774/bookoo-brew)：支持蓝牙连接 BOOKOO 咖啡秤和可选的 MT80 磨豆参数，配合 Brew Guide 管理笔记与库存。
 
 ## 许可证
 
