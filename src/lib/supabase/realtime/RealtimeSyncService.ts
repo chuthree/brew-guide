@@ -1,5 +1,6 @@
 import {
   hasDirtySettings,
+  getSettingsDirtyToken,
   markSettingsDirty,
   clearSettingsDirty,
 } from './settingsDirty';
@@ -721,7 +722,8 @@ export class RealtimeSyncService {
       );
 
       try {
-        const settingsDirty = hasDirtySettings();
+        const settingsDirtyToken = getSettingsDirtyToken();
+        const settingsDirty = Boolean(settingsDirtyToken);
         const settingsMode = getSettingsSyncMode(phase, settingsDirty);
         const syncManager = new InitialSyncManager(this.client!, {
           settingsMode,
@@ -732,7 +734,7 @@ export class RealtimeSyncService {
           await this.processOfflineQueue();
         }
         if (settingsMode === 'bidirectional') {
-          clearSettingsDirty();
+          clearSettingsDirty(settingsDirtyToken);
         }
         const now = Date.now();
         this.setState({ lastSyncTime: now, error: null });
@@ -802,13 +804,14 @@ export class RealtimeSyncService {
 
     this.isProcessingRemoteSettings = true;
     try {
+      const settingsDirtyToken = getSettingsDirtyToken();
       const result = await withTimeout(
         uploadSettingsData(this.client, { skipIfUnchanged: true }),
         SYNC_TIMING.SETTINGS_UPLOAD_TIMEOUT,
         '上传设置超时'
       );
       assertSyncSuccess(result, '上传设置失败');
-      clearSettingsDirty();
+      clearSettingsDirty(settingsDirtyToken);
       if (ownsProgress) {
         syncStore.updateSupabaseSyncTask(SYNC_TABLES.USER_SETTINGS, {
           status: 'success',

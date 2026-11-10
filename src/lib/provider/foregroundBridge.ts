@@ -10,6 +10,7 @@ import {
 import { createCapacitorImageFileStore } from '@/lib/data/images/capacitorImageFileStore';
 import { materializeProviderPublication } from './publicationQueue';
 import { withDataMutation } from '@/lib/data/mutationCoordinator';
+import { markSettingsDirty } from '@/lib/supabase/realtime/settingsDirty';
 
 let initialized: Promise<void> | undefined;
 let refreshTail = Promise.resolve();
@@ -37,7 +38,9 @@ export function initializeAndroidProviderBridge(): Promise<void> {
           fileStore,
           row.id,
           () => {
-            localStorage.setItem('brew-guide:realtime-sync:settingsDirty', '1');
+            if (!markSettingsDirty()) {
+              throw new Error('Settings sync intent cannot be persisted yet.');
+            }
           }
         );
         if (
