@@ -15,10 +15,8 @@ const isLocalStorageAvailable = (): boolean => {
   }
 
   try {
-    const testKey = `${APP_PREFIX}:test`;
-    localStorage.setItem(testKey, 'test');
-    localStorage.removeItem(testKey);
-    return true;
+    // A full quota can reject writes while existing settings remain readable.
+    return window.localStorage !== undefined;
   } catch (_error) {
     return false;
   }
