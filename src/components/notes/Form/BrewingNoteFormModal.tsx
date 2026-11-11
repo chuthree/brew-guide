@@ -367,6 +367,9 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
   useEffect(() => {
     if (!showForm) {
       didAutoAdvancePrefilledStepRef.current = false;
+      setIsRandomPickerOpen(false);
+      setIsLongPressRandom(false);
+      setIsExitDrawerOpen(false);
     }
   }, [showForm]);
 
@@ -853,7 +856,7 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
       {canUseCoffeeBeanModule && (
         <CoffeeBeanRandomPicker
           beans={availableCoffeeBeans}
-          isOpen={isRandomPickerOpen}
+          isOpen={showForm && isRandomPickerOpen}
           onClose={() => {
             setIsRandomPickerOpen(false);
             setIsLongPressRandom(false);

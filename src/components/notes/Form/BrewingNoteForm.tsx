@@ -229,9 +229,6 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
   const [flavorDimensions, setFlavorDimensions] = useState<FlavorDimension[]>(
     []
   );
-  const [displayDimensions, setDisplayDimensions] = useState<FlavorDimension[]>(
-    []
-  );
 
   // 咖啡豆数据和状态管理
   // 支持已有豆子(CoffeeBean)和待创建豆子(PendingCoffeeBean)
@@ -355,7 +352,9 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
   );
 
   const [selectionChanged, setSelectionChanged] = useState(false);
-  const selectedReferenceRef = useRef(pickNoteSelection(initialData));
+  const [selectedReference, setSelectedReference] = useState(() =>
+    pickNoteSelection(initialData)
+  );
 
   // 添加时间状态
   const [totalTimeStr, setTotalTimeStr] = useState(() =>
@@ -498,21 +497,20 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
   }, [initialData.id]);
 
   // 创建显示维度（包含历史维度）
-  const createDisplayDimensions = (
-    currentDimensions: FlavorDimension[],
-    tasteData: Record<string, number>
-  ) => {
+  const displayDimensions = useMemo(() => {
+    const currentDimensions = flavorDimensions;
+    const tasteData = formData.taste;
     const historicalLabels = getHistoricalLabelsSync();
     const displayDims = [...currentDimensions];
 
     // 检查笔记中是否有当前维度列表中不存在的风味评分
     Object.keys(tasteData).forEach(tasteId => {
       const existsInCurrent = currentDimensions.some(d => d.id === tasteId);
-      if (!existsInCurrent && tasteData[tasteId] > 0) {
+      if (!existsInCurrent) {
         // 创建一个历史维度项
         const historicalDimension: FlavorDimension = {
           id: tasteId,
-          label: historicalLabels[tasteId] || '已删除的评分维度',
+          label: `${historicalLabels[tasteId] || '未命名评分'}（历史）`,
           order: 999, // 放在最后
           isDefault: false,
         };
@@ -522,7 +520,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
 
     // 按order排序
     return displayDims.sort((a, b) => a.order - b.order);
-  };
+  }, [flavorDimensions, formData.taste]);
 
   // 加载评分维度数据
   useEffect(() => {
@@ -535,7 +533,6 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         if (!initialTasteSeed || Object.keys(initialTasteSeed).length === 0) {
           const emptyTaste = createEmptyTasteRatings(dimensions);
           setFormData(prev => ({ ...prev, taste: emptyTaste }));
-          setDisplayDimensions(dimensions);
         } else {
           // 迁移现有的风味评分数据以确保兼容性
           const migratedTaste = migrateTasteRatings(
@@ -543,13 +540,6 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
             dimensions
           );
           setFormData(prev => ({ ...prev, taste: migratedTaste }));
-
-          // 创建包含历史维度的显示维度列表
-          const displayDims = createDisplayDimensions(
-            dimensions,
-            initialTasteSeed
-          );
-          setDisplayDimensions(displayDims);
         }
       } catch (error) {
         console.error('加载评分维度失败:', error);
@@ -571,11 +561,6 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         const migratedTaste = migrateTasteRatings(prev.taste, dimensions);
         return { ...prev, taste: migratedTaste };
       });
-
-      // 重新创建显示维度列表
-      const currentTaste = formData.taste;
-      const displayDims = createDisplayDimensions(dimensions, currentTaste);
-      setDisplayDimensions(displayDims);
     };
 
     window.addEventListener(
@@ -588,7 +573,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         handleFlavorDimensionsChange
       );
     };
-  }, [formData.taste]);
+  }, []);
 
   // 加载器具和方案数据
   useEffect(() => {
@@ -941,10 +926,10 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     (selection: EquipmentMethodSelection) => {
       try {
         setSelectionChanged(true);
-        selectedReferenceRef.current = {
+        setSelectedReference({
           equipment: selection.equipmentId,
           method: selection.methodId || selection.methodName,
-        };
+        });
         // 更新器具
         setSelectedEquipment(selection.equipmentId);
         if (selection.equipmentId) {
@@ -1210,7 +1195,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
 
     try {
       const selection = selectionChanged
-        ? await resolveFormNoteSelection(selectedReferenceRef.current)
+        ? await resolveFormNoteSelection(selectedReference)
         : id ||
             initialData.equipmentId !== undefined ||
             initialData.methodId !== undefined
@@ -1273,16 +1258,13 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
             ? undefined
             : initialData.beanId);
 
-        // 处理风味评分数据
-        // 如果满足以下任一条件，不保存风味评分：
-        // 1. 用户关闭了风味评分显示
-        // 2. 用户只变更了总体评分，但风味评分完全没有手动修改过（仅来自同步）
+        // 隐藏评分只影响显示，不能清除已有笔记的评分。
         let finalTaste = formData.taste;
         if (
-          !settings?.showFlavorRatingInForm ||
-          (isAdding &&
-            settings?.flavorRatingFollowOverall &&
-            flavorRatingsOnlySyncedRef.current)
+          isAdding &&
+          (!settings?.showFlavorRatingInForm ||
+            (settings?.flavorRatingFollowOverall &&
+              flavorRatingsOnlySyncedRef.current))
         ) {
           // 不保存风味评分
           finalTaste = {};
@@ -1752,13 +1734,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     setFormData(prev => ({ ...prev, taste: newTaste }));
   }, []);
 
-  const lastEmittedDraftRef = useRef<string | null>(null);
-
-  useEffect(() => {
-    if (!onDraftChange) {
-      return;
-    }
-
+  const currentDraft = useMemo(() => {
     const parsedTotalTime = parseFloat(totalTimeStr);
     const totalTime =
       !Number.isNaN(parsedTotalTime) && parsedTotalTime > 0
@@ -1781,8 +1757,8 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
           roaster: undefined,
         };
 
-    const nextDraft = {
-      id: generatedNoteIdRef.current,
+    return {
+      id: initialData.id || generatedNoteId,
       timestamp: timestamp.getTime(),
       coffeeBean: canUseCoffeeBeanModule ? selectedCoffeeBean : null,
       beanId,
@@ -1794,8 +1770,8 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
       notes: formData.notes,
       ...(selectionChanged
         ? {
-            equipment: selectedReferenceRef.current.equipment,
-            method: selectedReferenceRef.current.method,
+            equipment: selectedReference.equipment,
+            method: selectedReference.method,
             equipmentId: undefined,
             methodId: undefined,
             equipmentName: undefined,
@@ -1808,14 +1784,6 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
       changeRecord: initialData.changeRecord,
       quickDecrementAmount: initialData.quickDecrementAmount,
     };
-    const nextDraftSignature = JSON.stringify(nextDraft);
-
-    if (lastEmittedDraftRef.current === nextDraftSignature) {
-      return;
-    }
-
-    lastEmittedDraftRef.current = nextDraftSignature;
-    onDraftChange(nextDraft);
   }, [
     canUseCoffeeBeanModule,
     formData,
@@ -1825,14 +1793,24 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     initialData.quickDecrementAmount,
     initialData.source,
     methodParams,
-    onDraftChange,
     selectedCoffeeBean,
     selectionChanged,
     selectedEquipment,
     selectedMethod,
     timestamp,
     totalTimeStr,
+    generatedNoteId,
+    selectedReference,
   ]);
+
+  const lastEmittedDraftRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!onDraftChange) return;
+    const signature = JSON.stringify(currentDraft);
+    if (lastEmittedDraftRef.current === signature) return;
+    lastEmittedDraftRef.current = signature;
+    onDraftChange(currentDraft);
+  }, [currentDraft, onDraftChange]);
 
   return (
     <form
@@ -2196,6 +2174,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         taste={formData.taste}
         onTasteChange={handleTasteChange}
         displayDimensions={displayDimensions}
+        currentDimensionIds={flavorDimensions.map(item => item.id)}
         halfStep={settings?.flavorRatingHalfStep}
         tenthStep={settings?.flavorRatingTenthStep}
         beanName={getCoffeeBeanDisplayName()}
