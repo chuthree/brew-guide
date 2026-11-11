@@ -8,11 +8,21 @@ import {
 } from '@/lib/data/sqlite/repositories/testing/nodeSqliteTestDriver';
 import { listCoffeeBeans } from '@/lib/data/sqlite/repositories/coffeeBean';
 import { listCoffeeBeanImageMetadata } from '@/lib/data/sqlite/imageMetadataExecutor';
+import { createSqliteRuntimeRepositories } from '@/lib/data/sqlite/runtimeRepositories';
+import {
+  configureRepositories,
+  appSettingsRepository,
+} from '@/lib/data/repositories';
+import type { AppSettings } from '@/lib/data/models';
 const native = vi.hoisted(() => ({
   driver: undefined as SqliteDriver | undefined,
   files: undefined as NativeImageFileStore | undefined,
   failProcessing: false,
   processes: 0,
+}));
+vi.mock('@/lib/app/runtime', async importOriginal => ({
+  ...(await importOriginal<typeof import('@/lib/app/runtime')>()),
+  detectAppRuntime: () => ({ runtime: 'tauri', capacitorPlatform: null }),
 }));
 vi.mock('@/lib/data/sqlite/tauriSqliteDriver', () => ({
   openTauriSqliteDriver: async () => {
@@ -37,9 +47,9 @@ vi.mock('@/lib/images/imageProcessing', async importOriginal => ({
 import { executeMcpTool } from './tools';
 import { MCP_TOOLS } from './toolDefinitions';
 const PNG =
-  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLbtAAAAABJRU5ErkJggg==';
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/iZk9HQAAAABJRU5ErkJggg==';
 const OTHER =
-  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/hS0AAAAASUVORK5CYII=';
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNgYPj/HwADAgH/5ncLrgAAAABJRU5ErkJggg==';
 class Files implements NativeImageFileStore {
   objects = new Map<string, Uint8Array>();
   write = vi.fn(async (key: string, bytes: Uint8Array) => {
@@ -73,6 +83,9 @@ type Result = {
 };
 let db: NodeSqliteTestDatabase;
 let files: Files;
+let repositories:
+  | ReturnType<typeof createSqliteRuntimeRepositories>
+  | undefined;
 let seq = 0;
 const permissions: McpPermissions = {
   scopes: { beans: 'edit', notes: 'edit' },
@@ -113,12 +126,20 @@ beforeEach(async () => {
   native.files = files;
   native.failProcessing = false;
   native.processes = 0;
+  const nextRepositories = createSqliteRuntimeRepositories(db.driver, files);
+  repositories ??= nextRepositories;
+  Object.assign(repositories, nextRepositories);
+  configureRepositories(repositories);
+  await appSettingsRepository.save({
+    autoFillRecognitionImage: true,
+  } as AppSettings);
 });
 afterEach(async () => {
   native.driver = undefined;
   native.files = undefined;
   await db.close();
 });
+
 describe('MCP image central transaction integration (real SQLite)', () => {
   it('registers the bounded tool catalog and creates a bean/photo atomically without exposing image bodies', async () => {
     expect(MCP_TOOLS.length).toBeLessThanOrEqual(96);
