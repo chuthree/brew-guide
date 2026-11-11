@@ -1,11 +1,11 @@
 /**
  * 同步配置组件共享 Hook
  *
- * 为 S3SyncSection、WebDAVSyncSection、SupabaseSyncSection 提供统一的状态管理
- * 减少三个组件中的重复代码
+ * 为 S3SyncSection、WebDAVSyncSection 提供统一的状态管理
  */
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useCallback } from 'react';
+import { useSyncDiagnostics } from './useSyncDiagnostics';
 import type { ConnectionStatus, SyncProgress } from '@/lib/sync/types';
 import hapticsUtils from '@/lib/ui/haptics';
 
@@ -16,7 +16,9 @@ export interface UseSyncSectionOptions {
   onSyncComplete?: () => void;
 }
 
-export interface UseSyncSectionReturn {
+export interface UseSyncSectionReturn extends ReturnType<
+  typeof useSyncDiagnostics
+> {
   // 连接状态
   status: ConnectionStatus;
   setStatus: (status: ConnectionStatus) => void;
@@ -32,16 +34,6 @@ export interface UseSyncSectionReturn {
   setIsSyncing: (syncing: boolean) => void;
   syncProgress: SyncProgress | null;
   setSyncProgress: (progress: SyncProgress | null) => void;
-
-  // 调试日志
-  debugLogs: string[];
-  setDebugLogs: (logs: string[]) => void;
-  showDebugDrawer: boolean;
-  setShowDebugDrawer: (show: boolean) => void;
-  textAreaRef: React.RefObject<HTMLTextAreaElement | null>;
-  copySuccess: boolean;
-  handleCopyLogs: () => Promise<void>;
-  handleSelectAll: () => void;
 
   // 工具函数
   getStatusColor: () => string;
@@ -79,31 +71,7 @@ export function useSyncSection(
   // ============================================
   // 调试日志
   // ============================================
-  const [debugLogs, setDebugLogs] = useState<string[]>([]);
-  const [showDebugDrawer, setShowDebugDrawer] = useState(false);
-  const [copySuccess, setCopySuccess] = useState(false);
-  const textAreaRef = useRef<HTMLTextAreaElement | null>(null);
-
-  // 复制日志到剪贴板
-  const handleCopyLogs = useCallback(async () => {
-    const logText = debugLogs.join('\n');
-    try {
-      await navigator.clipboard.writeText(logText);
-      setCopySuccess(true);
-      if (hapticFeedback) {
-        hapticsUtils.light();
-      }
-      setTimeout(() => setCopySuccess(false), 2000);
-    } catch {
-      // 降级方案：选中文本框内容
-      textAreaRef.current?.select();
-    }
-  }, [debugLogs, hapticFeedback]);
-
-  // 全选文本框内容
-  const handleSelectAll = useCallback(() => {
-    textAreaRef.current?.select();
-  }, []);
+  const diagnostics = useSyncDiagnostics();
 
   // ============================================
   // 状态显示
@@ -172,14 +140,7 @@ export function useSyncSection(
     setSyncProgress,
 
     // 调试日志
-    debugLogs,
-    setDebugLogs,
-    showDebugDrawer,
-    setShowDebugDrawer,
-    textAreaRef,
-    copySuccess,
-    handleCopyLogs,
-    handleSelectAll,
+    ...diagnostics,
 
     // 工具函数
     getStatusColor,

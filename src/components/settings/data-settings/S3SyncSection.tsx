@@ -12,11 +12,7 @@ import { makeSettingRowSearchId } from '../settingsSearch';
 import React, { useState } from 'react';
 import { S3SyncManager } from '@/lib/s3/syncManagerV2';
 import { CloudProxySetting } from './shared/CloudProxySetting';
-import type {
-  SyncResult,
-  SyncMetadataV2 as SyncMetadata,
-  BackupRecord,
-} from '@/lib/s3/types';
+import type { SyncResult, BackupRecord } from '@/lib/s3/types';
 import { useSyncSection } from '@/lib/hooks/useSyncSection';
 import { SettingsOptions } from '../Settings';
 import { showToast } from '@/components/common/feedback/LightToast';
@@ -43,7 +39,6 @@ interface S3SyncSectionProps {
     value: S3SyncSettings[K]
   ) => void;
   onSyncComplete?: () => void;
-  onConflict?: (remoteTime: number | null) => void;
   onEnable?: () => void;
 }
 
@@ -55,7 +50,6 @@ export const S3SyncSection: React.FC<S3SyncSectionProps> = ({
   hapticFeedback,
   onSettingChange,
   onSyncComplete,
-  onConflict,
   onEnable,
 }) => {
   // ============================================
@@ -76,10 +70,7 @@ export const S3SyncSection: React.FC<S3SyncSectionProps> = ({
     setDebugLogs,
     showDebugDrawer,
     setShowDebugDrawer,
-    textAreaRef,
-    copySuccess,
-    handleCopyLogs,
-    handleSelectAll,
+    showSyncFailure,
     notifyCloudSyncStatusChange,
     triggerHaptic,
   } = useSyncSection(enabled, { hapticFeedback, onSyncComplete });
@@ -229,9 +220,7 @@ export const S3SyncSection: React.FC<S3SyncSectionProps> = ({
         );
         if (!connected) {
           setStatus('error');
-          setError(manager.getLastError() || '连接失败，请检查配置');
-          setIsSyncing(false);
-          return;
+          throw new Error(manager.getLastError() || '连接失败，请检查配置');
         }
         setSyncManager(manager);
         setStatus('connected');
@@ -248,19 +237,6 @@ export const S3SyncSection: React.FC<S3SyncSectionProps> = ({
           });
         },
       });
-
-      if (result.conflict) {
-        const metadata = result.remoteMetadata;
-        if (metadata && 'version' in metadata && metadata.version === '2.0.0') {
-          onConflict?.((metadata as SyncMetadata).lastSyncTime || null);
-        }
-        if (result.debugLogs && result.debugLogs.length > 0) {
-          setDebugLogs(result.debugLogs);
-          setShowDebugDrawer(true);
-        }
-        setError(result.message);
-        return;
-      }
 
       if (result.success) {
         if (result.downloadedFiles > 0) {
@@ -303,24 +279,15 @@ export const S3SyncSection: React.FC<S3SyncSectionProps> = ({
         triggerHaptic('medium');
         onSyncComplete?.();
       } else {
-        if (result.debugLogs && result.debugLogs.length > 0) {
-          setDebugLogs(result.debugLogs);
-          setShowDebugDrawer(true);
-        }
+        showSyncFailure(result);
         setError(result.message || '同步失败');
-        showToast({
-          type: 'error',
-          title: result.message || '同步失败',
-          duration: 3000,
-        });
       }
     } catch (err) {
       console.error('同步失败:', err);
       setError(`同步失败: ${err instanceof Error ? err.message : '未知错误'}`);
-      showToast({
-        type: 'error',
-        title: `同步失败: ${err instanceof Error ? err.message : '未知错误'}`,
-        duration: 3000,
+      showSyncFailure({
+        message: `同步失败: ${err instanceof Error ? err.message : '未知错误'}`,
+        errors: [],
       });
     } finally {
       setIsSyncing(false);
@@ -582,10 +549,7 @@ export const S3SyncSection: React.FC<S3SyncSectionProps> = ({
         isOpen={showDebugDrawer}
         onClose={() => setShowDebugDrawer(false)}
         logs={debugLogs}
-        textAreaRef={textAreaRef}
-        copySuccess={copySuccess}
-        onCopy={handleCopyLogs}
-        onSelectAll={handleSelectAll}
+        hapticFeedback={hapticFeedback}
         title="S3 同步日志"
       />
     </>

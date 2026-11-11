@@ -36,6 +36,7 @@ import {
 } from './settingsSearch';
 import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
 import { useCloudSyncConnection } from '@/lib/hooks/useCloudSync';
+import { SyncDebugDrawer } from './data-settings/shared/SyncDebugDrawer';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
 import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
 import { useCustomMethodStore } from '@/lib/stores/customMethodStore';
@@ -346,6 +347,9 @@ const Settings: React.FC<SettingsProps> = ({
     status: cloudSyncStatus,
     isSyncing,
     performSync: performQuickSync,
+    debugLogs,
+    showDebugDrawer,
+    setShowDebugDrawer,
   } = useCloudSyncConnection(settings as SettingsOptions);
   const [showSyncMenu, setShowSyncMenu] = useState(false);
   const [settingsSearchQuery, setSettingsSearchQuery] = useState('');
@@ -1053,6 +1057,13 @@ const Settings: React.FC<SettingsProps> = ({
           </div>
         )}
       </div>
+
+      <SyncDebugDrawer
+        isOpen={showDebugDrawer}
+        onClose={() => setShowDebugDrawer(false)}
+        logs={debugLogs}
+        hapticFeedback={settings.hapticFeedback}
+      />
 
       {/* 版本更新抽屉 */}
       {updateInfo && (

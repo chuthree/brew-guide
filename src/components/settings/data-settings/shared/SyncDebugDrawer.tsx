@@ -1,14 +1,15 @@
 /**
  * 同步调试日志抽屉组件
  *
- * 共享组件，用于 S3、WebDAV、Supabase 的调试日志显示
+ * S3、WebDAV 设置页及快捷同步共用的日志抽屉
  */
 
 'use client';
 
-import React from 'react';
+import React, { useRef, useState } from 'react';
 import ActionDrawer from '@/components/common/ui/ActionDrawer';
 import DataAlertIcon from '@public/images/icons/ui/data-alert.svg';
+import hapticsUtils from '@/lib/ui/haptics';
 
 interface SyncDebugDrawerProps {
   /** 是否显示 */
@@ -16,15 +17,8 @@ interface SyncDebugDrawerProps {
   /** 关闭回调 */
   onClose: () => void;
   /** 日志内容 */
-  logs: string[];
-  /** 文本框引用 */
-  textAreaRef: React.RefObject<HTMLTextAreaElement | null>;
-  /** 是否复制成功 */
-  copySuccess: boolean;
-  /** 复制日志 */
-  onCopy: () => void;
-  /** 全选 */
-  onSelectAll: () => void;
+  logs: readonly string[];
+  hapticFeedback: boolean;
   /** 标题 */
   title?: string;
 }
@@ -33,12 +27,21 @@ export const SyncDebugDrawer: React.FC<SyncDebugDrawerProps> = ({
   isOpen,
   onClose,
   logs,
-  textAreaRef,
-  copySuccess,
-  onCopy,
-  onSelectAll,
+  hapticFeedback,
   title = '同步日志',
 }) => {
+  const textAreaRef = useRef<HTMLTextAreaElement>(null);
+  const [copiedLogs, setCopiedLogs] = useState<readonly string[] | null>(null);
+  const onCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(logs.join('\n'));
+      setCopiedLogs(logs);
+      if (hapticFeedback) hapticsUtils.light();
+    } catch {
+      textAreaRef.current?.select();
+    }
+  };
+
   return (
     <ActionDrawer isOpen={isOpen} onClose={onClose} historyId="sync-debug-logs">
       <ActionDrawer.Icon icon={DataAlertIcon} />
@@ -54,7 +57,7 @@ export const SyncDebugDrawer: React.FC<SyncDebugDrawerProps> = ({
           ref={textAreaRef}
           value={logs.join('\n')}
           readOnly
-          onClick={onSelectAll}
+          onClick={() => textAreaRef.current?.select()}
           className="h-48 w-full resize-none rounded-md border border-neutral-200/50 bg-neutral-50 p-3 font-mono text-xs leading-relaxed text-neutral-700 focus:ring-1 focus:ring-neutral-500 focus:outline-none dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-300"
         />
       </ActionDrawer.Content>
@@ -63,7 +66,7 @@ export const SyncDebugDrawer: React.FC<SyncDebugDrawerProps> = ({
           关闭
         </ActionDrawer.SecondaryButton>
         <ActionDrawer.PrimaryButton onClick={onCopy}>
-          {copySuccess ? '已复制' : '复制日志'}
+          {copiedLogs === logs ? '已复制' : '复制日志'}
         </ActionDrawer.PrimaryButton>
       </ActionDrawer.Actions>
     </ActionDrawer>

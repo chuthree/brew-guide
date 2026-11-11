@@ -72,10 +72,7 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
     setDebugLogs,
     showDebugDrawer,
     setShowDebugDrawer,
-    textAreaRef,
-    copySuccess,
-    handleCopyLogs,
-    handleSelectAll,
+    showSyncFailure,
     notifyCloudSyncStatusChange,
     triggerHaptic,
   } = useSyncSection(enabled, { hapticFeedback, onSyncComplete });
@@ -252,9 +249,7 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
         );
         if (!connected) {
           setStatus('error');
-          setError(manager.getLastError() || '连接失败，请检查配置');
-          setIsSyncing(false);
-          return;
+          throw new Error(manager.getLastError() || '连接失败，请检查配置');
         }
         setSyncManager(manager);
         setStatus('connected');
@@ -313,24 +308,15 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
         triggerHaptic('medium');
         onSyncComplete?.();
       } else {
-        if (result.debugLogs && result.debugLogs.length > 0) {
-          setDebugLogs(result.debugLogs);
-          setShowDebugDrawer(true);
-        }
+        showSyncFailure(result);
         setError(result.message || '同步失败');
-        showToast({
-          type: 'error',
-          title: result.message || 'WebDAV 同步失败',
-          duration: 3000,
-        });
       }
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : '未知错误';
       setError(`同步失败: ${errorMsg}`);
-      showToast({
-        type: 'error',
-        title: `WebDAV 同步失败: ${errorMsg}`,
-        duration: 3000,
+      showSyncFailure({
+        message: `WebDAV 同步失败: ${errorMsg}`,
+        errors: [],
       });
     } finally {
       setIsSyncing(false);
@@ -564,10 +550,7 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
         isOpen={showDebugDrawer}
         onClose={() => setShowDebugDrawer(false)}
         logs={debugLogs}
-        textAreaRef={textAreaRef}
-        copySuccess={copySuccess}
-        onCopy={handleCopyLogs}
-        onSelectAll={handleSelectAll}
+        hapticFeedback={hapticFeedback}
         title="WebDAV 同步日志"
       />
     </>

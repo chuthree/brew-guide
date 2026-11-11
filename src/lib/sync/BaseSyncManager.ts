@@ -6,6 +6,7 @@
  */
 
 import { Storage } from '@/lib/core/storage';
+import { equipmentList } from '@/lib/core/config';
 import { createFilesMetadataFromData, generateDeviceId } from '@/lib/s3/utils';
 
 import type {
@@ -193,7 +194,7 @@ export abstract class BaseSyncManager {
     base = undefined;
     if (merged.conflicts.length) {
       result.conflict = true;
-      result.message = `发现 ${merged.conflicts.length} 项冲突，未覆盖任何数据。请在设置的同步日志中查看记录并处理后重试`;
+      result.message = `有 ${merged.conflicts.length} 项数据在本机和云端不一致，无法自动合并。本次同步已停止，未覆盖任何数据。请先保留两边备份；不确定保留哪一份时，请复制下方日志寻求帮助，不要直接上传或下载覆盖。`;
       result.errors = merged.conflicts.map(path => {
         const match = path.match(/^([^[]+)\[([^\]]+)\]$/);
         const labels: Record<string, string> = {
@@ -201,16 +202,47 @@ export abstract class BaseSyncManager {
           brewingNotes: '冲煮记录',
           customEquipments: '器具',
           grinders: '磨豆机',
+          brewGuideSettings: '应用设置',
+          customPresets: '自定义预设',
+          roasterConfigs: '烘焙商配置',
         };
-        const rows = match ? local.data[match[1]] : undefined;
-        const record = Array.isArray(rows)
-          ? rows.find(row => row.id === match?.[2])
+        const findName = (rows: unknown, id: string) =>
+          Array.isArray(rows)
+            ? rows.find(row => row.id === id)?.name
+            : undefined;
+        const collection = match?.[1] ?? path.split('.')[0];
+        const equipmentId = collection.startsWith('customMethodsByEquipment.')
+          ? collection.slice('customMethodsByEquipment.'.length)
           : undefined;
-        const label =
-          match && labels[match[1]]
-            ? `${labels[match[1]]}「${record?.name || match[2]}」`
-            : path;
-        return `双方独立修改或删除了：${label}（${path}）`;
+        let label = labels[collection] ?? '同步数据';
+        if (match && equipmentId) {
+          const localMethods = local.data.customMethodsByEquipment as Record<
+            string,
+            unknown
+          >;
+          const remoteMethods = remote?.data.customMethodsByEquipment as Record<
+            string,
+            unknown
+          >;
+          const equipmentName =
+            findName(local.data.customEquipments, equipmentId) ||
+            findName(remote?.data.customEquipments, equipmentId) ||
+            equipmentList.find(equipment => equipment.id === equipmentId)
+              ?.name ||
+            equipmentId;
+          const methodName =
+            findName(localMethods[equipmentId], match[2]) ||
+            findName(remoteMethods[equipmentId], match[2]) ||
+            match[2];
+          label = `「${equipmentName}」的冲煮方案「${methodName}」`;
+        } else if (match) {
+          const name =
+            findName(local.data[collection], match[2]) ||
+            findName(remote?.data[collection], match[2]) ||
+            match[2];
+          label = `${label}「${name}」`;
+        }
+        return `${label}：本机与云端的修改或删除不一致。\n排查路径：${path}`;
       });
       return;
     }
