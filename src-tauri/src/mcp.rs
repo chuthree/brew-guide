@@ -283,7 +283,7 @@ fn tool_domain(name: &str) -> Option<&'static str> {
     for (fragment, domain) in [("equipment", "brewing"), ("method", "brewing"), ("grinder", "settings"), ("group", "settings"), ("statistics", "beans"), ("report", "beans"), ("settings", "settings"), ("preferences", "settings"), ("roaster", "settings"), ("flavor_dimension", "settings"), ("brew_note", "notes")] {
         if name.contains(fragment) { return Some(domain); }
     }
-    if ["list_beans", "get_bean", "get_bean_image", "create_bean", "update_bean", "delete_bean", "set_bean_image", "delete_bean_image", "adjust_bean_inventory", "get_inventory_summary"].contains(&name) { return Some("beans"); }
+    if ["list_beans", "get_bean", "get_bean_image", "create_bean", "repurchase_bean", "update_bean", "delete_bean", "set_bean_image", "delete_bean_image", "adjust_bean_inventory", "get_inventory_summary"].contains(&name) { return Some("beans"); }
     Some("unknown")
 }
 

@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import ActionDrawer from '@/components/common/ui/ActionDrawer';
 import ElasticSlider from '@/components/common/ui/ElasticSlider';
 import type { FlavorDimension } from '@/lib/data/models';
+import { ratingSteps } from '@/lib/ratings';
 
 // 星星图标组件 - 移到组件外部避免重复创建
 const StarIcon = React.memo(
@@ -158,8 +159,10 @@ const RatingDrawer: React.FC<RatingDrawerProps> = ({
     }));
   }, []);
 
-  const overallStep = tenthStep ? 0.1 : 0.5;
-  const tasteStep = tenthStep ? 0.1 : halfStep ? 0.5 : 1;
+  const { overall: overallStep, taste: tasteStep } = ratingSteps({
+    flavorRatingTenthStep: tenthStep,
+    flavorRatingHalfStep: halfStep,
+  });
   const shouldUseSlider = overallUseSlider || tenthStep;
   const historicalDimensions = displayDimensions.filter(
     dimension => !currentDimensionIds.includes(dimension.id)

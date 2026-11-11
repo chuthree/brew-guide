@@ -43,6 +43,7 @@ export function mcpToolDomain(name: string): McpDomain | null | undefined {
       'get_bean',
       'get_bean_image',
       'create_bean',
+      'repurchase_bean',
       'update_bean',
       'delete_bean',
       'set_bean_image',

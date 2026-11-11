@@ -1,5 +1,11 @@
 import { buildBusinessInventorySummary } from './businessAnalytics';
 import { validateBean } from './beanValidation';
+import { ratingSteps, validateRatingInput } from '@/lib/ratings';
+import { buildRepurchaseBean } from '@/lib/coffee-beans/repurchase';
+import {
+  listCoffeeBeanImageMetadata,
+  replaceCoffeeBeanImageMetadata,
+} from '@/lib/data/sqlite/imageMetadataExecutor';
 import { getAssignedBeanRemaining } from '@/lib/coffee-beans/beanInventoryInitialization';
 import {
   assertBeanCapacityHistory,
@@ -930,7 +936,34 @@ async function performMutation(
       summary: `${name === 'delete_bean_image' ? '删除' : '保存'}咖啡豆${side === 'front' ? '正面' : '背面'}图片：${before.name}`,
     };
   }
+  if (name === 'repurchase_bean') {
+    const source = await requireBean(tx, id);
+    await checkVersion(source, args.expectedVersion);
+    const bean = {
+      ...buildRepurchaseBean(source, await listCoffeeBeans(tx)),
+      id: nanoid(),
+      timestamp: Date.now(),
+    };
+    await saveCoffeeBean(tx, bean);
+    // Match historical conversion: immutable image files safely share references.
+    await replaceCoffeeBeanImageMetadata(
+      tx,
+      bean.id,
+      (await listCoffeeBeanImageMetadata(tx, source.id)).map(image => ({
+        ...image,
+        imageId: nanoid(),
+        beanId: bean.id,
+        updatedAt: bean.timestamp,
+      }))
+    );
+    return {
+      result: { bean: await beanView(bean, tx) },
+      changes: [await recordChange('bean', null, bean)],
+      summary: `续购咖啡豆：${bean.name}`,
+    };
+  }
   if (name === 'create_bean') {
+    validateRatingInput(args.bean as Arguments, await getAppSettings(tx));
     // Normalize before computing the app's roast-dependent default taste window.
     const fields = normalizeImportedCoffeeBeanCreate(
       args.bean as Partial<CoffeeBean>,
@@ -985,6 +1018,7 @@ async function performMutation(
     const before = await requireBean(tx, id);
     await checkVersion(before, args.expectedVersion);
     const changes = args.changes as Arguments;
+    validateRatingInput(changes, await getAppSettings(tx));
     const capacityUpdate = getBeanCapacityUpdate(before, changes.capacityGrams);
     if (capacityUpdate?.inventoryInitialized)
       assertBeanCapacityHistory(
@@ -1178,8 +1212,8 @@ async function performMutation(
         'CONFLICT',
         'Read the current note and supply its imageVersion before modifying photos.'
       );
-    const settings =
-      fields.taste !== undefined ? await getAppSettings(tx) : undefined;
+    const settings = await getAppSettings(tx);
+    validateRatingInput(fields, settings);
     const after =
       before && !Object.keys(fields).length
         ? {
@@ -1912,6 +1946,7 @@ export async function executeMcpTool(
       return {
         transport: 'Streamable HTTP',
         desktopOnly: true,
+        ratingSteps: ratingSteps(await getAppSettings(await getMcpDriver())),
         ...(grants.includes('beans')
           ? {
               beanInput: {

@@ -7,10 +7,7 @@ import { CoffeeBean } from '@/types/app';
 import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
 import { coffeeBeanImageRepository } from '@/lib/data/repositories';
 
-import {
-  parseBeanName,
-  getNextAvailableNumber,
-} from '@/lib/coffee-beans/repurchaseNaming';
+import { buildRepurchaseBean } from '@/lib/coffee-beans/repurchase';
 export {
   parseBeanName,
   getNextAvailableNumber,
@@ -33,33 +30,5 @@ export async function createRepurchaseBean(
   // 从 Store 获取所有咖啡豆以检测编号
   const allBeans = useCoffeeBeanStore.getState().beans;
 
-  // 解析当前咖啡豆名称
-  const { baseName } = parseBeanName(sourceBean.name);
-
-  // 获取下一个可用编号
-  const nextNumber = getNextAvailableNumber(baseName, allBeans);
-
-  // 复制基础数据，仅保留适合续购继承的字段
-  // 评分属于上一次购买的历史记录，不应随新批次继承
-  const {
-    id: _id,
-    timestamp: _timestamp,
-    overallRating: _overallRating,
-    ratingNotes: _ratingNotes,
-    sourceGreenBeanId: _sourceGreenBeanId,
-    sourceGreenBeanIds: _sourceGreenBeanIds,
-    ...repurchaseSourceBean
-  } = sourceBean;
-
-  const newBeanData: Omit<CoffeeBean, 'id' | 'timestamp'> = {
-    ...repurchaseSourceBean,
-    // 更新名称编号
-    name: `${baseName} #${nextNumber}`,
-    // 剩余量改为总量
-    remaining: sourceBean.capacity || '',
-    // 清除烘焙日期
-    roastDate: '',
-  };
-
-  return newBeanData;
+  return buildRepurchaseBean(sourceBean, allBeans);
 }

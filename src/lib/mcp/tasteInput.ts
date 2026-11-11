@@ -1,12 +1,13 @@
 import type { Schema } from './toolDefinitions';
 import { invalid, validate } from './validation';
+import { ratingSchema } from '@/lib/ratings';
 
 export type TastePatch = Record<string, number | null>;
 
 export const tastePatchSchema: Schema = {
   type: 'object',
   additionalProperties: {
-    anyOf: [{ type: 'number', minimum: 0, maximum: 5 }, { type: 'null' }],
+    anyOf: [ratingSchema('taste'), { type: 'null' }],
   },
   maxProperties: 100,
   description:

@@ -11,6 +11,7 @@ import { roastingDefinitions } from './roastingTools';
 import type { McpToolDefinition } from './types';
 import { ROAST_LEVELS } from '@/lib/utils/roastProfileUtils';
 import { tastePatchSchema } from './tasteInput';
+import { ratingSchema } from '@/lib/ratings';
 
 export interface Schema {
   type?:
@@ -195,7 +196,7 @@ export const beanFields: Record<string, Schema> = {
     'Green or roasted; default roasted. Green beans cannot be consumed by a brew note.'
   ),
   brand: text('Brand.'),
-  overallRating: number('Preference rating, 0 means unrated; scale 1–5.', 0, 5),
+  overallRating: ratingSchema('bean'),
   ratingNotes: text('Rating notes.', 2000),
   blendComponents: {
     type: 'array',
@@ -274,7 +275,7 @@ const noteFields: Record<string, Schema> = {
     'Actual grinder setting. Query list_grinder first and use its exact name plus scale. Follow that grinder currentGrindSize/history unit convention (e.g. C40 24 when existing values are unitless); do not invent a unit such as 格. Preserve units used by that grinder. Bare values never select a grinder.'
   ),
   ratio: text('Coffee-to-water ratio, e.g. 1:15.', 100),
-  rating: number('Overall rating, 0 means unrated; scale 1–5.', 0, 5),
+  rating: ratingSchema('overall'),
   stages: {
     type: 'array',
     maxItems: 100,
@@ -397,6 +398,17 @@ const definitions: Array<{
         description: 'Recent brew history window in days; default 30.',
       },
     }),
+  },
+  {
+    name: 'repurchase_bean',
+    write: true,
+    description:
+      'Repurchase an existing bean using the app workflow. Requires its current version. Creates the next # batch, copies package fields and photos, restores full stock, clears roast date and previous rating and green-source relationships. Original bean, stock, notes and group memberships stay unchanged; the new batch is not automatically grouped. Use this instead of create_bean for repurchases. Reuse requestId on retry. Edit the returned new bean only for explicitly supplied new-batch details.',
+    schema: object({ requestId, id, expectedVersion: version }, [
+      'requestId',
+      'id',
+      'expectedVersion',
+    ]),
   },
   {
     name: 'create_bean',

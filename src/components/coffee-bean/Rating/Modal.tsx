@@ -8,6 +8,7 @@ import ActionDrawer from '@/components/common/ui/ActionDrawer';
 import ElasticSlider from '@/components/common/ui/ElasticSlider';
 import { formatBeanDisplayName } from '@/lib/utils/beanVarietyUtils';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
+import { ratingSteps } from '@/lib/ratings';
 import DeleteIcon from '@public/images/icons/ui/delete.svg';
 
 const StarIcon = ({
@@ -214,7 +215,7 @@ const CoffeeBeanRatingModal: React.FC<CoffeeBeanRatingModalProps> = ({
                     label="评分"
                     min={0}
                     max={5}
-                    step={0.1}
+                    step={ratingSteps({ beanRatingTenthStep }).bean}
                     value={overallRating}
                     onValueChange={setOverallRating}
                     formatValue={formatRatingValue}

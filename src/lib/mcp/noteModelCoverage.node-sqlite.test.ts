@@ -94,6 +94,7 @@ const balance = async () =>
   Number((await getCoffeeBean(db.driver, 'bean'))!.remaining);
 const dimensions = async (label: string | null) =>
   saveAppSettings(db.driver, {
+    flavorRatingHalfStep: true,
     flavorDimensions: label
       ? [{ id: 'berry', label, order: 0, isDefault: false }]
       : [],
