@@ -564,9 +564,7 @@ export const buildSettingsSearchItems = ({
     isModuleVisible(visibleModules, 'notes')
   ) {
     items.push(
-      ...createRowItems('grinder-settings', '磨豆机', [
-        '添加磨豆机',
-      ]),
+      ...createRowItems('grinder-settings', '磨豆机', ['添加磨豆机']),
       ...createRowItems('equipment-method-settings', '器具和方案', ['添加器具'])
     );
 

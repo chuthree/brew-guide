@@ -66,7 +66,8 @@ const ExperimentalSettings: React.FC<ExperimentalSettingsProps> = ({
     resolveBeanRecognitionModel(settings.experimentalBeanRecognitionModel)
   );
   const [prompt, setPrompt] = React.useState(
-    settings.experimentalBeanRecognitionPrompt || DEFAULT_BEAN_RECOGNITION_PROMPT
+    settings.experimentalBeanRecognitionPrompt ||
+      DEFAULT_BEAN_RECOGNITION_PROMPT
   );
 
   React.useEffect(() => {
@@ -79,7 +80,8 @@ const ExperimentalSettings: React.FC<ExperimentalSettingsProps> = ({
       resolveBeanRecognitionModel(settings.experimentalBeanRecognitionModel)
     );
     setPrompt(
-      settings.experimentalBeanRecognitionPrompt || DEFAULT_BEAN_RECOGNITION_PROMPT
+      settings.experimentalBeanRecognitionPrompt ||
+        DEFAULT_BEAN_RECOGNITION_PROMPT
     );
   }, [
     settings.experimentalBeanRecognitionApiBaseUrl,
@@ -206,9 +208,7 @@ const ExperimentalSettings: React.FC<ExperimentalSettingsProps> = ({
             handleChange={handleChange}
           />
 
-          <SettingSection
-            footer="开启后，分享咖啡豆会生成包含图片的压缩包；添加咖啡豆时也会显示选择压缩包入口。"
-          >
+          <SettingSection footer="开启后，分享咖啡豆会生成包含图片的压缩包；添加咖啡豆时也会显示选择压缩包入口。">
             <SettingRow label="分享导入压缩包" isLast>
               <SettingToggle
                 checked={settings.experimentalBeanSharePackageEnabled || false}
@@ -350,7 +350,6 @@ const ExperimentalSettings: React.FC<ExperimentalSettingsProps> = ({
           )}
         </SettingSection>
       )}
-
     </SettingPage>
   );
 };
