@@ -238,7 +238,10 @@ const ActionDrawer: React.FC<ActionDrawerProps> & {
   autoFocus,
   style,
 }) => {
-  const queued = useActionDrawerQueue(isOpen && priority !== undefined, priority);
+  const queued = useActionDrawerQueue(
+    isOpen && priority !== undefined,
+    priority
+  );
   const presented = priority === undefined ? isOpen : queued;
 
   useEffect(() => {
@@ -277,21 +280,17 @@ const ActionDrawer: React.FC<ActionDrawerProps> & {
     [onClose]
   );
 
-  // 动画结束回调
-  const handleAnimationEnd = useCallback(
-    (open: boolean) => {
-      if (!open && !isOpen) {
-        onExitComplete?.();
-      }
-    },
-    [isOpen, onExitComplete]
-  );
+  // Vaul's root callback skips controlled closes; Content unmounts after its exit.
+  const handleCloseAutoFocus = useCallback(() => {
+    if (!isOpen) {
+      onExitComplete?.();
+    }
+  }, [isOpen, onExitComplete]);
 
   return (
     <Drawer.Root
       open={presented}
       onOpenChange={handleOpenChange}
-      onAnimationEnd={handleAnimationEnd}
       repositionInputs={repositionInputs}
       dismissible={dismissible}
       autoFocus={autoFocus}
@@ -306,6 +305,7 @@ const ActionDrawer: React.FC<ActionDrawerProps> & {
 
         {/* 抽屉内容 */}
         <Drawer.Content
+          onCloseAutoFocus={handleCloseAutoFocus}
           className="fixed inset-x-0 bottom-0 z-80 mx-auto flex max-w-md flex-col rounded-t-3xl bg-white outline-none dark:bg-neutral-900"
           style={{
             zIndex: 81,

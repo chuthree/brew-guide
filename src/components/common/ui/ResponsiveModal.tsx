@@ -196,6 +196,7 @@ const ResponsiveModal = forwardRef<ResponsiveModalHandle, ResponsiveModalProps>(
       return (
         <Drawer.Root
           open={isOpen}
+          onOpenChange={handleOpenChange}
           onAnimationEnd={handleAnimationEnd}
           dismissible={false}
         >

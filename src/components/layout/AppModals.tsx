@@ -584,27 +584,19 @@ const AppModals: React.FC<AppModalsProps> = ({
       )}
 
       {showNavigationSettings && (
-        <NavigationSettings
-          onClose={() => setShowNavigationSettings(false)}
-        />
+        <NavigationSettings onClose={() => setShowNavigationSettings(false)} />
       )}
 
       {showStockSettings && (
-        <StockSettings
-          onClose={() => setShowStockSettings(false)}
-        />
+        <StockSettings onClose={() => setShowStockSettings(false)} />
       )}
 
       {showBeanSettings && (
-        <BeanSettings
-          onClose={() => setShowBeanSettings(false)}
-        />
+        <BeanSettings onClose={() => setShowBeanSettings(false)} />
       )}
 
       {showGreenBeanSettings && (
-        <GreenBeanSettings
-          onClose={() => setShowGreenBeanSettings(false)}
-        />
+        <GreenBeanSettings onClose={() => setShowGreenBeanSettings(false)} />
       )}
 
       {showCoffeeBeanGroupSettings && (
@@ -627,9 +619,7 @@ const AppModals: React.FC<AppModalsProps> = ({
       )}
 
       {showTimerSettings && (
-        <TimerSettings
-          onClose={() => setShowTimerSettings(false)}
-        />
+        <TimerSettings onClose={() => setShowTimerSettings(false)} />
       )}
 
       {showProviderSettings && (
@@ -668,9 +658,7 @@ const AppModals: React.FC<AppModalsProps> = ({
       )}
 
       {showNoteSettings && (
-        <NoteSettings
-          onClose={() => setShowNoteSettings(false)}
-        />
+        <NoteSettings onClose={() => setShowNoteSettings(false)} />
       )}
 
       {showFlavorDimensionSettings && (
@@ -688,9 +676,7 @@ const AppModals: React.FC<AppModalsProps> = ({
       )}
 
       {showGrinderSettings && (
-        <GrinderSettings
-          onClose={() => setShowGrinderSettings(false)}
-        />
+        <GrinderSettings onClose={() => setShowGrinderSettings(false)} />
       )}
 
       {showExperimentalSettings && (
