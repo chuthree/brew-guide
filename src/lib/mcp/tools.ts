@@ -940,10 +940,18 @@ async function performMutation(
     const source = await requireBean(tx, id);
     await checkVersion(source, args.expectedVersion);
     const bean = {
-      ...buildRepurchaseBean(source, await listCoffeeBeans(tx)),
+      ...buildRepurchaseBean(
+        source,
+        await listCoffeeBeans(tx),
+        args.changes as
+          | (Partial<CoffeeBean> & { capacityGrams?: number })
+          | undefined,
+        await getAppSettings(tx)
+      ),
       id: nanoid(),
       timestamp: Date.now(),
     };
+    validateBean(bean);
     await saveCoffeeBean(tx, bean);
     // Match historical conversion: immutable image files safely share references.
     await replaceCoffeeBeanImageMetadata(

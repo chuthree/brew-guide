@@ -403,12 +403,11 @@ const definitions: Array<{
     name: 'repurchase_bean',
     write: true,
     description:
-      'Repurchase an existing bean using the app workflow. Requires its current version. Creates the next # batch, copies package fields and photos, restores full stock, clears roast date and previous rating and green-source relationships. Original bean, stock, notes and group memberships stay unchanged; the new batch is not automatically grouped. Use this instead of create_bean for repurchases. Reuse requestId on retry. Edit the returned new bean only for explicitly supplied new-batch details.',
-    schema: object({ requestId, id, expectedVersion: version }, [
-      'requestId',
-      'id',
-      'expectedVersion',
-    ]),
+      'Repurchase an existing bean using the app workflow. Requires its current version. Creates the next # batch, copies package fields and photos, clears roast date and previous rating and green-source relationships, then applies explicitly supplied new-batch changes before saving. Supply known new capacityGrams, price, roastDate and other fields in changes NOW: final stock equals final capacity, with no intermediate stock adjustment. Original bean, stock, notes and group memberships stay unchanged; the new batch is not automatically grouped. Use this instead of create_bean for repurchases. Reuse requestId and the same changes on retry.',
+    schema: object(
+      { requestId, id, expectedVersion: version, changes: object(beanFields) },
+      ['requestId', 'id', 'expectedVersion']
+    ),
   },
   {
     name: 'create_bean',
