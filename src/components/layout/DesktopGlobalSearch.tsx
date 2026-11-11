@@ -10,6 +10,7 @@ import React, {
 import { Command } from 'cmdk';
 import { RefreshCw, Upload, Download } from 'lucide-react';
 import { useCloudSyncConnection } from '@/lib/hooks/useCloudSync';
+import { SyncDebugDrawer } from '@/components/settings/data-settings/shared/SyncDebugDrawer';
 import type { SyncDirection } from '@/lib/sync/types';
 import ActionDrawer from '@/components/common/ui/ActionDrawer';
 import type { CustomEquipment, BrewingNote } from '@/lib/core/config';
@@ -232,6 +233,9 @@ const DesktopGlobalSearch: React.FC<DesktopGlobalSearchProps> = ({
     status: cloudSyncStatus,
     isSyncing,
     performSync,
+    debugLogs,
+    showDebugDrawer,
+    setShowDebugDrawer,
   } = useCloudSyncConnection(settings);
   const [syncConfirmation, setSyncConfirmation] = useState<{
     direction: 'upload' | 'download';
@@ -494,7 +498,8 @@ const DesktopGlobalSearch: React.FC<DesktopGlobalSearchProps> = ({
 
   const confirmSync = () => {
     closeSyncConfirmation();
-    if (!isSyncing && !syncDisabled) void performSync(syncConfirmation.direction);
+    if (!isSyncing && !syncDisabled)
+      void performSync(syncConfirmation.direction);
   };
 
   return (
@@ -546,7 +551,10 @@ const DesktopGlobalSearch: React.FC<DesktopGlobalSearchProps> = ({
                         disabled={isSyncing || syncDisabled}
                         className="-mx-2 flex cursor-pointer items-center gap-3 rounded-md px-2 py-2 text-sm text-neutral-700 outline-none data-[disabled=true]:cursor-not-allowed data-[disabled=true]:opacity-40 data-[selected=true]:bg-neutral-100 dark:text-neutral-200 dark:data-[selected=true]:bg-neutral-800"
                       >
-                        <action.icon className="size-4 shrink-0" aria-hidden="true" />
+                        <action.icon
+                          className="size-4 shrink-0"
+                          aria-hidden="true"
+                        />
                         <span className="flex-1">{action.label}</span>
                         <span className="text-xs text-neutral-500 dark:text-neutral-400">
                           {action.description}
@@ -647,6 +655,12 @@ const DesktopGlobalSearch: React.FC<DesktopGlobalSearchProps> = ({
           </ActionDrawer.PrimaryButton>
         </ActionDrawer.Actions>
       </ActionDrawer>
+      <SyncDebugDrawer
+        isOpen={showDebugDrawer}
+        onClose={() => setShowDebugDrawer(false)}
+        logs={debugLogs}
+        hapticFeedback={settings.hapticFeedback}
+      />
     </>
   );
 };
