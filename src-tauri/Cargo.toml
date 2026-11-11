@@ -1,6 +1,6 @@
 [package]
 name = "brew-guide"
-version = "1.7.3"
+version = "1.8.0-beta.2"
 description = "A coffee brewing assistant app"
 authors = ["Brew Guide Team"]
 license = "GPL-3.0-only"
@@ -29,6 +29,10 @@ tauri-plugin-http = "=2.5.2"
 chrono = "0.4"
 rusqlite = { version = "=0.37.0", features = ["bundled"] }
 base64 = "=0.22.1"
+
+[target.'cfg(windows)'.dependencies]
+webview2-com = "=0.38.2"
+windows-core = "=0.61.2"
 
 [target.'cfg(any(target_os = "macos", target_os = "windows", target_os = "linux"))'.dependencies]
 rmcp = { version = "=3.6.0", default-features = false, features = ["server", "transport-streamable-http-server"] }

@@ -14,6 +14,7 @@
       "identifier": "opener:allow-open-url",
       "allow": [
         { "url": "https://chu3.top/*" },
+        { "url": "https://brewguide-help.chu3.top/*" },
         { "url": "https://github.com/*" },
         { "url": "https://www.isocons.app/*" },
         { "url": "https://creativecommons.org/*" },

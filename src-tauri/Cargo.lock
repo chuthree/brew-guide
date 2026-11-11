@@ -431,7 +431,7 @@ dependencies = [
 
 [[package]]
 name = "brew-guide"
-version = "1.7.3"
+version = "1.8.0-beta.2"
 dependencies = [
  "axum",
  "base64 0.22.1",
@@ -450,6 +450,8 @@ dependencies = [
  "tauri-plugin-opener",
  "tokio",
  "tokio-util",
+ "webview2-com",
+ "windows-core 0.61.2",
 ]
 
 [[package]]

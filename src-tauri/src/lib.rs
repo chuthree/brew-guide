@@ -10,6 +10,8 @@ use std::sync::{Arc, Mutex};
 mod storage;
 mod migration;
 mod image_export;
+#[cfg(windows)]
+mod windows_webview;
 #[cfg(desktop)]
 mod mcp;
 
@@ -364,6 +366,10 @@ fn update_tray_with_beans(app: &tauri::AppHandle, beans: Vec<CoffeeBean>) -> Res
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    let context = tauri::generate_context!();
+    #[cfg(windows)]
+    let (context, main_url) = windows_webview::prepare_main_window(context);
+
     let builder = tauri::Builder::default();
     #[cfg(desktop)]
     let builder = builder.manage(mcp::McpState::default());
@@ -380,7 +386,7 @@ pub fn run() {
                 mcp::invalidate_bridge(webview.app_handle());
             }
         })
-        .setup(|app| {
+        .setup(move |app| {
             if cfg!(debug_assertions) {
                 app.handle().plugin(
                     tauri_plugin_log::Builder::default()
@@ -391,6 +397,11 @@ pub fn run() {
             
             // 初始化托盘状态
             app.manage(Arc::new(Mutex::new(TrayState::default())));
+
+            #[cfg(windows)]
+            if let Some((window, url)) = app.get_webview_window("main").zip(main_url) {
+                windows_webview::load_main_window(window, url)?;
+            }
             
             // 监听应用激活事件（点击 Dock 图标时显示窗口）
             #[cfg(desktop)]
@@ -551,7 +562,7 @@ pub fn run() {
             #[cfg(desktop)]
             mcp::mcp_respond,
         ])
-        .build(tauri::generate_context!())
+        .build(context)
         .expect("error while building tauri application")
         .run(|_app, _event| {
             #[cfg(target_os = "macos")]

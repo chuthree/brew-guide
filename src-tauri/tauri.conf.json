@@ -1,13 +1,13 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Brew Guide",
-  "version": "1.7.3",
+  "version": "1.8.0-beta.2",
   "identifier": "com.brewguide.desktop",
   "build": {
     "frontendDist": "../out",
     "devUrl": "http://localhost:3000",
     "beforeDevCommand": "pnpm dev",
-    "beforeBuildCommand": "pnpm check:native-release && pnpm build"
+    "beforeBuildCommand": "pnpm check:native-release && pnpm build:next"
   },
   "app": {
     "withGlobalTauri": true,
@@ -25,7 +25,7 @@
         "hiddenTitle": true,
         "trafficLightPosition": {
           "x": 16,
-          "y": 16
+          "y": 24
         }
       }
     ],
