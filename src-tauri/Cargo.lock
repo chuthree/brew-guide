@@ -431,7 +431,7 @@ dependencies = [
 
 [[package]]
 name = "brew-guide"
-version = "1.8.0-beta.2"
+version = "1.7.4-beta.1"
 dependencies = [
  "axum",
  "base64 0.22.1",
