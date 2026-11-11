@@ -7,6 +7,7 @@ import React, {
   useRef,
   useMemo,
 } from 'react';
+import { useIsPresent } from 'framer-motion';
 import Image from 'next/image';
 import { BrewingNote } from '@/lib/core/config';
 import { CoffeeBean } from '@/types/app';
@@ -202,7 +203,7 @@ interface NoteDetailModalProps {
 }
 
 const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
-  isOpen,
+  isOpen: open,
   note: initialNote,
   onClose,
   equipmentName: _equipmentName = '',
@@ -215,6 +216,7 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
 }) => {
   // 检测是否为大屏幕（lg 断点）
   const isLargeScreen = useIsLargeScreen();
+  const isOpen = useIsPresent() && open;
 
   // 获取克价显示设置
   const showUnitPriceInNote = useSettingsStore(
@@ -486,8 +488,8 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
     isVisible: true,
   });
   const isTitleVisible =
-    !isOpen ||
-    !isVisible ||
+    !open ||
+    (!isLargeScreen && !isVisible) ||
     titleVisibilityState.key !== imageViewKey ||
     titleVisibilityState.isVisible;
 
@@ -644,16 +646,17 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
     id: 'note-detail',
     isOpen,
     onClose: event => {
-      if (event.source === 'history') {
+      if (!isLargeScreen && event.source === 'history') {
         skipNextExitAnimation();
       }
       // 先触发子页面的退出动画
       onClose();
-      // 延迟通知父页面开始恢复动画，避免两个动画重叠造成闪烁
-      // 在子页面动画进行到一半时通知，让动画更流畅衔接
-      setTimeout(() => {
+      const notifyClosing = () => {
         window.dispatchEvent(new CustomEvent('noteDetailClosing'));
-      }, 175); // 350ms 动画的一半
+      };
+      // 移动端在子页面动画进行到一半时通知父页面。
+      if (isLargeScreen) notifyClosing();
+      else setTimeout(notifyClosing, 175);
     },
   });
 
@@ -787,7 +790,7 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
   }, [note, onDelete, onShare, onEdit, onClose]);
 
   // 只在需要时渲染DOM
-  if (!shouldRender) return null;
+  if (!isLargeScreen && !shouldRender) return null;
 
   return (
     <>
@@ -795,7 +798,7 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
         className={`flex flex-col overflow-hidden bg-neutral-50 dark:bg-neutral-900 ${
           isLargeScreen ? 'h-full w-full' : 'fixed inset-0 mx-auto'
         }`}
-        style={getChildPageStyle(isVisible, undefined, true)}
+        style={isLargeScreen ? undefined : getChildPageStyle(isVisible)}
       >
         {/* 顶部按钮栏 */}
         <div className="pt-safe-top sticky top-0 flex items-center gap-3 bg-neutral-50 p-4 dark:bg-neutral-900">

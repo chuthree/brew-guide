@@ -86,7 +86,15 @@ import {
   SIMPLIFIED_VIEW_LABELS,
 } from '@/components/coffee-bean/List/constants';
 import { getStringState, saveStringState } from '@/lib/core/statePersistence';
-import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import {
+  motion,
+  AnimatePresence,
+  useIsPresent,
+  useMotionValue,
+  useReducedMotion,
+  type MotionStyle,
+  type MotionValue,
+} from 'framer-motion';
 import { ChevronsUpDown } from 'lucide-react';
 import hapticsUtils from '@/lib/ui/haptics';
 import { BREWING_EVENTS } from '@/lib/brewing/constants';
@@ -190,6 +198,51 @@ const EMPTY_NOTE_TASTE = {
 };
 
 const DETAIL_NAVIGATION_DELAY_MS = IOS_TRANSITION_CONFIG.duration;
+
+function DesktopDetailPanel({
+  progress,
+  reduceMotion,
+  resizeHandle,
+  children,
+}: {
+  progress: MotionValue<number>;
+  reduceMotion: boolean;
+  resizeHandle: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  const isPresent = useIsPresent();
+
+  return (
+    <motion.aside
+      className="relative h-full shrink-0"
+      inert={!isPresent}
+      initial={{ '--detail-panel-progress': 0 }}
+      animate={{ '--detail-panel-progress': 1 }}
+      exit={{ '--detail-panel-progress': 0 }}
+      transition={
+        reduceMotion
+          ? { duration: 0 }
+          : { type: 'spring', duration: 0.3, bounce: 0 }
+      }
+      style={
+        {
+          '--detail-panel-progress': progress,
+          width: 'var(--detail-panel-offset)',
+        } as MotionStyle
+      }
+    >
+      {resizeHandle}
+      <div className="h-full overflow-hidden">
+        <div
+          className="h-full border-l border-neutral-200/50 dark:border-neutral-800/50"
+          style={{ width: 'var(--detail-panel-width)' }}
+        >
+          {children}
+        </div>
+      </div>
+    </motion.aside>
+  );
+}
 
 const createBlankBrewingNoteDraft = (): Partial<BrewingNoteData> => ({
   coffeeBeanInfo: {
@@ -565,6 +618,10 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     }
     return DETAIL_PANEL_DEFAULT_WIDTH;
   });
+  const detailPanelProgress = useMotionValue(0);
+  useLayoutEffect(() => {
+    if (!isLargeScreen) detailPanelProgress.jump(0);
+  }, [isLargeScreen, detailPanelProgress]);
   const [isResizing, setIsResizing] = useState(false);
   const resizeStartXRef = useRef(0);
   const resizeStartWidthRef = useRef(DETAIL_PANEL_DEFAULT_WIDTH);
@@ -2275,6 +2332,15 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     setHasAutoNavigatedToNotes,
   ]);
 
+  const requestBrewingBack = useCallback(() => {
+    const top = modalHistory.getStackIds().at(-1);
+    if (top === 'brewing' || top?.startsWith('brewing-step-')) {
+      modalHistory.back();
+    } else {
+      handleBackClick();
+    }
+  }, [handleBackClick]);
+
   const handleMethodSelectWrapper = useCallback(
     async (index: number, step?: Step) => {
       // 检查是否在冲煮完成状态选择了新的方案
@@ -3906,7 +3972,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         }}
         onDeleteEquipment={handleDeleteEquipment}
         onShareEquipment={handleShareEquipment}
-        onBackClick={handleBackClick}
+        onBackClick={requestBrewingBack}
         onToggleEquipmentManagement={() =>
           setShowEquipmentManagement(!showEquipmentManagement)
         }
@@ -4020,15 +4086,21 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
               isDesktopLayout && shouldRenderNavigation
                 ? `${navPanelWidth}px`
                 : '0px',
-            '--detail-panel-width':
-              isLargeScreen && (beanDetailOpen || noteDetailOpen)
-                ? `${detailPanelWidth}px`
-                : '0px',
           } as React.CSSProperties
         }
       >
         <PWAInstallBanner />
-        <div className="flex h-full flex-col md:flex-row">
+        <motion.div
+          className="flex h-full flex-col md:[container-type:inline-size] md:flex-row"
+          style={
+            {
+              '--detail-panel-progress': detailPanelProgress,
+              '--detail-panel-width': `min(${detailPanelWidth}px, max(0px, 100cqw - var(--nav-panel-width)))`,
+              '--detail-panel-offset':
+                'calc(var(--detail-panel-width) * var(--detail-panel-progress))',
+            } as MotionStyle
+          }
+        >
           <NavigationSection
             open={shouldRenderNavigation}
             animated={!isDesktopLayout && !reduceNavigationMotion}
@@ -4307,55 +4379,29 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
           </main>
 
           {/* 大屏幕详情面板区域 - 三栏布局的右侧，支持拖动调整宽度 */}
-          {isLargeScreen && (
-            <aside
-              className={`relative h-full shrink-0 ${
-                isResizing
-                  ? ''
-                  : 'transition-[width,border-color] duration-350 ease-in-out'
-              } ${
-                beanDetailOpen || noteDetailOpen
-                  ? 'border-l border-neutral-200/50 dark:border-neutral-800/50'
-                  : 'w-0 border-l border-transparent'
-              }`}
-              style={{
-                width:
-                  beanDetailOpen || noteDetailOpen
-                    ? `${detailPanelWidth}px`
-                    : 0,
-              }}
-            >
-              {/* 拖动条 - 居中跨越左边界 */}
-              {(beanDetailOpen || noteDetailOpen) && (
-                <div
-                  className="group absolute top-0 left-0 z-10 h-full w-0 -translate-x-1/2 cursor-col-resize select-none"
-                  onMouseDown={handleResizeStart}
-                  onTouchStart={handleResizeStart}
-                >
-                  {/* 可视化拖动指示器 - 居中显示 */}
+          <AnimatePresence
+            key={isLargeScreen ? 'desktop-detail' : 'mobile-detail'}
+          >
+            {isLargeScreen && hasContentDetailOpen && (
+              <DesktopDetailPanel
+                progress={detailPanelProgress}
+                reduceMotion={Boolean(reduceNavigationMotion)}
+                resizeHandle={
                   <div
-                    className={`absolute top-1/2 left-1/2 h-12 w-px -translate-x-1/2 -translate-y-1/2 ${
-                      isResizing
-                        ? 'bg-neutral-400 dark:bg-neutral-500'
-                        : 'bg-transparent group-hover:bg-neutral-300 dark:group-hover:bg-neutral-600'
-                    }`}
-                  />
-                  {/* 扩大触摸区域 - 左右各扩展8px */}
-                  <div className="absolute inset-y-0 -right-2 -left-2" />
-                </div>
-              )}
-              {/* 内部容器使用动态宽度 */}
-              <div
-                className={`h-full overflow-hidden ${
-                  isResizing
-                    ? ''
-                    : 'transition-opacity duration-350 ease-in-out'
-                } ${
-                  beanDetailOpen || noteDetailOpen ? 'opacity-100' : 'opacity-0'
-                }`}
-                style={{
-                  width: `${detailPanelWidth}px`,
-                }}
+                    className="group absolute top-0 left-0 z-10 h-full w-0 -translate-x-1/2 cursor-col-resize select-none"
+                    onMouseDown={handleResizeStart}
+                    onTouchStart={handleResizeStart}
+                  >
+                    <div
+                      className={`absolute top-1/2 left-1/2 h-12 w-px -translate-x-1/2 -translate-y-1/2 ${
+                        isResizing
+                          ? 'bg-neutral-400 dark:bg-neutral-500'
+                          : 'bg-transparent group-hover:bg-neutral-300 dark:group-hover:bg-neutral-600'
+                      }`}
+                    />
+                    <div className="absolute inset-y-0 -right-2 -left-2" />
+                  </div>
+                }
               >
                 {/* 咖啡豆详情 */}
                 {beanDetailOpen && (
@@ -4605,10 +4651,10 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                     }}
                   />
                 )}
-              </div>
-            </aside>
-          )}
-        </div>
+              </DesktopDetailPanel>
+            )}
+          </AnimatePresence>
+        </motion.div>
 
         <BackupReminderModal
           isOpen={showBackupReminder}

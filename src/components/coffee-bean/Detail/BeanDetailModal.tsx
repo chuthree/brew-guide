@@ -6,6 +6,7 @@ import {
 } from '@/lib/coffee-beans/roastingBatch';
 
 import React, { useState, useEffect, useMemo } from 'react';
+import { useIsPresent } from 'framer-motion';
 import dynamic from 'next/dynamic';
 import { CoffeeBean } from '@/types/app';
 import type { BrewingNote } from '@/lib/core/config';
@@ -83,7 +84,7 @@ const BeanRatingModal = dynamic(
 type RelatedRecordsTab = 'primary' | 'change' | 'green';
 
 const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
-  isOpen,
+  isOpen: open,
   bean: propBean,
   onClose,
   onCreateNoteFromBean,
@@ -104,6 +105,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
   initialBeanState = 'roasted',
 }) => {
   const isLargeScreen = useIsLargeScreen();
+  const isOpen = useIsPresent() && open;
   const isAddMode = mode === 'add';
   const isEditMode = mode === 'edit';
   const isFormMode = isAddMode || isEditMode;
@@ -403,8 +405,9 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
   );
 
   // 标题可见性（优化：减少延迟）
-  const shouldObserveTitle = isOpen && isVisible && !isFormMode;
-  const isTitleVisible = shouldObserveTitle ? observedTitleVisible : true;
+  const tracksTitle = open && (isLargeScreen || isVisible) && !isFormMode;
+  const shouldObserveTitle = isOpen && tracksTitle;
+  const isTitleVisible = tracksTitle ? observedTitleVisible : true;
 
   useEffect(() => {
     if (!shouldObserveTitle) return;
@@ -457,11 +460,13 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
       }
 
       onClose();
-      setTimeout(() => {
+      const notifyClosing = () => {
         window.dispatchEvent(new CustomEvent('beanDetailClosing'));
-      }, 175);
+      };
+      if (isLargeScreen) notifyClosing();
+      else setTimeout(notifyClosing, 175);
     },
-    [clearDraft, disableAutoPersist, isAddMode, onClose]
+    [clearDraft, disableAutoPersist, isAddMode, isLargeScreen, onClose]
   );
 
   const historyCloseRequestRef = React.useRef<() => void>(() => {});
@@ -490,7 +495,11 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
     id: 'bean-detail',
     isOpen,
     onClose: event => {
-      if (event.source === 'history' && !hasDraftContentRef.current) {
+      if (
+        !isLargeScreen &&
+        event.source === 'history' &&
+        !hasDraftContentRef.current
+      ) {
         skipNextExitAnimation();
       }
       handleHistoryCloseRequest();
@@ -891,7 +900,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
     });
   };
 
-  if (!shouldRender) return null;
+  if (!isLargeScreen && !shouldRender) return null;
 
   const activeRemainingEditorTarget = isOpen ? remainingEditorTarget : null;
 
@@ -902,7 +911,7 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
         className={`flex flex-col overflow-hidden bg-neutral-50 dark:bg-neutral-900 ${
           isLargeScreen ? 'h-full w-full' : 'fixed inset-0 mx-auto'
         }`}
-        style={getChildPageStyle(isVisible, undefined, true)}
+        style={isLargeScreen ? undefined : getChildPageStyle(isVisible)}
       >
         <div className="relative min-h-0 flex-1 overflow-hidden">
           <div className="absolute inset-0 flex min-h-0 flex-col bg-neutral-50 dark:bg-neutral-900">
