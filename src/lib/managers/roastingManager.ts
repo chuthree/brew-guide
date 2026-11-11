@@ -13,6 +13,7 @@ import {
   RoastingValidationError,
 } from '@/lib/coffee-beans/roastingBatch';
 import { saveRoastingBatchInMutation } from './roastingBatchManager';
+import { analyzeHistoricalConversion } from '@/lib/coffee-beans/historicalConversion';
 import {
   parseBeanName,
   getNextAvailableNumber,
@@ -21,6 +22,7 @@ import { formatBeanDisplayName } from '@/lib/utils/beanVarietyUtils';
 import {
   brewingNotePersistence,
   coffeeBeanImageRepository,
+  coffeeBeanRepository,
 } from '@/lib/data/repositories';
 import {
   getBrewingNoteById as getStoredBrewingNoteById,
@@ -391,6 +393,12 @@ const roastingManager = {
 
       // 2. 获取所有关联笔记
       const allNotes = await getAllBrewingNotes();
+      // Clamping negative roasted stock would hide conflicting history and lose inventory facts.
+      analyzeHistoricalConversion(
+        originalBean,
+        await coffeeBeanRepository.list(),
+        allNotes as BrewingNote[]
+      );
 
       // 筛选与原熟豆关联的笔记
       const relatedNotes = allNotes.filter(
@@ -703,6 +711,11 @@ const roastingManager = {
 
       // 获取所有关联笔记
       const allNotes = await getAllBrewingNotes();
+      analyzeHistoricalConversion(
+        originalBean,
+        await coffeeBeanRepository.list(),
+        allNotes as BrewingNote[]
+      );
       const relatedNotes = allNotes.filter(
         note => note.beanId === roastedBeanId
       );
