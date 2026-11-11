@@ -267,11 +267,11 @@ export default function RootLayout({
           enableColorScheme={false}
           disableTransitionOnChange
         >
+          <CrashDiagnosticsProvider />
           <DataLayerProvider>
             <TauriDragRegion />
             <div className="app-viewport overflow-hidden bg-neutral-50 dark:bg-neutral-900">
               <Suspense>
-                <CrashDiagnosticsProvider />
                 <CapacitorInit />
                 <StorageInit />
                 <ModalHistoryInit />

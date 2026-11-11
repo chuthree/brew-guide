@@ -1,5 +1,6 @@
 import { callStoreActionInMutation } from '@/lib/data/storeMutationBoundary';
 import { withDataMutation } from '@/lib/data/mutationCoordinator';
+import { readCustomPresets } from '@/lib/settings/customPresets';
 import {
   Method as _Method,
   CustomEquipment,
@@ -27,11 +28,14 @@ import {
   grinderRepository,
   legacySettingsRepository,
   imageSourcePayloadValidator,
+  dataImportPersistence,
 } from '@/lib/data/repositories';
 import { resolveStorageBackend } from '@/lib/data/runtime';
 import {
   getRoasterConfigsSync,
   getSettingsStore,
+  normalizeImportedSettings,
+  useSettingsStore,
 } from '@/lib/stores/settingsStore';
 import { normalizeCoffeeBeans } from '@/lib/utils/coffeeBeanUtils';
 import { recordCrashOperationStep } from '@/lib/app/crashDiagnostics';
@@ -126,16 +130,6 @@ const CUSTOM_PRESETS_KEYS = [
   'batches', // 批次
   'varieties', // 品种
 ];
-
-/**
- * 需要同步到IndexedDB的数据键
- */
-const INDEXED_DB_SYNC_KEYS = [
-  'customEquipments',
-  'coffeeBeans',
-  'brewingNotes',
-  'grinders',
-] as const;
 
 /**
  * 数据管理工具类
@@ -336,8 +330,7 @@ export const DataManager = {
 
           // 处理每个自定义预设类型
           for (const key of CUSTOM_PRESETS_KEYS) {
-            const storageKey = `${CUSTOM_PRESETS_PREFIX}${key}`;
-            const presetJson = localStorage.getItem(storageKey);
+            const presetJson = JSON.stringify(readCustomPresets(key));
 
             if (presetJson) {
               try {
@@ -412,10 +405,10 @@ export const DataManager = {
       expectedSyncData?: Record<string, unknown>;
     } = {}
   ): Promise<{ success: boolean; message: string }> {
-    return withDataMutation(async () => {
-      try {
+    let committed = false;
+    try {
+      return await withDataMutation(async () => {
         if (options.expectedSyncData) {
-          // shortcut: Web 端导入尚非跨标签页事务，同步期间应避免其他标签页写入；统一 Web 写入事务后移除此限制。
           const { syncDataEqual, parseSyncDocument } =
             await import('@/lib/sync/mergeData');
           const current = parseSyncDocument(
@@ -425,450 +418,284 @@ export const DataManager = {
             })
           );
           if (!syncDataEqual(current.data, options.expectedSyncData)) {
-            return {
-              success: false,
-              message: '同步期间本地数据发生变化，请重试',
+            throw new Error('同步期间本地数据发生变化，请重试');
+          }
+        }
+        const document = JSON.parse(jsonString) as ImportData;
+        const data = document?.data;
+        if (!data || typeof data !== 'object' || Array.isArray(data)) {
+          throw new Error('导入的数据格式不正确，缺少有效的 data 字段');
+        }
+        const plan: import('@/lib/data/importData').DataImportPlan = {
+          legacy: {},
+        };
+        const native =
+          resolveStorageBackend(detectAppRuntime()) === 'native-sqlite';
+        for (const key of [
+          'coffeeBeans',
+          'brewingNotes',
+          'customEquipments',
+          'grinders',
+        ] as const) {
+          if (!Object.hasOwn(data, key)) continue;
+          const records = data[key];
+          if (
+            !Array.isArray(records) ||
+            records.some(
+              record =>
+                !record ||
+                typeof record !== 'object' ||
+                Array.isArray(record) ||
+                typeof record.id !== 'string' ||
+                !record.id.trim()
+            )
+          )
+            throw new Error(`${key} 格式无效，应为包含有效 id 的记录数组`);
+        }
+        if (Array.isArray(data.coffeeBeans)) {
+          plan.coffeeBeans = normalizeCoffeeBeans(
+            data.coffeeBeans as _CoffeeBean[],
+            { ensureFlavorArray: true }
+          );
+          if (native)
+            plan.coffeeBeans = plan.coffeeBeans.map(bean => ({
+              ...bean,
+              ...(bean.image === null ? { image: undefined } : {}),
+              ...(bean.backImage === null ? { backImage: undefined } : {}),
+            }));
+          await imageSourcePayloadValidator.validateCoffeeBeans(
+            plan.coffeeBeans
+          );
+        }
+        if (Array.isArray(data.brewingNotes)) {
+          plan.brewingNotes = (data.brewingNotes as _BrewingNote[]).map(note =>
+            native && note.rating == null ? { ...note, rating: 0 } : note
+          );
+          await imageSourcePayloadValidator.validateBrewingNotes(
+            plan.brewingNotes
+          );
+        }
+        if (Array.isArray(data.customEquipments))
+          plan.customEquipments = data.customEquipments as CustomEquipment[];
+        if (Array.isArray(data.grinders))
+          plan.grinders = data.grinders as Grinder[];
+
+        const currentSettings = getSettingsStore().settings;
+        if (Object.hasOwn(data, 'brewGuideSettings')) {
+          let incoming = data.brewGuideSettings as Record<string, unknown>;
+          if (
+            !incoming ||
+            typeof incoming !== 'object' ||
+            Array.isArray(incoming)
+          )
+            throw new Error('brewGuideSettings 格式无效');
+          if (
+            incoming.state &&
+            typeof incoming.state === 'object' &&
+            'settings' in incoming.state
+          ) {
+            incoming = incoming.state.settings as Record<string, unknown>;
+          }
+          if (
+            !incoming ||
+            typeof incoming !== 'object' ||
+            Array.isArray(incoming)
+          )
+            throw new Error('brewGuideSettings 格式无效');
+          let settings = { ...incoming } as Partial<_SettingsOptions>;
+          if (options.preserveDeviceSettings)
+            settings = preserveDeviceSettings(settings, currentSettings);
+          settings = preserveSyncConnectionSettings(settings, currentSettings);
+          if (
+            Array.isArray(data.customFlavorDimensions) &&
+            !settings.flavorDimensions?.length
+          ) {
+            settings.flavorDimensions = data.customFlavorDimensions;
+          }
+          if (
+            data.flavorDimensionHistoricalLabels &&
+            typeof data.flavorDimensionHistoricalLabels === 'object'
+          ) {
+            settings.flavorDimensionHistoricalLabels = {
+              ...settings.flavorDimensionHistoricalLabels,
+              ...(data.flavorDimensionHistoricalLabels as Record<
+                string,
+                string
+              >),
             };
           }
+          const legacyGrinders = incoming.grinders;
+          if (!plan.grinders && Array.isArray(legacyGrinders)) {
+            plan.grinders = legacyGrinders.filter(
+              g => g && typeof g === 'object' && g.id && g.name
+            );
+          }
+          plan.settings = normalizeImportedSettings(
+            settings as _SettingsOptions
+          );
+          // Presets have their own backup section; older settings must not erase them.
+          plan.settings.customPresets = currentSettings.customPresets;
         }
-        const importData = JSON.parse(jsonString) as ImportData;
-        const usesNativeSqlite =
-          resolveStorageBackend(detectAppRuntime()) === 'native-sqlite';
-
-        // 验证数据格式
-        if (!importData.data) {
-          return {
-            success: false,
-            message: '导入的数据格式不正确，缺少 data 字段',
+        if (Object.hasOwn(data, 'customPresets')) {
+          const presets = data.customPresets;
+          if (!presets || typeof presets !== 'object' || Array.isArray(presets))
+            throw new Error('customPresets 格式无效，应为对象');
+          const normalized: Record<string, string[]> = {
+            ...currentSettings.customPresets,
+          };
+          for (const key of CUSTOM_PRESETS_KEYS) {
+            const values = Object.hasOwn(presets, key)
+              ? (presets as Record<string, unknown>)[key]
+              : [];
+            if (
+              !Array.isArray(values) ||
+              values.some(value => typeof value !== 'string')
+            )
+              throw new Error(`customPresets.${key} 格式无效，应为字符串数组`);
+            normalized[key] = values;
+          }
+          plan.settings = {
+            ...(plan.settings ?? currentSettings),
+            customPresets: normalized,
           };
         }
-
-        if (Object.hasOwn(importData.data, 'customPresets')) {
-          const customPresets = importData.data.customPresets;
-          if (
-            customPresets === null ||
-            typeof customPresets !== 'object' ||
-            Array.isArray(customPresets)
-          ) {
-            throw new Error('customPresets 格式无效，应为对象');
-          }
-          for (const key of CUSTOM_PRESETS_KEYS) {
-            if (
-              Object.hasOwn(customPresets, key) &&
-              !Array.isArray((customPresets as Record<string, unknown>)[key])
-            ) {
-              throw new Error(`customPresets.${key} 格式无效，应为数组`);
+        if (Object.hasOwn(data, 'customMethodsByEquipment')) {
+          const methods = data.customMethodsByEquipment;
+          if (!methods || typeof methods !== 'object' || Array.isArray(methods))
+            throw new Error('customMethodsByEquipment 格式无效');
+          plan.methods = Object.entries(methods).map(
+            ([equipmentId, values]) => {
+              if (!equipmentId.trim() || !Array.isArray(values))
+                throw new Error('自定义方案格式无效');
+              return { equipmentId, methods: values as _Method[] };
             }
-          }
-        }
-
-        // Native storage needs the complete image-bearing backup payload checked
-        // before the first destructive table replacement. Dexie deliberately
-        // keeps its existing import behavior through its no-op validator.
-        const imagePreflightTasks: Promise<void>[] = [];
-        if (Array.isArray(importData.data.coffeeBeans)) {
-          let coffeeBeans = importData.data.coffeeBeans;
-          if (usesNativeSqlite) {
-            // Legacy backups use null for empty image slots. Normalize before
-            // preflight so validation and persistence share Native's undefined
-            // representation, preserving explicit empties and absent fields.
-            coffeeBeans = coffeeBeans.map(bean => {
-              if (!bean || typeof bean !== 'object' || Array.isArray(bean))
-                return bean;
-              return {
-                ...bean,
-                ...(bean.image === null ? { image: undefined } : {}),
-                ...(bean.backImage === null ? { backImage: undefined } : {}),
-              };
-            });
-            importData.data.coffeeBeans = coffeeBeans;
-          }
-          imagePreflightTasks.push(
-            imageSourcePayloadValidator.validateCoffeeBeans(coffeeBeans)
           );
         }
-        if (Array.isArray(importData.data.brewingNotes)) {
-          imagePreflightTasks.push(
-            imageSourcePayloadValidator.validateBrewingNotes(
-              importData.data.brewingNotes
+        const roasters = data.roasterConfigs ?? data['roaster-logos'];
+        if (roasters !== undefined) {
+          if (!Array.isArray(roasters))
+            throw new Error('roasterConfigs 格式无效');
+          const settings = plan.settings ?? currentSettings;
+          const configs = [...(settings.roasterConfigs ?? [])];
+          for (const config of roasters as RoasterConfig[]) {
+            if (
+              !config ||
+              typeof config.roasterName !== 'string' ||
+              !config.roasterName.trim()
             )
-          );
-        }
-        await Promise.all(imagePreflightTasks);
-
-        if (
-          Array.isArray(importData.data.coffeeBeans) ||
-          Array.isArray(importData.data.brewingNotes)
-        ) {
-          await markExpectedCoreDataMutation('data-import');
-        }
-
-        // 导入数据
-        const storage = await getStorage();
-
-        // 辅助函数：同步数据到IndexedDB
-        const syncToIndexedDB = async (key: string, data: unknown[]) => {
-          switch (key) {
-            case 'customEquipments':
-              await customEquipmentRepository.replaceAll(
-                data as CustomEquipment[]
-              );
-              break;
-            case 'coffeeBeans':
-              await coffeeBeanPersistence.replaceAllWithImages(
-                normalizeCoffeeBeans(data as _CoffeeBean[], {
-                  ensureFlavorArray: true,
-                }),
-                { allowDestructiveReplace: true }
-              );
-              break;
-            case 'brewingNotes': {
-              // Older backups can contain unrated notes without a rating. The
-              // Native SQLite codec requires the canonical numeric value used
-              // by the legacy migration path; keep Dexie imports unchanged.
-              const notes = usesNativeSqlite
-                ? (data as _BrewingNote[]).map(note => {
-                    if (
-                      !note ||
-                      typeof note !== 'object' ||
-                      Array.isArray(note) ||
-                      (note.rating !== undefined && note.rating !== null)
-                    ) {
-                      return note;
-                    }
-                    return { ...note, rating: 0 };
-                  })
-                : (data as _BrewingNote[]);
-              await brewingNotePersistence.replaceAllWithImages(notes, {
-                allowDestructiveReplace: true,
-              });
-              break;
-            }
-            case 'grinders':
-              await grinderRepository.replaceAll(data as Grinder[]);
-              break;
-          }
-        };
-
-        for (const key of APP_DATA_KEYS) {
-          if (options.preserveDeviceSettings && key === 'backupReminderSettings')
-            continue;
-          if (importData.data[key] !== undefined) {
-            let valueToSave = importData.data[key];
-
-            if (key === 'coffeeBeans' && Array.isArray(valueToSave)) {
-              valueToSave = normalizeCoffeeBeans(valueToSave as _CoffeeBean[], {
-                ensureFlavorArray: true,
-              });
-            }
-
-            if (
-              (key === 'coffeeBeans' || key === 'brewingNotes') &&
-              Array.isArray(valueToSave)
-            ) {
-              await syncToIndexedDB(key, valueToSave);
-              continue;
-            }
-
-            // 特殊处理 brewGuideSettings - 使用 settingsStore 导入
-            if (
-              key === 'brewGuideSettings' &&
-              typeof valueToSave === 'object'
-            ) {
-              // 如果导入的数据是 Zustand 格式（包含 state.settings），则解包
-              if ((valueToSave as any)?.state?.settings) {
-                valueToSave = (valueToSave as any).state.settings;
-              }
-
-              if (options.preserveDeviceSettings) {
-                valueToSave = preserveDeviceSettings(
-                  valueToSave as Partial<_SettingsOptions>,
-                  getSettingsStore().settings
-                );
-              }
-              valueToSave = preserveSyncConnectionSettings(
-                valueToSave as Partial<_SettingsOptions>,
-                getSettingsStore().settings
-              );
-
-              const settingsObj = valueToSave as any;
-
-              // 迁移旧版评分维度数据：从顶层 customFlavorDimensions 迁移到 settings.flavorDimensions
-              // 旧版本中评分维度存储在 data.customFlavorDimensions，新版本存储在 brewGuideSettings.flavorDimensions
-              if (
-                importData.data.customFlavorDimensions &&
-                Array.isArray(importData.data.customFlavorDimensions)
-              ) {
-                // 只有当 settings 中没有 flavorDimensions 或为空时才迁移
-                if (
-                  !settingsObj.flavorDimensions ||
-                  settingsObj.flavorDimensions.length === 0
-                ) {
-                  settingsObj.flavorDimensions =
-                    importData.data.customFlavorDimensions;
-                  console.log(
-                    `[DataManager] Migrated ${(importData.data.customFlavorDimensions as any[]).length} flavor dimensions from legacy format`
-                  );
-                }
-              }
-
-              // 迁移旧版历史标签数据
-              if (
-                importData.data.flavorDimensionHistoricalLabels &&
-                typeof importData.data.flavorDimensionHistoricalLabels ===
-                  'object'
-              ) {
-                // 合并历史标签（旧数据优先，因为可能包含更完整的历史记录）
-                settingsObj.flavorDimensionHistoricalLabels = {
-                  ...(settingsObj.flavorDimensionHistoricalLabels || {}),
-                  ...(importData.data.flavorDimensionHistoricalLabels as Record<
-                    string,
-                    string
-                  >),
-                };
-                console.log(
-                  '[DataManager] Migrated flavor dimension historical labels from legacy format'
-                );
-              }
-
-              // 尝试迁移旧版 grinders 数据 (如果存在)
-              if (
-                settingsObj &&
-                Array.isArray(settingsObj.grinders) &&
-                settingsObj.grinders.length > 0
-              ) {
-                try {
-                  const { getGrinderStore } =
-                    await import('@/lib/stores/grinderStore');
-                  // 简单的验证，确保是对象且有 id 和 name
-                  const validGrinders = settingsObj.grinders.filter(
-                    (g: any) => g && typeof g === 'object' && g.id && g.name
-                  );
-
-                  if (validGrinders.length > 0) {
-                    await grinderRepository.replaceAll(validGrinders);
-                    await callStoreActionInMutation(
-                      getGrinderStore().refreshGrinders
-                    );
-                    console.log(
-                      `[DataManager] Migrated ${validGrinders.length} grinders from settings`
-                    );
-                  }
-                } catch (e) {
-                  console.error('[DataManager] Failed to migrate grinders:', e);
-                }
-              }
-
-              // 使用 settingsStore 导入设置（会自动保存到 IndexedDB）
-              await callStoreActionInMutation(
-                getSettingsStore().importSettings,
-                valueToSave as any
-              );
-              continue; // 跳过后续的 Storage 保存
-            }
-
-            // 保存到Storage
-            const value =
-              typeof valueToSave === 'object'
-                ? JSON.stringify(valueToSave)
-                : String(valueToSave);
-            await callStoreActionInMutation(storage.set, key, value);
-
-            // 同步到IndexedDB（如果需要）
-            if (
-              INDEXED_DB_SYNC_KEYS.includes(
-                key as (typeof INDEXED_DB_SYNC_KEYS)[number]
-              ) &&
-              typeof importData.data[key] === 'object'
-            ) {
-              const rawData = importData.data[key] as unknown[];
-              if (Array.isArray(rawData)) {
-                await syncToIndexedDB(key, rawData);
-              }
-            }
-          }
-        }
-
-        // 导入自定义方案数据
-        if (
-          importData.data.customMethodsByEquipment &&
-          typeof importData.data.customMethodsByEquipment === 'object'
-        ) {
-          // 清除现有方案数据
-          const existing = await customMethodRepository.list();
-          for (const { equipmentId } of existing) {
-            await callStoreActionInMutation(
-              storage.remove,
-              `customMethods_${equipmentId}`
+              throw new Error('烘焙商配置格式无效');
+            const index = configs.findIndex(
+              value => value.roasterName === config.roasterName
             );
+            const previous = configs[index];
+            const next = {
+              ...previous,
+              ...config,
+              updatedAt: Date.now(),
+              logoUpdatedAt: Math.max(
+                Date.now(),
+                (previous?.logoUpdatedAt ?? 0) + 1
+              ),
+            };
+            if (index < 0) configs.push(next);
+            else configs[index] = next;
           }
-          for (const key of await storage.keys()) {
-            if (key.startsWith('customMethods_'))
-              await callStoreActionInMutation(storage.remove, key);
-          }
-          await customMethodRepository.clear();
-
-          // 遍历所有器具的方案
-          const customMethodsByEquipment = importData.data
-            .customMethodsByEquipment as Record<string, unknown>;
-
-          for (const equipmentId of Object.keys(customMethodsByEquipment)) {
-            const methods = customMethodsByEquipment[equipmentId];
-            if (Array.isArray(methods)) {
-              // 保存该器具的所有方案
-              const storageKey = `customMethods_${equipmentId}`;
-              await callStoreActionInMutation(
-                storage.set,
-                storageKey,
-                JSON.stringify(methods)
-              );
-
-              // 同时更新IndexedDB
-              await customMethodRepository.save({
-                equipmentId,
-                methods,
-              });
-            }
-          }
+          plan.settings = { ...settings, roasterConfigs: configs };
         }
-
-        // 导入自定义预设数据
-        if (
-          isBrowser &&
-          importData.data.customPresets &&
-          typeof importData.data.customPresets === 'object'
-        ) {
-          // 遍历所有自定义预设类型
-          const customPresets = importData.data.customPresets as Record<
-            string,
-            unknown
-          >;
-          for (const key of CUSTOM_PRESETS_KEYS) {
-            if (!(key in customPresets))
-              localStorage.removeItem(`${CUSTOM_PRESETS_PREFIX}${key}`);
-          }
-          for (const presetType of Object.keys(customPresets)) {
-            if (CUSTOM_PRESETS_KEYS.includes(presetType)) {
-              const presets = customPresets[presetType];
-              if (Array.isArray(presets)) {
-                // 保存该类型的所有自定义预设
-                const storageKey = `${CUSTOM_PRESETS_PREFIX}${presetType}`;
-                localStorage.setItem(storageKey, JSON.stringify(presets));
-              }
-            }
-          }
+        for (const key of APP_DATA_KEYS) {
+          if (
+            [
+              'coffeeBeans',
+              'brewingNotes',
+              'customEquipments',
+              'grinders',
+              'brewGuideSettings',
+            ].includes(key)
+          )
+            continue;
+          if (
+            options.preserveDeviceSettings &&
+            key === 'backupReminderSettings'
+          )
+            continue;
+          if (data[key] !== undefined)
+            plan.legacy[key] =
+              typeof data[key] === 'object'
+                ? JSON.stringify(data[key])
+                : String(data[key]);
         }
-
-        // 导入烘焙商配置（兼容旧版 'roaster-logos' 和新版 'roasterConfigs'）
-        const importedRoasterConfigs =
-          importData.data['roasterConfigs'] || importData.data['roaster-logos'];
-        if (importedRoasterConfigs && Array.isArray(importedRoasterConfigs)) {
-          const roasterConfigs = importedRoasterConfigs as RoasterConfig[];
-          const store = getSettingsStore();
-          for (const config of roasterConfigs) {
-            if (config.roasterName) {
-              await callStoreActionInMutation(
-                store.updateRoasterConfig,
-                config.roasterName,
-                {
-                  logoData: config.logoData,
-                  flavorPeriod: config.flavorPeriod,
+        if (plan.coffeeBeans) {
+          const { extractRoasterFromName, removeRoasterFromName } =
+            await import('@/lib/utils/beanVarietyUtils');
+          const separator =
+            (plan.settings ?? currentSettings).roasterSeparator || ' ';
+          plan.coffeeBeans = plan.coffeeBeans.map(bean => {
+            if (bean.roaster) return bean;
+            const roaster = extractRoasterFromName(bean.name, separator);
+            return roaster
+              ? {
+                  ...bean,
+                  roaster,
+                  name: removeRoasterFromName(bean.name, separator),
                 }
-              );
-            }
-          }
+              : bean;
+          });
         }
+        await dataImportPersistence.importData(plan);
+        committed = true;
 
-        // 刷新咖啡豆缓存，确保导入的数据能立即生效
+        // Persistence has committed. Cache/notification failures cannot turn it into a failed import.
         try {
+          if (plan.settings)
+            useSettingsStore.setState({ settings: plan.settings });
+          await markExpectedCoreDataMutation('data-import');
+          const { announceBusinessHistoryInvalidation } =
+            await import('@/lib/data/business/maintenance');
+          announceBusinessHistoryInvalidation();
           const { getCoffeeBeanStore } =
             await import('@/lib/stores/coffeeBeanStore');
-          await getCoffeeBeanStore().refreshBeans();
-        } catch (error) {
-          console.error('刷新咖啡豆缓存失败:', error);
-        }
-
-        // 执行烘焙商字段迁移（按需迁移导入的数据）
-        try {
-          const { migrateRoasterField } =
-            await import('@/lib/utils/roasterMigration');
-          await callStoreActionInMutation(migrateRoasterField);
-        } catch (error) {
-          console.error('烘焙商字段迁移失败:', error);
-        }
-
-        // 刷新磨豆机缓存，确保导入的数据能立即生效
-        try {
           const { getGrinderStore } = await import('@/lib/stores/grinderStore');
+          await getCoffeeBeanStore().refreshBeans();
           await callStoreActionInMutation(getGrinderStore().refreshGrinders);
-        } catch (error) {
-          console.error('刷新磨豆机缓存失败:', error);
-        }
-
-        // 触发器具排序更新事件
-        if (importData.data.equipmentOrder) {
-          try {
-            const { equipmentEventBus } =
-              await import('@/lib/equipment/equipmentEventBus');
-            equipmentEventBus.notify();
-          } catch (error) {
-            console.error('触发器具排序更新事件失败:', error);
-          }
-        }
-
-        // 触发数据变更事件，通知应用中的组件重新加载数据
-        if (isBrowser) {
-          const eventDetail = { source: 'importAllData' };
-          const events = [
-            'coffeeBeansUpdated', // 确保个人榜单能及时刷新
-            'customEquipmentUpdate', // 自定义器具更新
-            'customMethodUpdate', // 自定义方案更新
-          ];
-
-          // 批量触发事件
-          events.forEach(eventName => {
+          if (isBrowser) {
+            for (const name of [
+              'coffeeBeansUpdated',
+              'customEquipmentUpdate',
+              'customMethodUpdate',
+              'settingsChanged',
+            ]) {
+              window.dispatchEvent(
+                new CustomEvent(name, { detail: { source: 'importAllData' } })
+              );
+            }
             window.dispatchEvent(
-              new CustomEvent(eventName, { detail: eventDetail })
+              new CustomEvent('storage:changed', {
+                detail: { key: 'allData', action: 'import' },
+              })
             );
-          });
-
-          // 触发通用数据更改事件
-          window.dispatchEvent(
-            new CustomEvent('storage:changed', {
-              detail: { key: 'allData', action: 'import' },
-            })
-          );
+          }
+        } catch (error) {
+          console.error('数据已导入，刷新缓存失败，请重新打开应用:', error);
         }
-
-        const displayDate = importData.exportDate
-          ? new Date(importData.exportDate).toLocaleString(undefined, {
-              year: 'numeric',
-              month: 'numeric',
-              day: 'numeric',
-              hour: 'numeric',
-              minute: 'numeric',
-              second: 'numeric',
-              timeZoneName: 'short',
-            })
-          : '未知';
-
-        const timeZoneInfo = importData.timeZone
-          ? ` (时区: ${importData.timeZone})`
-          : '';
-
         return {
           success: true,
-          message: `数据导入成功，导出日期: ${displayDate}${timeZoneInfo}`,
+          message: '数据导入成功',
         };
-      } catch (_error) {
+      });
+    } catch (error) {
+      if (committed) {
+        console.error('数据已导入，会话清理失败:', error);
         return {
-          success: false,
-          message: `导入数据失败: ${(_error as Error).message}`,
+          success: true,
+          message: '数据已导入，请重新打开应用加载最新数据',
         };
       }
-    });
+      return {
+        success: false,
+        message: `导入数据失败: ${error instanceof Error ? error.message : String(error)}`,
+      };
+    }
   },
-
   /**
    * 重置所有数据（完全重置）
    * 清除所有用户数据、设置和缓存，恢复到初始状态
