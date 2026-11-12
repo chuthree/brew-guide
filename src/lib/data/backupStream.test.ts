@@ -36,6 +36,41 @@ describe('streamed backup reader', () => {
     expect(wholeFileRead).not.toHaveBeenCalled();
   });
 
+  it('streams historical text beyond the former cumulative metadata limit', async () => {
+    const text = 'x'.repeat(8192);
+    const records = Array.from({ length: 600 }, (_, index) => ({
+      id: String(index),
+      notes: text,
+    }));
+    const file = new Blob([
+      JSON.stringify({ data: { coffeeBeans: records, brewingNotes: records } }),
+    ]);
+    const counts = { coffeeBeans: 0, brewingNotes: 0 };
+    for await (const event of readBackupStream(file)) {
+      if (event.section === 'document') {
+        expect(event.value.data).toEqual({ coffeeBeans: [], brewingNotes: [] });
+      } else {
+        expect(event.value.notes).toBe(text);
+        counts[event.section]++;
+      }
+    }
+    expect(counts).toEqual({ coffeeBeans: 600, brewingNotes: 600 });
+  });
+
+  it('preserves large settings without an image-field-specific text limit', async () => {
+    const background = `data:image/png;base64,${'a'.repeat(9 * 1024 * 1024)}`;
+    const file = new Blob([
+      JSON.stringify({ data: { settings: { background } } }),
+    ]);
+    let documents = 0;
+    for await (const event of readBackupStream(file)) {
+      expect(event.section).toBe('document');
+      expect(event.value).toEqual({ data: { settings: { background } } });
+      documents++;
+    }
+    expect(documents).toBe(1);
+  });
+
   it.each([
     '{"data":{"coffeeBeans":[{"id":"a"}]',
     '{"data":{"coffeeBeans":[{"id":"a"},{"id":"a"}]}}',
@@ -73,7 +108,8 @@ describe('streamed backup reader', () => {
     try {
       for await (const event of readBackupStream(
         new Blob(['{"data":{"coffeeBeans":[{"id":"a"}'])
-      )) void event;
+      ))
+        void event;
       throw new Error('expected rejection');
     } catch (error) {
       expect(error).toMatchObject({

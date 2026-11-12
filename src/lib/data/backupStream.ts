@@ -12,7 +12,6 @@ export type BackupStreamEvent =
 
 const CHUNK_BYTES = 64 * 1024;
 const MAX_RECORD_BYTES = 32 * 1024 * 1024;
-const MAX_METADATA_BYTES = 16 * 1024 * 1024;
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   value !== null && typeof value === 'object' && !Array.isArray(value);
 
@@ -26,7 +25,6 @@ export async function* readBackupStream(
   let tokenOffset = 0;
   let boundary = 0;
   let depth = 0;
-  let metadataBytes = 0;
   let complete = false;
   const sections = new Set<string>();
   const rootKeys = new Set<string>();
@@ -52,19 +50,6 @@ export async function* readBackupStream(
     }
     const section = stack[1]?.key === 'data' ? stack[2]?.key : undefined;
     const streamed = section === 'coffeeBeans' || section === 'brewingNotes';
-    const imageValue =
-      streamed &&
-      ((stack.length === 4 && (key === 'image' || key === 'backImage')) ||
-        (section === 'brewingNotes' &&
-          stack.length === 5 &&
-          stack[4]?.key === 'images'));
-    if (!imageValue) {
-      metadataBytes +=
-        (typeof key === 'string' ? key.length * 2 : 8) +
-        (typeof value === 'string' ? value.length * 2 : 8);
-      if (metadataBytes > MAX_METADATA_BYTES)
-        throw new Error('备份中的文字或设置数据过大，无法安全导入');
-    }
     if (streamed && stack.length === 3) {
       if (!isRecord(value) || typeof value.id !== 'string' || !value.id.trim())
         throw new Error(`${section} 中存在缺少有效 id 的记录`);
