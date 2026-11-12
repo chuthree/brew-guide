@@ -11,7 +11,7 @@ import {
   RoasterRatingStatsItem,
   CommonMethodStatsItem,
 } from './types';
-import { formatNumber, getTimeRange } from './utils';
+import { formatNumber, formatStatsDateRange, getTimeRange } from './utils';
 import {
   globalCache,
   saveDateGroupingModePreference,
@@ -1597,6 +1597,7 @@ const RoastedBeanStatsView: React.FC<RoastedBeanStatsViewProps> = ({
     trendData,
     isHistoricalView,
     effectiveDateRange,
+    isLoading,
     metadata,
     brewingDetails,
   } = useStatsData(beans, dateGroupingMode, selectedDate);
@@ -1610,39 +1611,7 @@ const RoastedBeanStatsView: React.FC<RoastedBeanStatsViewProps> = ({
     [roastedBeans]
   );
 
-  // 生成日期范围标签（基于实际数据范围）
-  const dateRangeLabel = useMemo(() => {
-    if (!effectiveDateRange) return '';
-
-    const formatFull = (date: Date) => {
-      const y = date.getFullYear();
-      const m = (date.getMonth() + 1).toString().padStart(2, '0');
-      const d = date.getDate().toString().padStart(2, '0');
-      return `${y}.${m}.${d}`;
-    };
-
-    const formatShort = (date: Date) => {
-      const m = (date.getMonth() + 1).toString().padStart(2, '0');
-      const d = date.getDate().toString().padStart(2, '0');
-      return `${m}.${d}`;
-    };
-
-    const startDate = new Date(effectiveDateRange.start);
-    // end 是开区间边界，需要减1ms获取实际最后一天
-    const endDate = new Date(effectiveDateRange.end - 1);
-
-    const isSameDay =
-      startDate.getFullYear() === endDate.getFullYear() &&
-      startDate.getMonth() === endDate.getMonth() &&
-      startDate.getDate() === endDate.getDate();
-
-    if (isSameDay) return formatFull(startDate);
-
-    if (startDate.getFullYear() !== endDate.getFullYear()) {
-      return `${formatFull(startDate)} - ${formatFull(endDate)}`;
-    }
-    return `${formatFull(startDate)} - ${formatShort(endDate)}`;
-  }, [effectiveDateRange]);
+  const dateRangeLabel = formatStatsDateRange(effectiveDateRange);
 
   // 处理点击解释
   const handleExplain = useCallback(
@@ -1777,13 +1746,13 @@ const RoastedBeanStatsView: React.FC<RoastedBeanStatsViewProps> = ({
   useEffect(() => {
     if (
       !isContentMode &&
+      !isLoading &&
       selectedDate !== null &&
-      availableDates.length > 0 &&
       !availableDates.includes(selectedDate)
     ) {
       setSelectedDate(null);
     }
-  }, [availableDates, selectedDate, isContentMode]);
+  }, [availableDates, selectedDate, isContentMode, isLoading]);
 
   if (roastedBeans.length === 0) {
     return (
@@ -1902,7 +1871,7 @@ const RoastedBeanStatsView: React.FC<RoastedBeanStatsViewProps> = ({
       selectedDate={selectedDate}
       onDateClick={setSelectedDate}
       availableDates={availableDates}
-      dateRangeLabel={dateRangeLabel || '—'}
+      dateRangeLabel={dateRangeLabel}
       beanStateType={beanStateType}
       onBeanStateTypeChange={onBeanStateTypeChange}
       showBeanStateSwitch={showBeanStateSwitch}
@@ -2037,40 +2006,9 @@ const CombinedStatsView: React.FC<CombinedStatsViewProps> = ({
   // 根据当前类型选择数据
   const currentStatsData =
     beanStateType === 'roasted' ? roastedStatsData : greenStatsData;
-  const { availableDates, effectiveDateRange } = currentStatsData;
+  const { availableDates, effectiveDateRange, isLoading } = currentStatsData;
 
-  // 生成日期范围标签
-  const dateRangeLabel = useMemo(() => {
-    if (!effectiveDateRange) return '';
-
-    const formatFull = (date: Date) => {
-      const y = date.getFullYear();
-      const m = (date.getMonth() + 1).toString().padStart(2, '0');
-      const d = date.getDate().toString().padStart(2, '0');
-      return `${y}.${m}.${d}`;
-    };
-
-    const formatShort = (date: Date) => {
-      const m = (date.getMonth() + 1).toString().padStart(2, '0');
-      const d = date.getDate().toString().padStart(2, '0');
-      return `${m}.${d}`;
-    };
-
-    const startDate = new Date(effectiveDateRange.start);
-    const endDate = new Date(effectiveDateRange.end - 1);
-
-    const isSameDay =
-      startDate.getFullYear() === endDate.getFullYear() &&
-      startDate.getMonth() === endDate.getMonth() &&
-      startDate.getDate() === endDate.getDate();
-
-    if (isSameDay) return formatFull(startDate);
-
-    if (startDate.getFullYear() !== endDate.getFullYear()) {
-      return `${formatFull(startDate)} - ${formatFull(endDate)}`;
-    }
-    return `${formatFull(startDate)} - ${formatShort(endDate)}`;
-  }, [effectiveDateRange]);
+  const dateRangeLabel = formatStatsDateRange(effectiveDateRange);
 
   // 处理分组模式变更
   const handleDateGroupingModeChange = useCallback(
@@ -2108,17 +2046,14 @@ const CombinedStatsView: React.FC<CombinedStatsViewProps> = ({
 
   // 验证 selectedDate 是否在可用日期列表中，如果不在则重置
   useEffect(() => {
-    const nextSelectedDate =
+    if (
+      !isLoading &&
       selectedDate !== null &&
-      availableDates.length > 0 &&
       !availableDates.includes(selectedDate)
-        ? null
-        : selectedDate;
-
-    if (nextSelectedDate !== selectedDate) {
-      handleSelectedDateChange(nextSelectedDate);
+    ) {
+      handleSelectedDateChange(null);
     }
-  }, [availableDates, selectedDate, handleSelectedDateChange]);
+  }, [availableDates, selectedDate, handleSelectedDateChange, isLoading]);
 
   // 内容模式 props
   const contentModeProps = useMemo(
@@ -2146,7 +2081,7 @@ const CombinedStatsView: React.FC<CombinedStatsViewProps> = ({
           selectedDate={selectedDate}
           onDateClick={handleSelectedDateChange}
           availableDates={availableDates}
-          dateRangeLabel={dateRangeLabel || '—'}
+          dateRangeLabel={dateRangeLabel}
           beanStateType={beanStateType}
           onBeanStateTypeChange={onBeanStateTypeChange}
           showBeanStateSwitch

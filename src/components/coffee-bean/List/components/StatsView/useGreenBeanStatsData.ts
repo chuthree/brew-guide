@@ -231,8 +231,9 @@ export const useGreenBeanStatsData = (
     const dates = new Set<string>();
 
     for (const note of notes) {
-      // 只统计烘焙记录
       if (!note.timestamp || note.source !== 'roasting') continue;
+      if ((note.changeRecord?.roastingRecord?.roastedAmount ?? 0) <= 0)
+        continue;
       const key = getDateKey(
         new Date(getRoastingTimestamp(note)),
         dateGroupingMode
@@ -257,7 +258,6 @@ export const useGreenBeanStatsData = (
     let todayRoasted = 0;
     let todayCost = 0;
     let firstNoteTime = Infinity;
-    let lastNoteTime = 0;
     let validRecordsCount = 0;
     let todayRecordsCount = 0;
 
@@ -329,7 +329,6 @@ export const useGreenBeanStatsData = (
 
         // 记录时间边界
         if (ts < firstNoteTime) firstNoteTime = ts;
-        if (ts > lastNoteTime) lastNoteTime = ts;
 
         // 按类型统计
         if (roastingRecord.inputs) {

@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { DateGroupingMode, TypeInventoryStats } from './types';
 import type { NavigationSwipeControl } from '@/lib/navigation/navigationSwipe';
-import { formatNumber, getTimeRange } from './utils';
+import { formatNumber, formatStatsDateRange, getTimeRange } from './utils';
 import {
   globalCache,
   saveDateGroupingModePreference,
@@ -888,42 +888,12 @@ const GreenBeanStatsView: React.FC<GreenBeanStatsViewProps> = ({
     trendData,
     isHistoricalView,
     effectiveDateRange,
+    isLoading,
     metadata,
     roastingDetails,
   } = useGreenBeanStatsData(beans, dateGroupingMode, selectedDate);
 
-  // 生成日期范围标签
-  const dateRangeLabel = useMemo(() => {
-    if (!effectiveDateRange) return '';
-
-    const formatFull = (date: Date) => {
-      const y = date.getFullYear();
-      const m = (date.getMonth() + 1).toString().padStart(2, '0');
-      const d = date.getDate().toString().padStart(2, '0');
-      return `${y}.${m}.${d}`;
-    };
-
-    const formatShort = (date: Date) => {
-      const m = (date.getMonth() + 1).toString().padStart(2, '0');
-      const d = date.getDate().toString().padStart(2, '0');
-      return `${m}.${d}`;
-    };
-
-    const startDate = new Date(effectiveDateRange.start);
-    const endDate = new Date(effectiveDateRange.end - 1);
-
-    const isSameDay =
-      startDate.getFullYear() === endDate.getFullYear() &&
-      startDate.getMonth() === endDate.getMonth() &&
-      startDate.getDate() === endDate.getDate();
-
-    if (isSameDay) return formatFull(startDate);
-
-    if (startDate.getFullYear() !== endDate.getFullYear()) {
-      return `${formatFull(startDate)} - ${formatFull(endDate)}`;
-    }
-    return `${formatFull(startDate)} - ${formatShort(endDate)}`;
-  }, [effectiveDateRange]);
+  const dateRangeLabel = formatStatsDateRange(effectiveDateRange);
 
   // 处理点击解释
   const handleExplain = useCallback(
@@ -1045,13 +1015,13 @@ const GreenBeanStatsView: React.FC<GreenBeanStatsViewProps> = ({
   useEffect(() => {
     if (
       !isContentMode &&
+      !isLoading &&
       selectedDate !== null &&
-      availableDates.length > 0 &&
       !availableDates.includes(selectedDate)
     ) {
       setSelectedDate(null);
     }
-  }, [availableDates, selectedDate, isContentMode]);
+  }, [availableDates, selectedDate, isContentMode, isLoading]);
 
   // 检查是否有生豆
   const greenBeans = useMemo(() => {
@@ -1151,7 +1121,7 @@ const GreenBeanStatsView: React.FC<GreenBeanStatsViewProps> = ({
       selectedDate={selectedDate}
       onDateClick={setSelectedDate}
       availableDates={availableDates}
-      dateRangeLabel={dateRangeLabel || '—'}
+      dateRangeLabel={dateRangeLabel}
       beanStateType={beanStateType}
       onBeanStateTypeChange={onBeanStateTypeChange}
       showBeanStateSwitch={showBeanStateSwitch}

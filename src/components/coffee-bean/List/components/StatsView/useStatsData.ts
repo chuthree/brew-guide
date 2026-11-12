@@ -392,7 +392,13 @@ export const useStatsData = (
     const dates = new Set<string>();
 
     for (const note of notes) {
-      if (!note.timestamp || note.source === 'capacity-adjustment') continue;
+      if (
+        !note.timestamp ||
+        note.source === 'capacity-adjustment' ||
+        note.source === 'roasting' ||
+        parseNoteConsumption(note) <= 0
+      )
+        continue;
       const key = getDateKey(new Date(note.timestamp), dateGroupingMode);
       if (key) dates.add(key);
     }
@@ -482,7 +488,6 @@ export const useStatsData = (
     let todayConsumption = 0;
     let todayCost = 0;
     let firstNoteTime = Infinity;
-    let lastNoteTime = 0;
     let validNotesCount = 0; // 有效记录数
     let todayNotesCount = 0; // 今日记录数
     const beansUsed = new Set<string>(); // 参与计算的咖啡豆
@@ -619,7 +624,6 @@ export const useStatsData = (
 
         // 记录时间边界
         if (ts < firstNoteTime) firstNoteTime = ts;
-        if (ts > lastNoteTime) lastNoteTime = ts;
 
         // 趋势数据
         if (needTrend) {

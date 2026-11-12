@@ -126,44 +126,45 @@ const StatsFilterBar: React.FC<StatsFilterBarProps> = ({
       {...interactionProps}
     >
       {/* 时间范围文案 - 可点击切换时间分组和豆子类型 */}
-      {dateRangeLabel && (
-        <ListHeaderSummary navigation={navigationToggleControl}>
-          <div className="text-left leading-none">
-            <button
-              type="button"
-              onClick={() =>
-                onDateGroupingModeChange(
-                  getNextDateGroupingMode(dateGroupingMode)
-                )
-              }
-              className="text-xs leading-none font-medium tracking-wide text-neutral-800 underline decoration-neutral-300 underline-offset-2 dark:text-neutral-100 dark:decoration-neutral-600"
-            >
-              {DATE_GROUPING_LABELS[dateGroupingMode]}统计
-            </button>
-            {showBeanStateSwitch && onBeanStateTypeChange && (
-              <>
-                <span className="text-xs leading-none font-medium tracking-wide text-neutral-800 dark:text-neutral-100">
-                  ，
-                </span>
-                <button
-                  type="button"
-                  onClick={() =>
-                    onBeanStateTypeChange(
-                      beanStateType === 'roasted' ? 'green' : 'roasted'
-                    )
-                  }
-                  className="text-xs leading-none font-medium tracking-wide text-neutral-800 underline decoration-neutral-300 underline-offset-2 dark:text-neutral-100 dark:decoration-neutral-600"
-                >
-                  {beanStateType === 'roasted' ? '咖啡豆' : '生豆'}
-                </button>
-              </>
-            )}
+      <ListHeaderSummary navigation={navigationToggleControl}>
+        <div className="text-left leading-none">
+          <button
+            type="button"
+            onClick={() =>
+              onDateGroupingModeChange(
+                getNextDateGroupingMode(dateGroupingMode)
+              )
+            }
+            className="text-xs leading-none font-medium tracking-wide text-neutral-800 underline decoration-neutral-300 underline-offset-2 dark:text-neutral-100 dark:decoration-neutral-600"
+          >
+            {DATE_GROUPING_LABELS[dateGroupingMode]}统计
+          </button>
+          {showBeanStateSwitch && onBeanStateTypeChange && (
+            <>
+              <span className="text-xs leading-none font-medium tracking-wide text-neutral-800 dark:text-neutral-100">
+                ，
+              </span>
+              <button
+                type="button"
+                onClick={() =>
+                  onBeanStateTypeChange(
+                    beanStateType === 'roasted' ? 'green' : 'roasted'
+                  )
+                }
+                className="text-xs leading-none font-medium tracking-wide text-neutral-800 underline decoration-neutral-300 underline-offset-2 dark:text-neutral-100 dark:decoration-neutral-600"
+              >
+                {beanStateType === 'roasted' ? '咖啡豆' : '生豆'}
+              </button>
+            </>
+          )}
+          {dateRangeLabel && (
             <span className="text-xs leading-none font-medium tracking-wide text-neutral-800 dark:text-neutral-100">
-              {showBeanStateSwitch ? '' : '，'}数据周期 {dateRangeLabel}
+              {showBeanStateSwitch && onBeanStateTypeChange ? '' : '，'}
+              数据周期 {dateRangeLabel}
             </span>
-          </div>
-        </ListHeaderSummary>
-      )}
+          )}
+        </div>
+      </ListHeaderSummary>
 
       {/* 整个分类栏容器 */}
       <ListFilterBar

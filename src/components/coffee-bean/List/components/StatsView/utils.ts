@@ -1,10 +1,23 @@
 import { differenceInCalendarDays } from 'date-fns/differenceInCalendarDays';
 import { eachDayOfInterval } from 'date-fns/eachDayOfInterval';
 import { eachMonthOfInterval } from 'date-fns/eachMonthOfInterval';
+import { format } from 'date-fns/format';
+import { isValid } from 'date-fns/isValid';
 import { getDateKey, type TimeRange } from '@/lib/utils/dateUtils';
 import type { RoasterRatingStatsItem, TrendDataPoint } from './types';
 
 export { getDateKey, getTimeRange } from '@/lib/utils/dateUtils';
+
+export const formatStatsDateRange = (
+  range: { start: number; end: number } | null
+) => {
+  if (!range || !isValid(range.start) || !isValid(range.end)) return '';
+
+  const start = format(range.start, 'yyyy.MM.dd');
+  const end = format(range.end, 'yyyy.MM.dd');
+  if (start === end) return start;
+  return `${start} - ${start.slice(0, 4) === end.slice(0, 4) ? end.slice(5) : end}`;
+};
 
 // 按本地日历计数，包含起止两天。
 export const calculateDaysBetween = (startTime: number, endTime: number) =>
@@ -15,7 +28,8 @@ export const buildTrendData = (
   groupBy: 'day' | 'month',
   values: ReadonlyMap<string, number>
 ): TrendDataPoint[] => {
-  if (!(startTime < endTime) || !Number.isFinite(endTime)) return [];
+  if (!values.size || !(startTime < endTime) || !Number.isFinite(endTime))
+    return [];
 
   const interval = { start: startTime, end: endTime - 1 };
   const dates =
