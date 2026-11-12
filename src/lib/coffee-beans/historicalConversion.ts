@@ -2,6 +2,7 @@ import type { CoffeeBean } from '@/types/app';
 import type { BrewingNote } from '@/lib/core/config';
 import { invalid, McpToolError } from '@/lib/mcp/validation';
 import { formatBeanDisplayName } from '@/lib/utils/beanVarietyUtils';
+import { formatInventoryAmount } from './amount';
 
 /** Local, structured diagnostics. Never relax inventory checks to make a preview succeed. */
 export class HistoricalConversionConflict extends McpToolError {
@@ -16,14 +17,15 @@ export class HistoricalConversionConflict extends McpToolError {
   ) {
     super(
       'INVALID_ARGUMENT',
-      `Existing brew usage contradicts the historical conversion; reconcile records first. 总量 ${inventory.capacityGrams}g，剩余 ${inventory.remainingGrams}g，可迁移的已用量 ${inventory.convertedGrams}g，但 ${inventory.brewCount} 条冲煮笔记合计 ${inventory.brewUsageGrams}g。请先核对库存与笔记，不要自动修改或截断用量。`
+      inventory.convertedGrams === 0 && inventory.brewUsageGrams === 0
+        ? `暂时无法转换：库存未记录用量，但仍有 ${inventory.brewCount} 条关联笔记。请先核对笔记归属和用量。`
+        : `暂时无法转换：总量 ${inventory.capacityGrams}g、剩余 ${inventory.remainingGrams}g，已用量 ${inventory.convertedGrams}g，但 ${inventory.brewCount} 条关联笔记合计 ${inventory.brewUsageGrams}g。请先核对库存、笔记用量和咖啡豆关联。`
     );
   }
 }
 
 /** Shared native/Web historical migration rules. No storage or UI side effects. */
-export const conversionAmount = (n: number) =>
-  String(Math.round(n * 1000) / 1000);
+export const conversionAmount = formatInventoryAmount;
 export function conversionGrams(value: unknown, label: string) {
   const n =
     typeof value === 'number'
@@ -39,7 +41,7 @@ export function conversionGrams(value: unknown, label: string) {
     Math.abs(Number(conversionAmount(n)) - n) > 1e-9
   )
     invalid(
-      `${label} must be a valid nonnegative gram amount with at most three decimals`
+      `${label}须为有效克数：不能小于 0 或大于 1000000，最多保留三位小数。请核对数值和单位。`
     );
   return n;
 }
@@ -54,9 +56,7 @@ export function analyzeHistoricalConversion(
     original.sourceGreenBeanId ||
     original.sourceGreenBeanIds?.length
   )
-    invalid(
-      'Only historical roasted beans without green provenance can be converted'
-    );
+    invalid('只能转换未关联生豆来源的历史熟豆，请核对咖啡豆状态和来源。');
   if (
     beans.some(
       b => b.sourceGreenBeanId === id || b.sourceGreenBeanIds?.includes(id)
@@ -72,7 +72,7 @@ export function analyzeHistoricalConversion(
     )
   )
     invalid(
-      'Existing roasting relationships must be resolved before this historical conversion'
+      '该咖啡豆已关联烘焙记录或来源，请先核对关联的生豆、熟豆和烘焙记录。'
     );
   const related = all
     .filter(n => n.beanId === id)
@@ -81,9 +81,9 @@ export function analyzeHistoricalConversion(
     n => n.source === 'quick-decrement' || n.source === 'capacity-adjustment'
   );
   const brews = related.filter(n => !records.includes(n));
-  const capacity = conversionGrams(original.capacity, 'Capacity'),
-    remaining = conversionGrams(original.remaining, 'Remaining');
-  if (remaining > capacity) invalid('Remaining inventory exceeds capacity');
+  const capacity = conversionGrams(original.capacity, '总量'),
+    remaining = conversionGrams(original.remaining, '剩余量');
+  if (remaining > capacity) invalid('剩余量超过总量，请先核对咖啡豆库存。');
   const input = Number(conversionAmount(capacity - remaining));
   const usage = Number(
     conversionAmount(
@@ -91,7 +91,7 @@ export function analyzeHistoricalConversion(
         (sum, n) =>
           sum +
           (n.params?.coffee
-            ? conversionGrams(n.params.coffee, 'Linked brew dose')
+            ? conversionGrams(n.params.coffee, '关联笔记用量')
             : 0),
         0
       )

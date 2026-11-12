@@ -252,6 +252,114 @@ describe.each(['dexie', 'sqlite'] as const)(
       ).toBe('8');
     });
 
+    it('preserves tiny quick decrements when clamped, initialized and restored', async () => {
+      await repositories.coffeeBeanRepository.save({
+        ...bean(),
+        capacity: '0.009g',
+        remaining: '0.009',
+      });
+      const input: BrewingNote = {
+        ...note('tiny', 0.01),
+        source: 'quick-decrement',
+        quickDecrementAmount: 0.01,
+      };
+      const saved = (
+        await repositories.brewingNotePersistence.saveWithInventory(input)
+      ).note!;
+      expect(saved.quickDecrementAmount).toBe(0.009);
+      expect(saved.params?.coffee).toBe('0.009g');
+      expect(
+        (await repositories.coffeeBeanRepository.get('bean'))?.remaining
+      ).toBe('0');
+      await repositories.brewingNotePersistence.deleteWithInventory(saved.id);
+      expect(
+        (await repositories.coffeeBeanRepository.get('bean'))?.remaining
+      ).toBe('0.009');
+      const initialized =
+        await repositories.brewingNotePersistence.saveWithInventory(
+          note('initialized', 0.001),
+          { initializeBeanId: 'bean' }
+        );
+      expect(initialized.beans[0]).toMatchObject({
+        capacity: '0.001g',
+        remaining: '0',
+      });
+      await repositories.brewingNotePersistence.deleteWithInventory(
+        'initialized'
+      );
+      expect(
+        (await repositories.coffeeBeanRepository.get('bean'))?.remaining
+      ).toBe('0.001');
+    });
+
+    it('keeps fractional restoration within capacity and consumption above zero', async () => {
+      const saved = (
+        await repositories.brewingNotePersistence.saveWithInventory(
+          note('fraction', 0.009)
+        )
+      ).note!;
+      await repositories.coffeeBeanRepository.save({
+        ...bean(),
+        capacity: '100.001g',
+        remaining: '99.999',
+      });
+      await repositories.brewingNotePersistence.deleteWithInventory(saved.id);
+      expect(
+        (await repositories.coffeeBeanRepository.get('bean'))?.remaining
+      ).toBe('100.001');
+      await repositories.coffeeBeanRepository.save({
+        ...bean(),
+        remaining: '0.001',
+      });
+      await repositories.brewingNotePersistence.saveWithInventory(
+        note('clamped', 0.009)
+      );
+      expect(
+        (await repositories.coffeeBeanRepository.get('bean'))?.remaining
+      ).toBe('0');
+    });
+
+    it.each([15.01, 15.001, 0.001])(
+      'preserves %s grams across edit, move and deletion',
+      async amount => {
+        const created = (
+          await repositories.brewingNotePersistence.saveWithInventory(
+            note('fraction', amount)
+          )
+        ).note!;
+        const expected = String(Math.round((100 - amount) * 1000) / 1000);
+        expect(
+          (await repositories.coffeeBeanRepository.get('bean'))?.remaining
+        ).toBe(expected);
+        const edited = (
+          await repositories.brewingNotePersistence.saveWithInventory(
+            { ...created, params: { coffee: '0.009g' } },
+            { expectedUpdatedAt: created.updatedAt ?? created.timestamp }
+          )
+        ).note!;
+        expect(
+          (await repositories.coffeeBeanRepository.get('bean'))?.remaining
+        ).toBe('99.991');
+        await repositories.coffeeBeanRepository.save(bean('other'));
+        const moved = (
+          await repositories.brewingNotePersistence.saveWithInventory(
+            { ...edited, beanId: 'other' },
+            { expectedUpdatedAt: edited.updatedAt ?? edited.timestamp }
+          )
+        ).note!;
+        expect(
+          (await repositories.coffeeBeanRepository.get('bean'))?.remaining
+        ).toBe('100');
+        expect(
+          (await repositories.coffeeBeanRepository.get('other'))?.remaining
+        ).toBe('99.991');
+        await repositories.brewingNotePersistence.deleteWithInventory(moved.id);
+        expect(
+          (await repositories.coffeeBeanRepository.get('other'))?.remaining
+        ).toBe('100');
+      }
+    );
+
     it('creates a pending bean in the same transaction as its first note', async () => {
       const newBean = { ...bean('new'), capacity: '15g', remaining: '15' };
       const input = { ...note(), beanId: newBean.id };

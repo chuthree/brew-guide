@@ -1,7 +1,7 @@
 import type { BrewingNote } from '@/lib/core/config';
 import type { CoffeeBean } from '@/types/app';
 import {
-  formatCoffeeBeanAmount,
+  formatInventoryAmount,
   parseCoffeeBeanAmount,
 } from '@/lib/coffee-beans/amount';
 import { RecordConflictError } from '@/lib/data/recordConflict';
@@ -122,8 +122,8 @@ export async function prepareBrewingNoteInventory(
     const amount = -stockEffect(note);
     const initialized = {
       ...bean,
-      capacity: amount > 0 ? `${formatCoffeeBeanAmount(amount)}g` : '',
-      remaining: formatCoffeeBeanAmount(amount),
+      capacity: amount > 0 ? `${formatInventoryAmount(amount)}g` : '',
+      remaining: formatInventoryAmount(amount),
     };
     beans.set(bean.id, initialized);
     changedBeans.set(bean.id, initialized);
@@ -143,7 +143,7 @@ export async function prepareBrewingNoteInventory(
     note = {
       ...note,
       quickDecrementAmount: amount,
-      params: { ...note.params, coffee: `${formatCoffeeBeanAmount(amount)}g` },
+      params: { ...note.params, coffee: `${formatInventoryAmount(amount)}g` },
     };
   }
 
@@ -153,7 +153,7 @@ export async function prepareBrewingNoteInventory(
     deltas.set(note.beanId, (deltas.get(note.beanId) ?? 0) + stockEffect(note));
   }
   for (const [id, delta] of deltas) {
-    if (Math.abs(delta) < 0.01) continue;
+    if (Math.abs(delta) < 0.000001) continue;
     const bean = beans.get(id);
     if (!bean) {
       if (id === note?.beanId) throw new Error('咖啡豆不存在，请重新选择');
@@ -170,7 +170,7 @@ export async function prepareBrewingNoteInventory(
     }
     changedBeans.set(id, {
       ...bean,
-      remaining: formatCoffeeBeanAmount(amount),
+      remaining: formatInventoryAmount(amount),
       timestamp: Math.max(now, bean.timestamp + 1),
     });
   }

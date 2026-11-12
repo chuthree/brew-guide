@@ -116,11 +116,11 @@ describe('RoastingManager.updateRoastingRecord', () => {
     const preview = await RoastingManager.previewConvertRoastedToGreen(bean.id);
     expect(preview.success).toBe(false);
     expect(preview.preview).toBeUndefined();
-    expect(preview.error).toContain('contradicts');
+    expect(preview.error).toContain('请先核对库存、笔记用量和咖啡豆关联');
     const result = await RoastingManager.convertRoastedToGreen(bean.id);
     expect(result.success).toBe(false);
-    expect(result.error).toContain('总量 100g，剩余 60g');
-    expect(result.error).toContain('1 条冲煮笔记合计 80g');
+    expect(result.error).toContain('总量 100g、剩余 60g');
+    expect(result.error).toContain('1 条关联笔记合计 80g');
     expect(
       await Promise.all([db.coffeeBeans.toArray(), db.brewingNotes.toArray()])
     ).toEqual(before);

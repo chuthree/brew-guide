@@ -13,7 +13,10 @@ import {
   RoastingValidationError,
 } from '@/lib/coffee-beans/roastingBatch';
 import { saveRoastingBatchInMutation } from './roastingBatchManager';
-import { analyzeHistoricalConversion } from '@/lib/coffee-beans/historicalConversion';
+import {
+  analyzeHistoricalConversion,
+  conversionAmount,
+} from '@/lib/coffee-beans/historicalConversion';
 import {
   parseBeanName,
   getNextAvailableNumber,
@@ -28,11 +31,6 @@ import {
   getBrewingNoteById as getStoredBrewingNoteById,
   getBrewingNotes,
 } from '@/lib/notes/relatedNotes';
-
-// 辅助函数：格式化数字
-function formatNumber(value: number): string {
-  return Number.isInteger(value) ? value.toString() : value.toFixed(1);
-}
 
 const getAllBrewingNotes = async (): Promise<BrewingNoteData[]> =>
   (await getBrewingNotes()) as BrewingNoteData[];
@@ -394,52 +392,22 @@ const roastingManager = {
       // 2. 获取所有关联笔记
       const allNotes = await getAllBrewingNotes();
       // Clamping negative roasted stock would hide conflicting history and lose inventory facts.
-      analyzeHistoricalConversion(
+      const analyzed = analyzeHistoricalConversion(
         originalBean,
         await coffeeBeanRepository.list(),
         allNotes as BrewingNote[]
       );
 
-      // 筛选与原熟豆关联的笔记
-      const relatedNotes = allNotes.filter(
-        note => note.beanId === roastedBeanId
+      const {
+        brews: brewingNotes,
+        records: recordNotes,
+        capacity,
+        input: roastedAmount,
+        usage: noteUsageTotal,
+      } = analyzed;
+      const newRoastedRemaining = Number(
+        conversionAmount(roastedAmount - noteUsageTotal)
       );
-
-      // 分类笔记
-      const brewingNotes: BrewingNoteData[] = []; // 普通冲煮笔记
-      const recordNotes: BrewingNoteData[] = []; // 变动记录（需删除）
-
-      for (const note of relatedNotes) {
-        if (
-          note.source === 'quick-decrement' ||
-          note.source === 'capacity-adjustment' ||
-          note.source === 'roasting'
-        ) {
-          recordNotes.push(note);
-        } else {
-          // 普通冲煮笔记（包括导入的笔记）
-          brewingNotes.push(note);
-        }
-      }
-
-      // 3. 计算普通笔记消耗的咖啡量
-      let noteUsageTotal = 0;
-      for (const note of brewingNotes) {
-        if (note.params?.coffee) {
-          const match = note.params.coffee.match(/(\d+(?:\.\d+)?)/);
-          if (match) {
-            noteUsageTotal += parseFloat(match[0]);
-          }
-        }
-      }
-
-      // 4. 计算各项数值
-      const capacity = parseFloat(originalBean.capacity || '0');
-      const remaining = parseFloat(originalBean.remaining || '0');
-      const roastedAmount = capacity - remaining; // 已使用量 = 已烘焙量
-
-      // 计算新熟豆的剩余量
-      const newRoastedRemaining = Math.max(0, roastedAmount - noteUsageTotal);
 
       // 5. 如果熟豆未使用（roastedAmount <= 0），直接转为生豆
       if (roastedAmount <= 0) {
@@ -548,8 +516,8 @@ const roastingManager = {
         roaster: originalBean.roaster,
         beanState: 'roasted',
         beanType: originalBean.beanType,
-        capacity: formatNumber(roastedAmount),
-        remaining: formatNumber(newRoastedRemaining),
+        capacity: conversionAmount(roastedAmount),
+        remaining: conversionAmount(newRoastedRemaining),
         image: originalBean.image,
         backImage: originalBean.backImage,
         roastLevel: originalBean.roastLevel,
@@ -579,7 +547,7 @@ const roastingManager = {
         },
         rating: 0,
         taste: {},
-        notes: `从熟豆转换：烘焙了 ${formatNumber(roastedAmount)}g 生豆 → ${formatBeanDisplayName(newRoastedBean)}`,
+        notes: `从熟豆转换：烘焙了 ${conversionAmount(roastedAmount)}g 生豆 → ${formatBeanDisplayName(newRoastedBean)}`,
         source: 'roasting',
         beanId: greenBean.id,
         changeRecord: {
@@ -711,44 +679,22 @@ const roastingManager = {
 
       // 获取所有关联笔记
       const allNotes = await getAllBrewingNotes();
-      analyzeHistoricalConversion(
+      const analyzed = analyzeHistoricalConversion(
         originalBean,
         await coffeeBeanRepository.list(),
         allNotes as BrewingNote[]
       );
-      const relatedNotes = allNotes.filter(
-        note => note.beanId === roastedBeanId
+      const {
+        capacity,
+        remaining,
+        input: roastingAmount,
+        usage: noteUsageTotal,
+      } = analyzed;
+      const brewingNotesCount = analyzed.brews.length;
+      const recordsToDeleteCount = analyzed.records.length;
+      const newRoastedRemaining = Number(
+        conversionAmount(roastingAmount - noteUsageTotal)
       );
-
-      // 分类并统计
-      let brewingNotesCount = 0;
-      let recordsToDeleteCount = 0;
-      let noteUsageTotal = 0;
-
-      for (const note of relatedNotes) {
-        if (
-          note.source === 'quick-decrement' ||
-          note.source === 'capacity-adjustment' ||
-          note.source === 'roasting'
-        ) {
-          recordsToDeleteCount++;
-        } else {
-          brewingNotesCount++;
-          if (note.params?.coffee) {
-            const match = note.params.coffee.match(/(\d+(?:\.\d+)?)/);
-            if (match) {
-              noteUsageTotal += parseFloat(match[0]);
-            }
-          }
-        }
-      }
-
-      // 计算数值
-      const capacity = parseFloat(originalBean.capacity || '0');
-      const remaining = parseFloat(originalBean.remaining || '0');
-      const roastingAmount = capacity - remaining;
-
-      const newRoastedRemaining = Math.max(0, roastingAmount - noteUsageTotal);
 
       // 如果未使用，直接转为生豆（不会产生烘焙记录和新熟豆）
       if (roastingAmount <= 0) {
