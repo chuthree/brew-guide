@@ -6,6 +6,7 @@ import { useSettingsStore } from '@/lib/stores/settingsStore';
 import hapticsUtils from '@/lib/ui/haptics';
 import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
 import { useGrinderStore } from '@/lib/stores/grinderStore';
+import { sortGrinders } from '@/lib/grinder/sortGrinders';
 import {
   SettingPage,
   SettingSection,
@@ -87,8 +88,9 @@ const GrinderSettings: React.FC<GrinderSettingsProps> = ({ onClose }) => {
     updateGrinder,
     deleteGrinder,
   } = useGrinderStore();
+  const sortedGrinders = sortGrinders(grinders);
   useScrollToHighlightedSetting(
-    `${grinders.map(grinder => grinder.id).join('\n')}:${addingStep}`
+    `${sortedGrinders.map(grinder => grinder.id).join('\n')}:${addingStep}`
   );
   // 初始化 store
   useEffect(() => {
@@ -247,7 +249,7 @@ const GrinderSettings: React.FC<GrinderSettingsProps> = ({ onClose }) => {
         )}
 
         {/* 磨豆机列表 */}
-        {grinders.map((grinder, index) => (
+        {sortedGrinders.map((grinder, index) => (
           <SettingRow
             key={grinder.id}
             settingId={makeDynamicSettingSearchId('grinder', grinder.id)}
