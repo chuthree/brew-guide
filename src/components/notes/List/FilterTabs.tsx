@@ -8,7 +8,6 @@ import {
   SORT_OPTIONS,
   SortOption,
   DateGroupingMode,
-  DATE_GROUPING_LABELS,
   NotesViewMode,
 } from '../types';
 import { X, AlignLeft } from 'lucide-react';
@@ -16,6 +15,12 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useInputFocus } from '@/lib/hooks/useInputFocus';
 import { useFilterPanelAnimation } from '@/lib/hooks/useFilterPanelAnimation';
 import SearchAllSuggestion from '@/components/common/ui/SearchAllSuggestion';
+import {
+  DATE_GROUPING_LABELS,
+  DATE_GROUPING_MODES,
+  formatWeekLabel,
+  getDateKey,
+} from '@/lib/utils/dateUtils';
 
 const isInsideFilterInteraction = (
   event: PointerEvent,
@@ -45,6 +50,8 @@ const formatDateLabel = (
   groupingMode: DateGroupingMode
 ): string => {
   const now = new Date();
+  if (groupingMode === 'week') return formatWeekLabel(dateStr, now);
+
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth() + 1;
   const currentDay = now.getDate();
@@ -100,25 +107,6 @@ const formatDateLabel = (
     } else {
       return `${year}/${monthNum}/${dayNum}`;
     }
-  }
-};
-
-// 生成今天的日期字符串（根据粒度）
-const getTodayDateString = (groupingMode: DateGroupingMode): string => {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
-
-  switch (groupingMode) {
-    case 'year':
-      return `${year}`;
-    case 'month':
-      return `${year}-${month}`;
-    case 'day':
-      return `${year}-${month}-${day}`;
-    default:
-      return `${year}-${month}`;
   }
 };
 
@@ -237,24 +225,15 @@ const DateGroupingSection: React.FC<DateGroupingSectionProps> = ({
         时间分组
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        <FilterButton
-          isActive={dateGroupingMode === 'year'}
-          onClick={() => onDateGroupingModeChange('year')}
-        >
-          {DATE_GROUPING_LABELS.year}
-        </FilterButton>
-        <FilterButton
-          isActive={dateGroupingMode === 'month'}
-          onClick={() => onDateGroupingModeChange('month')}
-        >
-          {DATE_GROUPING_LABELS.month}
-        </FilterButton>
-        <FilterButton
-          isActive={dateGroupingMode === 'day'}
-          onClick={() => onDateGroupingModeChange('day')}
-        >
-          {DATE_GROUPING_LABELS.day}
-        </FilterButton>
+        {DATE_GROUPING_MODES.map(mode => (
+          <FilterButton
+            key={mode}
+            isActive={dateGroupingMode === mode}
+            onClick={() => onDateGroupingModeChange(mode)}
+          >
+            {DATE_GROUPING_LABELS[mode]}
+          </FilterButton>
+        ))}
       </div>
     </div>
   );
@@ -596,8 +575,8 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
                       {/* 按日模式下，始终显示"今天"、"昨天"、"前天"快捷选项 */}
                       {dateGroupingMode === 'day' &&
                         (() => {
-                          const todayStr = getTodayDateString('day');
                           const now = new Date();
+                          const todayStr = getDateKey(now, 'day');
 
                           // 计算昨天
                           const yesterday = new Date(now);
@@ -671,7 +650,7 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
                       {availableDates
                         .filter(date => {
                           if (dateGroupingMode !== 'day') return true;
-                          const todayStr = getTodayDateString('day');
+                          const todayStr = getDateKey(new Date(), 'day');
                           const now = new Date();
 
                           const yesterday = new Date(now);

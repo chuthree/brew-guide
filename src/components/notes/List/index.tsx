@@ -62,7 +62,11 @@ import {
   getNoteDeleteDisplay,
   sortNotes,
 } from '../utils';
-import { resolveSelectedDateTimestamp } from '@/lib/utils/dateUtils';
+import {
+  formatWeekLabel,
+  getDateKey,
+  resolveSelectedDateTimestamp,
+} from '@/lib/utils/dateUtils';
 import { useBrewingNoteStore } from '@/lib/stores/brewingNoteStore';
 import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
 import { useCustomEquipmentStore } from '@/lib/stores/customEquipmentStore';
@@ -403,15 +407,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
     } else if (filterMode === 'date' && selectedDate) {
       return sortedNotes.filter((note: BrewingNote) => {
         if (!note.timestamp) return false;
-        const date = new Date(note.timestamp);
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-
-        let noteDate = '';
-        if (dateGroupingMode === 'year') noteDate = `${year}`;
-        else if (dateGroupingMode === 'month') noteDate = `${year}-${month}`;
-        else noteDate = `${year}-${month}-${day}`;
+        const noteDate = getDateKey(new Date(note.timestamp), dateGroupingMode);
 
         // 处理相对日期
         if (selectedDate === 'today') {
@@ -464,17 +460,8 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
     const dateSet = new Set<string>();
     sortedNotes.forEach((note: BrewingNote) => {
       if (note.timestamp) {
-        const date = new Date(note.timestamp);
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-
-        let dateStr = '';
-        if (dateGroupingMode === 'year') dateStr = `${year}`;
-        else if (dateGroupingMode === 'month') dateStr = `${year}-${month}`;
-        else dateStr = `${year}-${month}-${day}`;
-
-        dateSet.add(dateStr);
+        const key = getDateKey(new Date(note.timestamp), dateGroupingMode);
+        if (key) dateSet.add(key);
       }
     });
     return Array.from(dateSet).sort((a, b) => b.localeCompare(a));
@@ -527,6 +514,7 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
     if (selectedDate === 'today') return '今天';
     if (selectedDate === 'yesterday') return '昨天';
     if (selectedDate === 'dayBeforeYesterday') return '前天';
+    if (dateGroupingMode === 'week') return formatWeekLabel(selectedDate);
     if (dateGroupingMode === 'year') return `${selectedDate}年`;
     if (dateGroupingMode === 'month') {
       const [year, month] = selectedDate.split('-');

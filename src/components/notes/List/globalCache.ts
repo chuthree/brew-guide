@@ -16,31 +16,10 @@ import {
 } from '@/lib/notes/noteDisplay';
 import { getEquipmentIdByName } from '@/lib/utils/equipmentUtils';
 import { getBrewingNotes } from '@/lib/notes/relatedNotes';
+import { DATE_GROUPING_MODES, getDateKey } from '@/lib/utils/dateUtils';
 
 // 模块名称
 const MODULE_NAME = 'brewing-notes';
-
-// 根据日期粒度格式化日期字符串
-const formatDateByGrouping = (
-  timestamp: number,
-  groupingMode: DateGroupingMode
-): string => {
-  const date = new Date(timestamp);
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-
-  switch (groupingMode) {
-    case 'year':
-      return `${year}`;
-    case 'month':
-      return `${year}-${month}`;
-    case 'day':
-      return `${year}-${month}-${day}`;
-    default:
-      return `${year}-${month}`;
-  }
-};
 
 // 创建全局缓存对象，确保跨组件实例保持数据
 export const globalCache: {
@@ -130,7 +109,7 @@ export const saveSortOptionPreference = (value: SortOption): void => {
 // 从localStorage读取日期分组模式
 export const getDateGroupingModePreference = (): DateGroupingMode => {
   const value = getStringState(MODULE_NAME, 'dateGroupingMode', 'day');
-  return value as DateGroupingMode;
+  return DATE_GROUPING_MODES.find(mode => mode === value) ?? 'day';
 };
 
 // 保存日期分组模式到localStorage
@@ -201,14 +180,16 @@ export const initializeGlobalCache = async (): Promise<void> => {
         );
       })(),
 
-      // 收集日期列表（按年-月）
+      // 按当前粒度收集日期列表
       (async () => {
         const dateSet = new Set<string>();
         parsedNotes.forEach(note => {
           if (note.timestamp) {
-            const date = new Date(note.timestamp);
-            const yearMonth = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-            dateSet.add(yearMonth);
+            const key = getDateKey(
+              new Date(note.timestamp),
+              globalCache.dateGroupingMode
+            );
+            if (key) dateSet.add(key);
           }
         });
         // 按日期降序排序（最新的在前）
@@ -233,8 +214,8 @@ export const initializeGlobalCache = async (): Promise<void> => {
     } else if (globalCache.filterMode === 'date' && globalCache.selectedDate) {
       filteredNotes = parsedNotes.filter(note => {
         if (!note.timestamp) return false;
-        const noteDate = formatDateByGrouping(
-          note.timestamp,
+        const noteDate = getDateKey(
+          new Date(note.timestamp),
           globalCache.dateGroupingMode
         );
         return noteDate === globalCache.selectedDate;

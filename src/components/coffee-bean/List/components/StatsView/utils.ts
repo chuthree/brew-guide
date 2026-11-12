@@ -1,60 +1,10 @@
 import { differenceInCalendarDays } from 'date-fns/differenceInCalendarDays';
 import { eachDayOfInterval } from 'date-fns/eachDayOfInterval';
 import { eachMonthOfInterval } from 'date-fns/eachMonthOfInterval';
-import { formatISO } from 'date-fns/formatISO';
-import { startOfISOWeek } from 'date-fns/startOfISOWeek';
-import type {
-  DateGroupingMode,
-  RoasterRatingStatsItem,
-  TrendDataPoint,
-} from './types';
+import { getDateKey, type TimeRange } from '@/lib/utils/dateUtils';
+import type { RoasterRatingStatsItem, TrendDataPoint } from './types';
 
-// 周分组用本地周一的日期作为键。
-export const getDateKey = (
-  date: Date,
-  mode: DateGroupingMode
-): string | null => {
-  const periodDate = mode === 'week' ? startOfISOWeek(date) : date;
-  if (Number.isNaN(periodDate.getTime())) return null;
-
-  const key = formatISO(periodDate, { representation: 'date' });
-  if (mode === 'year') return key.slice(0, 4);
-  if (mode === 'month') return key.slice(0, 7);
-  return key;
-};
-
-interface TimeRange {
-  startTime: number;
-  endTime: number;
-}
-
-// 起点包含在内，终点为下一周期的本地零点。
-export const getTimeRange = (
-  dateKey: string | null,
-  mode: DateGroupingMode
-): TimeRange => {
-  if (!dateKey) return { startTime: 0, endTime: Infinity };
-
-  const [year, month, day] = dateKey.split('-').map(Number);
-  if (mode === 'year') {
-    return {
-      startTime: new Date(year, 0, 1).getTime(),
-      endTime: new Date(year + 1, 0, 1).getTime(),
-    };
-  }
-  if (mode === 'month') {
-    return {
-      startTime: new Date(year, month - 1, 1).getTime(),
-      endTime: new Date(year, month, 1).getTime(),
-    };
-  }
-
-  const days = mode === 'week' ? 7 : 1;
-  return {
-    startTime: new Date(year, month - 1, day).getTime(),
-    endTime: new Date(year, month - 1, day + days).getTime(),
-  };
-};
+export { getDateKey, getTimeRange } from '@/lib/utils/dateUtils';
 
 // 按本地日历计数，包含起止两天。
 export const calculateDaysBetween = (startTime: number, endTime: number) =>

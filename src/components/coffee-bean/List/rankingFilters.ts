@@ -1,9 +1,14 @@
 import type { CoffeeBean } from '@/types/app';
-import { normalizeDate } from '@/lib/utils/dateUtils';
+import {
+  formatWeekLabel,
+  getDateKey,
+  normalizeDate,
+  type DateGroupingMode,
+} from '@/lib/utils/dateUtils';
 import { getBeanRoasterName } from '@/lib/utils/coffeeBeanUtils';
 
 export type RankingFilterMode = 'type' | 'date' | 'roaster';
-export type RankingDateGroupingMode = 'year' | 'month' | 'day';
+export type RankingDateGroupingMode = DateGroupingMode;
 
 interface RankingFilterOptions {
   filterMode: RankingFilterMode;
@@ -41,6 +46,12 @@ export const getRankingDateKey = (
 
   if (groupingMode === 'year') return year;
   if (groupingMode === 'month') return `${year}-${month}`;
+  if (groupingMode === 'week') {
+    return getDateKey(
+      new Date(Number(year), Number(month) - 1, Number(day)),
+      'week'
+    );
+  }
   return `${year}-${month}-${day}`;
 };
 
@@ -105,6 +116,8 @@ export const formatRankingDateLabel = (
   groupingMode: RankingDateGroupingMode,
   now = new Date()
 ): string => {
+  if (groupingMode === 'week') return formatWeekLabel(dateKey, now);
+
   const [yearText, monthText, dayText] = dateKey.split('-');
   const year = Number(yearText);
   const month = Number(monthText);

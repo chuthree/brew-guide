@@ -55,6 +55,7 @@ import TabButton from '@/components/common/ui/TabButton';
 import TabBar from '@/components/common/ui/TabBar';
 import type { BeanFilterOptionCounts } from '../beanListPipeline';
 import SearchAllSuggestion from '@/components/common/ui/SearchAllSuggestion';
+import { DATE_GROUPING_LABELS, DATE_GROUPING_MODES } from '@/lib/utils/dateUtils';
 import {
   formatRankingDateLabel,
   type RankingDateGroupingMode,
@@ -425,13 +426,13 @@ const RankingDateGroupingSection: React.FC<{
       时间分组
     </div>
     <div className="flex flex-wrap items-center gap-2">
-      {(['year', 'month', 'day'] as const).map(mode => (
+      {DATE_GROUPING_MODES.map(mode => (
         <FilterButton
           key={mode}
           isActive={dateGroupingMode === mode}
           onClick={() => onDateGroupingModeChange(mode)}
         >
-          {mode === 'year' ? '按年' : mode === 'month' ? '按月' : '按日'}
+          {DATE_GROUPING_LABELS[mode]}
         </FilterButton>
       ))}
     </div>

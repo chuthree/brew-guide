@@ -295,7 +295,7 @@ export const getRankingDateGroupingModePreference =
       'rankingDateGroupingMode',
       'month'
     );
-    return value === 'year' || value === 'day' ? value : 'month';
+    return DATE_GROUPING_MODES.find(mode => mode === value) ?? 'month';
   };
 export const saveRankingDateGroupingModePreference = (
   v: RankingDateGroupingMode

@@ -9,9 +9,10 @@ export interface StatsViewProps {
   navigationSwipeControl?: NavigationSwipeControl;
 }
 
-// 时间分组模式
-export const DATE_GROUPING_MODES = ['year', 'month', 'week', 'day'] as const;
-export type DateGroupingMode = (typeof DATE_GROUPING_MODES)[number];
+export {
+  DATE_GROUPING_MODES,
+  type DateGroupingMode,
+} from '@/lib/utils/dateUtils';
 
 export interface TrendDataPoint {
   label: string;

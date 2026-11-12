@@ -1,3 +1,7 @@
+import { format } from 'date-fns/format';
+import { formatISO } from 'date-fns/formatISO';
+import { startOfISOWeek } from 'date-fns/startOfISOWeek';
+
 /**
  * 将各种格式的日期字符串标准化为 YYYY-MM-DD 格式
  * 支持以下格式：
@@ -135,7 +139,81 @@ function daysBetween(dateStr1: string, dateStr2?: string): number {
   return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 }
 
-export type DateGroupingMode = 'year' | 'month' | 'day';
+export const DATE_GROUPING_LABELS = {
+  year: '按年',
+  month: '按月',
+  week: '按周',
+  day: '按日',
+} as const;
+
+export type DateGroupingMode = keyof typeof DATE_GROUPING_LABELS;
+export const DATE_GROUPING_MODES = Object.keys(
+  DATE_GROUPING_LABELS
+) as DateGroupingMode[];
+
+// 周分组用本地周一的日期作为键。
+export const getDateKey = (
+  date: Date,
+  mode: DateGroupingMode
+): string | null => {
+  const periodDate = mode === 'week' ? startOfISOWeek(date) : date;
+  if (Number.isNaN(periodDate.getTime())) return null;
+
+  const key = formatISO(periodDate, { representation: 'date' });
+  if (mode === 'year') return key.slice(0, 4);
+  if (mode === 'month') return key.slice(0, 7);
+  return key;
+};
+
+export interface TimeRange {
+  startTime: number;
+  endTime: number;
+}
+
+// 起点包含在内，终点为下一周期的本地零点。
+export const getTimeRange = (
+  dateKey: string | null,
+  mode: DateGroupingMode
+): TimeRange => {
+  if (!dateKey) return { startTime: 0, endTime: Infinity };
+
+  const [year, month, day] = dateKey.split('-').map(Number);
+  if (mode === 'year') {
+    return {
+      startTime: new Date(year, 0, 1).getTime(),
+      endTime: new Date(year + 1, 0, 1).getTime(),
+    };
+  }
+  if (mode === 'month') {
+    return {
+      startTime: new Date(year, month - 1, 1).getTime(),
+      endTime: new Date(year, month, 1).getTime(),
+    };
+  }
+
+  const days = mode === 'week' ? 7 : 1;
+  return {
+    startTime: new Date(year, month - 1, day).getTime(),
+    endTime: new Date(year, month - 1, day + days).getTime(),
+  };
+};
+
+export const formatWeekLabel = (dateKey: string, now = new Date()): string => {
+  const { startTime, endTime } = getTimeRange(dateKey, 'week');
+  if (!Number.isFinite(startTime) || !Number.isFinite(endTime)) return dateKey;
+
+  const currentWeekStart = startOfISOWeek(now).getTime();
+  if (startTime === currentWeekStart) return '本周';
+  if (endTime === currentWeekStart) return '上周';
+
+  const start = new Date(startTime);
+  const end = new Date(endTime - 1);
+  const sameYear = start.getFullYear() === end.getFullYear();
+  const startFormat =
+    sameYear && start.getFullYear() === now.getFullYear() ? 'M/d' : 'yyyy/M/d';
+  const endFormat = sameYear ? 'M/d' : 'yyyy/M/d';
+  return `${format(start, startFormat)}–${format(end, endFormat)}`;
+};
 
 const applyTimeOfDay = (targetDate: Date, sourceDate: Date): Date => {
   targetDate.setHours(
@@ -176,12 +254,15 @@ export const resolveSelectedDateTimestamp = (
 ): number | null => {
   if (!selectedDate) return null;
 
-  if (dateGroupingMode === 'day') {
-    if (selectedDate === 'today') {
+  if (dateGroupingMode === 'day' || dateGroupingMode === 'week') {
+    if (dateGroupingMode === 'day' && selectedDate === 'today') {
       return baseDate.getTime();
     }
 
-    if (selectedDate === 'yesterday' || selectedDate === 'dayBeforeYesterday') {
+    if (
+      dateGroupingMode === 'day' &&
+      (selectedDate === 'yesterday' || selectedDate === 'dayBeforeYesterday')
+    ) {
       const offsetDays = selectedDate === 'yesterday' ? 1 : 2;
       const targetDate = new Date(baseDate);
       targetDate.setDate(targetDate.getDate() - offsetDays);

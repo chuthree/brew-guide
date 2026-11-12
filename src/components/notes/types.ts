@@ -3,6 +3,7 @@ import type { BrewingNoteData, CoffeeBean } from '@/types/app';
 import type { CoffeeBeanLookup } from '@/lib/notes/noteDisplay';
 import type { ReactNode } from 'react';
 import type { NavigationSwipeControl } from '@/lib/navigation/navigationSwipe';
+import type { DateGroupingMode } from '@/lib/utils/dateUtils';
 import type {
   NotesTableColumnConfig,
   NotesTableColumnKey,
@@ -20,15 +21,7 @@ export type SortOption = (typeof SORT_OPTIONS)[keyof typeof SORT_OPTIONS];
 
 export type NotesViewMode = 'list' | 'gallery' | 'table';
 
-// 日期分组粒度类型
-export type DateGroupingMode = 'year' | 'month' | 'day';
-
-// 日期分组粒度的显示名称
-export const DATE_GROUPING_LABELS: Record<DateGroupingMode, string> = {
-  year: '按年',
-  month: '按月',
-  day: '按日',
-};
+export type { DateGroupingMode } from '@/lib/utils/dateUtils';
 
 // 笔记历史组件属性
 export interface BrewingHistoryProps {

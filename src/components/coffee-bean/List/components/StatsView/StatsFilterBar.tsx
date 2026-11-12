@@ -2,25 +2,16 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { differenceInCalendarDays } from 'date-fns/differenceInCalendarDays';
-import { format } from 'date-fns/format';
-import { startOfISOWeek } from 'date-fns/startOfISOWeek';
 import { AlignLeft } from 'lucide-react';
 import TabButton from '@/components/common/ui/TabButton';
 import TabBar from '@/components/common/ui/TabBar';
 import { AnimatePresence, motion } from 'framer-motion';
 import { DATE_GROUPING_MODES, type DateGroupingMode } from './types';
-import { getTimeRange } from './utils';
+import { DATE_GROUPING_LABELS, formatWeekLabel } from '@/lib/utils/dateUtils';
 import {
   useNavigationSwipe,
   type NavigationSwipeControl,
 } from '@/lib/navigation/navigationSwipe';
-
-const DATE_GROUPING_LABELS: Record<DateGroupingMode, string> = {
-  year: '按年',
-  month: '按月',
-  week: '按周',
-  day: '按日',
-};
 
 // Apple风格动画配置
 const FILTER_ANIMATION = {
@@ -83,18 +74,7 @@ const formatDateLabel = (
     }
     return `${year}年${monthNum}月`;
   } else if (groupingMode === 'week') {
-    const { startTime, endTime } = getTimeRange(dateStr, groupingMode);
-    const currentWeekStart = startOfISOWeek(now).getTime();
-    if (startTime === currentWeekStart) return '本周';
-    if (endTime === currentWeekStart) return '上周';
-
-    const start = new Date(startTime);
-    const end = new Date(endTime - 1);
-    const sameYear = start.getFullYear() === end.getFullYear();
-    const startFormat =
-      sameYear && start.getFullYear() === currentYear ? 'M/d' : 'yyyy/M/d';
-    const endFormat = sameYear ? 'M/d' : 'yyyy/M/d';
-    return `${format(start, startFormat)}–${format(end, endFormat)}`;
+    return formatWeekLabel(dateStr, now);
   } else {
     const [year, month, day] = dateStr.split('-');
     const yearNum = parseInt(year, 10);
