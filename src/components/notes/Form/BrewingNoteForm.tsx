@@ -639,7 +639,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
 
     // 🎯 处理笔记步骤中的参数修改（直接修改，不触发外部事件）
     const handleUpdateNoteParams = (e: CustomEvent) => {
-      const { type, value } = e.detail;
+      const { type, value, isEspresso } = e.detail;
 
       // 根据参数类型计算相关值
       const currentCoffeeNum = parseFloat(
@@ -658,7 +658,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
           setMethodParams(prev => ({
             ...prev,
             coffee: `${coffeeValue}g`,
-            water: `${calculatedWater}g`,
+            water: isEspresso ? prev.water : `${calculatedWater}g`,
           }));
           break;
         }
@@ -695,14 +695,20 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
 
           setMethodParams(prev => ({
             ...prev,
-            water: `${waterValue}g`,
+            ...(isEspresso
+              ? { liquidWeight: `${waterValue}g` }
+              : { water: `${waterValue}g` }),
           }));
           break;
         }
         case 'time': {
           const timeValue = parseFloat(value);
           if (isNaN(timeValue) || timeValue < 0) return;
-          setTotalTimeStr(String(timeValue));
+          if (isEspresso) {
+            setMethodParams(prev => ({ ...prev, extractionTime: timeValue }));
+          } else {
+            setTotalTimeStr(String(timeValue));
+          }
           break;
         }
       }

@@ -16,6 +16,7 @@ import { formatNoteBeanDisplayName } from '@/lib/utils/beanVarietyUtils';
 import {
   normalizeBrewingNoteParams,
   getNoteEspressoMeasurements,
+  isEspressoNote,
   resolveNoteMethodName,
 } from '@/lib/notes/noteDisplay';
 import { useCoffeeBeanImage } from '@/lib/hooks/useCoffeeBeanImage';
@@ -90,7 +91,7 @@ const ArtisticShareDrawer: React.FC<ArtisticShareDrawerProps> = ({
   const [equipmentName, setEquipmentName] = useState(
     note.equipmentName || note.equipment || ''
   );
-  const [isEspresso, setIsEspresso] = useState(false);
+  const [isEspressoEquipment, setIsEspressoEquipment] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const textRef = useRef<HTMLDivElement>(null);
   const { activeTab, isSettingsOpen } = viewState;
@@ -186,7 +187,7 @@ const ArtisticShareDrawer: React.FC<ArtisticShareDrawerProps> = ({
       const equipmentId = note.equipmentId || note.equipment;
       const snapshotName =
         note.equipmentName || (note.equipmentId === null ? note.equipment : '');
-      setIsEspresso(equipmentId === 'Espresso');
+      setIsEspressoEquipment(false);
       setEquipmentName(snapshotName || note.equipment || '');
 
       // 1. Check system equipment
@@ -204,9 +205,7 @@ const ArtisticShareDrawer: React.FC<ArtisticShareDrawerProps> = ({
         );
         if (customEquipment) {
           setEquipmentName(snapshotName || customEquipment.name);
-          if (customEquipment.animationType === 'espresso') {
-            setIsEspresso(true);
-          }
+          setIsEspressoEquipment(customEquipment.animationType === 'espresso');
         }
       } catch (error) {
         console.error('Failed to load custom equipment:', error);
@@ -387,7 +386,7 @@ const ArtisticShareDrawer: React.FC<ArtisticShareDrawerProps> = ({
     const normalizedParams = normalizeBrewingNoteParams(note.params);
     const params = [];
 
-    if (isEspresso && normalizedParams) {
+    if (normalizedParams && isEspressoNote(note, isEspressoEquipment)) {
       // 意式：粉量、研磨度、萃取时间、液重
       if (normalizedParams.coffee && normalizedParams.coffee !== '0')
         params.push(`粉量 ${cleanValue(normalizedParams.coffee)}g`);

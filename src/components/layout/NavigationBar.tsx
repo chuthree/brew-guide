@@ -9,7 +9,12 @@ import React, {
 } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import NavigationSection from './NavigationSection';
-import { equipmentList, type CustomEquipment } from '@/lib/core/config';
+import {
+  equipmentList,
+  type CustomEquipment,
+  type Method,
+} from '@/lib/core/config';
+import type { EditableParams } from '@/lib/hooks/useBrewingParameters';
 import hapticsUtils from '@/lib/ui/haptics';
 import { SettingsOptions } from '@/components/settings/Settings';
 import { BREWING_EVENTS, ParameterInfo } from '@/lib/brewing/constants';
@@ -17,6 +22,7 @@ import { listenToEvent } from '@/lib/brewing/events';
 import {
   updateParameterInfo,
   getEquipmentName,
+  isEspressoMethod,
 } from '@/lib/brewing/parameters';
 import EquipmentBar from '@/components/equipment/EquipmentBar';
 import GrindSizeInput from '@/components/ui/GrindSizeInput';
@@ -70,15 +76,6 @@ const TabButton = ({
   </button>
 );
 
-interface EditableParams {
-  coffee: string;
-  water: string;
-  ratio: string;
-  grindSize: string;
-  temp: string;
-  time?: string;
-}
-
 interface DisplayOverlayState {
   step: BrewingStep;
   params: EditableParams;
@@ -87,28 +84,7 @@ interface DisplayOverlayState {
 
 // 意式咖啡相关工具函数
 const espressoUtils = {
-  isEspresso: (
-    method: {
-      params?: {
-        stages?: Array<{ pourType?: string; [key: string]: unknown }>;
-      };
-    } | null
-  ) =>
-    method?.params?.stages?.some(stage =>
-      ['extraction', 'beverage'].includes(stage.pourType || '')
-    ) || false,
-
-  getExtractionTime: (
-    method: {
-      params?: {
-        stages?: Array<{
-          pourType?: string;
-          duration?: number;
-          [key: string]: unknown;
-        }>;
-      };
-    } | null
-  ) => {
+  getExtractionTime: (method: Method | null) => {
     const extractionStage = method?.params?.stages?.find(
       stage => stage.pourType === 'extraction'
     );
@@ -240,23 +216,7 @@ interface NavigationBarProps {
   isTimerRunning: boolean;
   showComplete: boolean;
   selectedEquipment: string | null;
-  selectedMethod: {
-    name: string;
-    params: {
-      coffee: string;
-      water: string;
-      ratio: string;
-      grindSize: string;
-      temp: string;
-      stages: Array<{
-        label: string;
-        duration?: number;
-        water?: string;
-        detail: string;
-        pourType?: string;
-      }>;
-    };
-  } | null;
+  selectedMethod: Method | null;
   handleParamChange: (type: keyof EditableParams, value: string) => void;
   setShowHistory: (show: boolean) => void;
   onTitleDoubleClick: () => void;
@@ -737,12 +697,12 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
     );
   }, [setParameterInfo]);
 
-  // 🎯 监听笔记步骤中的导航栏显示更新事件
+  // 同步显示笔记顶部刚编辑的参数
   useEffect(() => {
     const handleNavbarDisplayUpdate = (e: CustomEvent) => {
       if (activeBrewingStep !== 'notes' || !editableParams) return;
 
-      const { type, value } = e.detail;
+      const { type, value, isEspresso } = e.detail;
 
       // 获取当前显示值（优先使用叠加层，否则使用原始值）
       const getCurrentDisplayValue = (key: keyof EditableParams) => {
@@ -765,7 +725,9 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
           updateDisplayOverlay(prev => ({
             ...prev,
             coffee: `${coffeeValue}g`,
-            water: `${calculatedWater}g`,
+            ...(isEspresso
+              ? {}
+              : { water: `${calculatedWater}g` }),
           }));
           break;
         }
@@ -816,17 +778,22 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
     };
 
     window.addEventListener(
-      'brewing:updateNavbarDisplay',
+      'brewing:updateNoteParams',
       handleNavbarDisplayUpdate as EventListener
     );
 
     return () => {
       window.removeEventListener(
-        'brewing:updateNavbarDisplay',
+        'brewing:updateNoteParams',
         handleNavbarDisplayUpdate as EventListener
       );
     };
-  }, [activeBrewingStep, editableParams, displayOverlay, updateDisplayOverlay]);
+  }, [
+    activeBrewingStep,
+    editableParams,
+    displayOverlay,
+    updateDisplayOverlay,
+  ]);
 
   const shouldHideHeader =
     activeBrewingStep === 'brewing' && isTimerRunning && !showComplete;
@@ -1284,7 +1251,7 @@ const NavigationBar: React.FC<NavigationBarProps> = ({
               {/* 右侧：参数区域 - 固定不压缩 - 桌面端全宽显示 */}
               {parameterInfo.params && (
                 <div className="flex shrink-0 items-center md:w-full md:flex-col md:items-start md:gap-1">
-                  {espressoUtils.isEspresso(selectedMethod) ? (
+                  {isEspressoMethod(selectedMethod) ? (
                     // 意式参数显示
                     editableParams ? (
                       <div className="flex items-center space-x-1 sm:space-x-2 md:flex-col md:items-start md:space-y-2 md:space-x-0">

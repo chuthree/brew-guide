@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { Method, Stage } from '@/lib/core/config';
+import { isEspressoMethod } from '@/lib/brewing/parameters';
 
 // 参数显示接口
 export interface ParameterInfo {
@@ -122,16 +123,6 @@ export function useBrewingParameters() {
       };
     }
   }, [handleMethodSelectedEvent]);
-
-  // 检查是否是意式咖啡方案
-  const isEspressoMethod = (method: Method | null): boolean => {
-    return (
-      method?.params?.stages?.some(
-        stage =>
-          stage.pourType === 'extraction' || stage.pourType === 'beverage'
-      ) || false
-    );
-  };
 
   // 处理参数变更
   const handleParamChange = useCallback(

@@ -28,6 +28,7 @@ import {
   getNoteBeanAgingDaysForNote,
   normalizeBrewingNoteParams,
   getNoteEspressoParamParts,
+  isEspressoNote,
   resolveNoteBean,
   resolveNoteBeanDisplayName,
   resolveNoteEquipmentName,
@@ -203,10 +204,7 @@ const getParamsDisplay = (note: BrewingNote): string => {
     return '-';
   }
 
-  if (
-    note.equipment?.toLowerCase().includes('espresso') ||
-    note.equipment?.includes('意式')
-  ) {
+  if (isEspressoNote(note)) {
     const parts = getNoteEspressoParamParts(note);
 
     return parts.length > 0 ? parts.join(' / ') : '-';

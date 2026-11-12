@@ -12,6 +12,7 @@ import {
   getBeanUnitPrice,
   normalizeBrewingNoteParams,
   getNoteEspressoParamParts,
+  isEspressoNote,
   resolveNoteBean,
   resolveNoteBeanDisplayName,
   resolveNoteEquipmentName,
@@ -80,19 +81,6 @@ const NoteItemStandard: React.FC<NoteItemProps> = ({
   const beanUnitPrice = getBeanUnitPrice(beanInfo);
   const normalizedParams = normalizeBrewingNoteParams(note.params);
 
-  // 判断是否为意式咖啡笔记
-  const isEspresso = React.useMemo(() => {
-    // 检查器具ID (兼容自定义意式器具ID格式，通常包含 espresso)
-    if (
-      note.equipment &&
-      (note.equipment.toLowerCase().includes('espresso') ||
-        note.equipment.includes('意式'))
-    ) {
-      return true;
-    }
-    return false;
-  }, [note.equipment]);
-
   const titleText = React.useMemo(() => {
     const methodName = resolveNoteMethodName(note);
 
@@ -120,7 +108,7 @@ const NoteItemStandard: React.FC<NoteItemProps> = ({
 
     const coffeeText = normalizedParams.coffee || '';
 
-    if (isEspresso) {
+    if (isEspressoNote(note)) {
       return getNoteEspressoParamParts(note);
     }
 
@@ -131,7 +119,7 @@ const NoteItemStandard: React.FC<NoteItemProps> = ({
     return [coffeeText, normalizedParams.ratio, combinedTexture].filter(
       Boolean
     );
-  }, [isEspresso, normalizedParams, note]);
+  }, [normalizedParams, note]);
 
   // 处理笔记点击事件
   const handleNoteClick = () => {
