@@ -1,8 +1,7 @@
 'use client';
 
 import TabButton from '@/components/common/ui/TabButton';
-import TabBar from '@/components/common/ui/TabBar';
-import React, { memo, useRef, useState, useEffect, useCallback } from 'react';
+import React, { memo } from 'react';
 import {
   FilterTabsProps,
   SORT_OPTIONS,
@@ -10,39 +9,20 @@ import {
   DateGroupingMode,
   NotesViewMode,
 } from '../types';
-import { X, AlignLeft } from 'lucide-react';
-import { AnimatePresence, motion } from 'framer-motion';
 import { useInputFocus } from '@/lib/hooks/useInputFocus';
-import { useFilterPanelAnimation } from '@/lib/hooks/useFilterPanelAnimation';
-import SearchAllSuggestion from '@/components/common/ui/SearchAllSuggestion';
+import {
+  FilterButton,
+  FilterPanel,
+  FilterPanelTrigger,
+} from '@/components/common/ui/FilterPanel';
+import { useFilterPanel } from '@/lib/hooks/useFilterPanel';
+import { ListFilterBar } from '@/components/common/ui/ListFilterBar';
 import {
   DATE_GROUPING_LABELS,
   DATE_GROUPING_MODES,
   formatWeekLabel,
   getDateKey,
 } from '@/lib/utils/dateUtils';
-
-const isInsideFilterInteraction = (
-  event: PointerEvent,
-  elements: Array<HTMLElement | null>
-) => {
-  const target = event.target;
-  const path =
-    typeof event.composedPath === 'function' ? event.composedPath() : [];
-
-  if (
-    target instanceof Element &&
-    target.closest('[data-filter-toggle-button="true"]')
-  ) {
-    return true;
-  }
-
-  return elements.some(element => {
-    if (!element) return false;
-    if (path.includes(element)) return true;
-    return target instanceof Node && element.contains(target);
-  });
-};
 
 // 日期格式化函数 - 将日期字符串转换为更友好的显示（支持不同粒度）
 const formatDateLabel = (
@@ -109,36 +89,6 @@ const formatDateLabel = (
     }
   }
 };
-
-// 筛选按钮组件 - 用于筛选区域的轻量样式
-interface FilterButtonProps {
-  isActive: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-  className?: string;
-  disabled?: boolean;
-}
-
-const FilterButton: React.FC<FilterButtonProps> = ({
-  isActive,
-  onClick,
-  children,
-  className = '',
-  disabled = false,
-}) => (
-  <button
-    type="button"
-    onClick={onClick}
-    disabled={disabled}
-    className={`px-2 py-1 text-xs font-medium whitespace-nowrap transition-colors ${
-      isActive
-        ? 'bg-neutral-300/30 text-neutral-800 dark:bg-neutral-600/50 dark:text-neutral-200'
-        : 'bg-neutral-200/30 text-neutral-400 dark:bg-neutral-800/50 dark:text-neutral-400'
-    } ${disabled ? 'cursor-not-allowed opacity-40' : ''} ${className}`}
-  >
-    {children}
-  </button>
-);
 
 // 排序相关辅助函数
 const getSortTypeAndOrder = (sortOption: SortOption) => {
@@ -415,19 +365,13 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
   const { inputRef: searchInputRef, activateAndFocus } =
     useInputFocus<HTMLInputElement>(isSearching);
 
-  // 筛选展开栏状态
-  const [isFilterExpanded, setIsFilterExpanded] = useState(false);
-  // 筛选交互边界：只包含触发按钮和下拉内容，点击其他分类标签会按外部点击处理
   const {
-    filterDropdownRef,
-    filterContentRef,
-    filterAnimation,
-    instantFilterTransition,
-    setKeyboardInteraction,
-  } = useFilterPanelAnimation(
-    Boolean(isFilterExpanded && sortOption && onSortChange)
-  );
-  const filterToggleButtonRef = useRef<HTMLButtonElement>(null);
+    isOpen: isFilterExpanded,
+    setIsOpen: setIsFilterExpanded,
+    handleTriggerClick,
+    interactionProps,
+    panelProps,
+  } = useFilterPanel();
 
   // 处理搜索图标点击
   const handleSearchClick = () => {
@@ -445,48 +389,6 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
     onSearchClick();
   };
 
-  // 处理筛选展开栏
-  const handleFilterToggle = useCallback(() => {
-    setIsFilterExpanded(isExpanded => !isExpanded);
-  }, []);
-
-  // 点击外部关闭筛选展开栏
-  useEffect(() => {
-    if (!isFilterExpanded) return;
-
-    const handlePointerDownOutside = (event: PointerEvent) => {
-      setKeyboardInteraction(false);
-      if (
-        isInsideFilterInteraction(event, [
-          filterToggleButtonRef.current,
-          filterDropdownRef.current,
-        ])
-      ) {
-        return;
-      }
-
-      setIsFilterExpanded(false);
-    };
-
-    document.addEventListener('pointerdown', handlePointerDownOutside, true);
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape') return;
-      setKeyboardInteraction(true);
-      setIsFilterExpanded(false);
-      filterToggleButtonRef.current?.focus();
-    };
-    document.addEventListener('keydown', handleEscape);
-
-    return () => {
-      document.removeEventListener('keydown', handleEscape);
-      document.removeEventListener(
-        'pointerdown',
-        handlePointerDownOutside,
-        true
-      );
-    };
-  }, [isFilterExpanded, filterDropdownRef, setKeyboardInteraction]);
-
   // 如果没有可筛选的设备或日期，不渲染任何内容
   if (
     !isSearching &&
@@ -498,377 +400,267 @@ const FilterTabs: React.FC<FilterTabsProps> = memo(function FilterTabs({
     return null;
 
   return (
-    <div
-      className="relative"
-      onKeyDownCapture={() => setKeyboardInteraction(true)}
-      onPointerDownCapture={() => setKeyboardInteraction(false)}
-    >
+    <div className="relative" {...interactionProps}>
       {/* 整个分类栏容器 - 下边框在这里 */}
-      <div className="border-b border-neutral-200/50 dark:border-neutral-800/50">
-        <div className="relative px-6">
-          {!isSearching ? (
-            <TabBar className="relative flex items-center">
-              {/* 固定在左侧的"全部"和筛选按钮 */}
-              <div className="relative flex shrink-0 items-center bg-neutral-50 pr-3 dark:bg-neutral-900">
+      <ListFilterBar
+        leading={
+          <>
+            <TabButton
+              isActive={
+                (filterMode === 'equipment' && selectedEquipment === null) ||
+                (filterMode === 'date' && selectedDate === null)
+              }
+              onClick={() => {
+                if (filterMode === 'equipment') {
+                  onEquipmentClick(null);
+                } else {
+                  onDateClick(null);
+                }
+              }}
+              onDoubleClick={onSmartToggleImageFlow}
+              className="mr-1"
+              dataTab="all"
+            >
+              全部
+            </TabButton>
+
+            {/* 筛选图标按钮 */}
+            {sortOption && onSortChange && (
+              <FilterPanelTrigger
+                panelId={panelProps.id}
+                isOpen={isFilterExpanded}
+                onClick={handleTriggerClick}
+              />
+            )}
+          </>
+        }
+        tabs={
+          <>
+            {/* 动态筛选按钮 */}
+            {filterMode === 'equipment' ? (
+              availableEquipments.map(equipment => (
                 <TabButton
-                  isActive={
-                    (filterMode === 'equipment' &&
-                      selectedEquipment === null) ||
-                    (filterMode === 'date' && selectedDate === null)
+                  key={equipment}
+                  isActive={selectedEquipment === equipment}
+                  onClick={() =>
+                    selectedEquipment !== equipment &&
+                    onEquipmentClick(equipment)
                   }
-                  onClick={() => {
-                    if (filterMode === 'equipment') {
-                      onEquipmentClick(null);
-                    } else {
-                      onDateClick(null);
-                    }
-                  }}
-                  onDoubleClick={onSmartToggleImageFlow}
-                  className="mr-1"
-                  dataTab="all"
+                  className="mr-3"
+                  dataTab={equipment}
                 >
-                  全部
+                  {equipmentNames[equipment] || equipment}
                 </TabButton>
+              ))
+            ) : (
+              <>
+                {/* 按日模式下，始终显示"今天"、"昨天"、"前天"快捷选项 */}
+                {dateGroupingMode === 'day' &&
+                  (() => {
+                    const now = new Date();
+                    const todayStr = getDateKey(now, 'day');
 
-                {/* 筛选图标按钮 */}
-                <button
-                  type="button"
-                  ref={filterToggleButtonRef}
-                  data-filter-toggle-button="true"
-                  onClick={handleFilterToggle}
-                  className="mr-1 flex items-center pb-1.5 text-xs font-medium text-neutral-400 dark:text-neutral-600"
-                >
-                  <AlignLeft size={12} color="currentColor" />
-                </button>
+                    // 计算昨天
+                    const yesterday = new Date(now);
+                    yesterday.setDate(yesterday.getDate() - 1);
+                    const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
 
-                {/* 左侧固定按钮的右侧渐变遮罩 */}
-                <div className="fade-mask-to-l pointer-events-none absolute top-0 right-0 bottom-0 w-5 bg-neutral-50 dark:bg-neutral-900"></div>
-              </div>
+                    // 计算前天
+                    const dayBeforeYesterday = new Date(now);
+                    dayBeforeYesterday.setDate(
+                      dayBeforeYesterday.getDate() - 2
+                    );
+                    const dayBeforeYesterdayStr = `${dayBeforeYesterday.getFullYear()}-${String(dayBeforeYesterday.getMonth() + 1).padStart(2, '0')}-${String(dayBeforeYesterday.getDate()).padStart(2, '0')}`;
 
-              {/* 中间滚动区域 */}
-              <div className="relative flex-1 overflow-hidden">
-                {/* 左侧渐变阴影 - 覆盖在滚动内容上 */}
-                <div
-                  data-scroll-shadow="left"
-                  className="fade-mask-to-r pointer-events-none absolute top-0 bottom-0 left-0 z-10 w-6 bg-neutral-50/95 dark:bg-neutral-900/95"
-                />
+                    return (
+                      <>
+                        {/* 今天 - 始终显示 */}
+                        <TabButton
+                          key="today-shortcut"
+                          isActive={
+                            selectedDate === 'today' ||
+                            selectedDate === todayStr
+                          }
+                          onClick={() =>
+                            selectedDate !== 'today' && onDateClick('today')
+                          }
+                          className="mr-3"
+                          dataTab="today"
+                        >
+                          今天
+                        </TabButton>
 
-                <div data-category-scroll className="flex overflow-x-auto">
-                  {/* 动态筛选按钮 */}
-                  {filterMode === 'equipment' ? (
-                    availableEquipments.map(equipment => (
-                      <TabButton
-                        key={equipment}
-                        isActive={selectedEquipment === equipment}
-                        onClick={() =>
-                          selectedEquipment !== equipment &&
-                          onEquipmentClick(equipment)
-                        }
-                        className="mr-3"
-                        dataTab={equipment}
-                      >
-                        {equipmentNames[equipment] || equipment}
-                      </TabButton>
-                    ))
-                  ) : (
-                    <>
-                      {/* 按日模式下，始终显示"今天"、"昨天"、"前天"快捷选项 */}
-                      {dateGroupingMode === 'day' &&
-                        (() => {
-                          const now = new Date();
-                          const todayStr = getDateKey(now, 'day');
+                        {/* 昨天 - 始终显示 */}
+                        <TabButton
+                          key="yesterday-shortcut"
+                          isActive={
+                            selectedDate === 'yesterday' ||
+                            selectedDate === yesterdayStr
+                          }
+                          onClick={() =>
+                            selectedDate !== 'yesterday' &&
+                            onDateClick('yesterday')
+                          }
+                          className="mr-3"
+                          dataTab="yesterday"
+                        >
+                          昨天
+                        </TabButton>
 
-                          // 计算昨天
-                          const yesterday = new Date(now);
-                          yesterday.setDate(yesterday.getDate() - 1);
-                          const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
+                        {/* 前天 - 始终显示 */}
+                        <TabButton
+                          key="day-before-yesterday-shortcut"
+                          isActive={
+                            selectedDate === 'dayBeforeYesterday' ||
+                            selectedDate === dayBeforeYesterdayStr
+                          }
+                          onClick={() =>
+                            selectedDate !== 'dayBeforeYesterday' &&
+                            onDateClick('dayBeforeYesterday')
+                          }
+                          className="mr-3"
+                          dataTab="dayBeforeYesterday"
+                        >
+                          前天
+                        </TabButton>
+                      </>
+                    );
+                  })()}
 
-                          // 计算前天
-                          const dayBeforeYesterday = new Date(now);
-                          dayBeforeYesterday.setDate(
-                            dayBeforeYesterday.getDate() - 2
-                          );
-                          const dayBeforeYesterdayStr = `${dayBeforeYesterday.getFullYear()}-${String(dayBeforeYesterday.getMonth() + 1).padStart(2, '0')}-${String(dayBeforeYesterday.getDate()).padStart(2, '0')}`;
+                {/* 其他日期 - 过滤掉今天、昨天、前天（避免重复） */}
+                {availableDates
+                  .filter(date => {
+                    if (dateGroupingMode !== 'day') return true;
+                    const todayStr = getDateKey(new Date(), 'day');
+                    const now = new Date();
 
-                          return (
-                            <>
-                              {/* 今天 - 始终显示 */}
-                              <TabButton
-                                key="today-shortcut"
-                                isActive={
-                                  selectedDate === 'today' ||
-                                  selectedDate === todayStr
-                                }
-                                onClick={() =>
-                                  selectedDate !== 'today' &&
-                                  onDateClick('today')
-                                }
-                                className="mr-3"
-                                dataTab="today"
-                              >
-                                今天
-                              </TabButton>
+                    const yesterday = new Date(now);
+                    yesterday.setDate(yesterday.getDate() - 1);
+                    const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
 
-                              {/* 昨天 - 始终显示 */}
-                              <TabButton
-                                key="yesterday-shortcut"
-                                isActive={
-                                  selectedDate === 'yesterday' ||
-                                  selectedDate === yesterdayStr
-                                }
-                                onClick={() =>
-                                  selectedDate !== 'yesterday' &&
-                                  onDateClick('yesterday')
-                                }
-                                className="mr-3"
-                                dataTab="yesterday"
-                              >
-                                昨天
-                              </TabButton>
+                    const dayBeforeYesterday = new Date(now);
+                    dayBeforeYesterday.setDate(
+                      dayBeforeYesterday.getDate() - 2
+                    );
+                    const dayBeforeYesterdayStr = `${dayBeforeYesterday.getFullYear()}-${String(dayBeforeYesterday.getMonth() + 1).padStart(2, '0')}-${String(dayBeforeYesterday.getDate()).padStart(2, '0')}`;
 
-                              {/* 前天 - 始终显示 */}
-                              <TabButton
-                                key="day-before-yesterday-shortcut"
-                                isActive={
-                                  selectedDate === 'dayBeforeYesterday' ||
-                                  selectedDate === dayBeforeYesterdayStr
-                                }
-                                onClick={() =>
-                                  selectedDate !== 'dayBeforeYesterday' &&
-                                  onDateClick('dayBeforeYesterday')
-                                }
-                                className="mr-3"
-                                dataTab="dayBeforeYesterday"
-                              >
-                                前天
-                              </TabButton>
-                            </>
-                          );
-                        })()}
-
-                      {/* 其他日期 - 过滤掉今天、昨天、前天（避免重复） */}
-                      {availableDates
-                        .filter(date => {
-                          if (dateGroupingMode !== 'day') return true;
-                          const todayStr = getDateKey(new Date(), 'day');
-                          const now = new Date();
-
-                          const yesterday = new Date(now);
-                          yesterday.setDate(yesterday.getDate() - 1);
-                          const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
-
-                          const dayBeforeYesterday = new Date(now);
-                          dayBeforeYesterday.setDate(
-                            dayBeforeYesterday.getDate() - 2
-                          );
-                          const dayBeforeYesterdayStr = `${dayBeforeYesterday.getFullYear()}-${String(dayBeforeYesterday.getMonth() + 1).padStart(2, '0')}-${String(dayBeforeYesterday.getDate()).padStart(2, '0')}`;
-
-                          return (
-                            date !== todayStr &&
-                            date !== yesterdayStr &&
-                            date !== dayBeforeYesterdayStr
-                          );
-                        })
-                        .map(date => (
-                          <TabButton
-                            key={date}
-                            isActive={selectedDate === date}
-                            onClick={() =>
-                              selectedDate !== date && onDateClick(date)
-                            }
-                            className="mr-3"
-                            dataTab={date}
-                          >
-                            {formatDateLabel(date, dateGroupingMode)}
-                          </TabButton>
-                        ))}
-                    </>
-                  )}
-                </div>
-
-                {/* 右侧渐变阴影 - 覆盖在滚动内容上 */}
-                <div
-                  data-scroll-shadow="right"
-                  className="fade-mask-to-l pointer-events-none absolute top-0 right-0 bottom-0 w-6 bg-neutral-50/95 dark:bg-neutral-900/95"
-                />
-              </div>
-
-              {/* 固定在右侧的搜索按钮 */}
-              <div className="relative flex shrink-0 items-center bg-neutral-50 pl-3 dark:bg-neutral-900">
-                {/* 竖直分割线 */}
-                <div className="mr-3 mb-1.5 h-3 w-px bg-neutral-200 dark:bg-neutral-800"></div>
-                <button
-                  type="button"
-                  onClick={handleSearchClick}
-                  className="flex items-center pb-1.5 text-xs font-medium whitespace-nowrap text-neutral-600 dark:text-neutral-400"
-                >
-                  <span className="relative">搜索</span>
-                </button>
-
-                {/* 右侧固定按钮的左侧渐变遮罩 */}
-                <div className="fade-mask-to-r pointer-events-none absolute top-0 bottom-0 left-0 w-5 bg-neutral-50 dark:bg-neutral-900"></div>
-              </div>
-            </TabBar>
-          ) : (
-            /* 搜索框 - 替换整个分类栏 */
-            <div className="relative flex items-center pb-1.5">
-              <div className="relative flex flex-1 items-center">
-                <input
-                  ref={searchInputRef}
-                  type="text"
-                  value={searchQuery}
-                  onChange={onSearchChange}
-                  onKeyDown={onSearchKeyDown}
-                  placeholder="搜索笔记..."
-                  className="w-full border-none bg-transparent pr-2 text-xs font-medium text-neutral-800 placeholder-neutral-400 outline-hidden dark:text-neutral-100 dark:placeholder-neutral-500"
-                  autoComplete="off"
-                  autoFocus
-                />
-              </div>
-              <button
-                type="button"
-                onClick={handleSearchClick}
-                className="-m-2 ml-1 flex items-center p-2 text-neutral-500 dark:text-neutral-400"
-              >
-                <X size={14} color="currentColor" />
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* 搜索历史下拉框 - 在搜索框没有内容时显示 */}
-        {isSearching &&
-          !searchQuery.trim() &&
-          searchHistory &&
-          searchHistory.length > 0 && (
-            <div className="border-t border-neutral-200/50 dark:border-neutral-800/50">
-              <div className="px-6 py-3">
-                <div
-                  className="flex flex-wrap items-center gap-2 overflow-hidden"
-                  style={{ maxHeight: '3.5rem' }}
-                >
-                  <div className="shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                    历史搜索:
-                  </div>
-                  {searchHistory.map((item, index) => (
-                    <button
-                      type="button"
-                      key={index}
-                      onClick={() => onSearchHistoryClick?.(item)}
-                      className="shrink-0 bg-neutral-200/30 px-2 py-1 text-xs font-medium whitespace-nowrap text-neutral-400 transition-colors dark:bg-neutral-800/50 dark:text-neutral-400"
+                    return (
+                      date !== todayStr &&
+                      date !== yesterdayStr &&
+                      date !== dayBeforeYesterdayStr
+                    );
+                  })
+                  .map(date => (
+                    <TabButton
+                      key={date}
+                      isActive={selectedDate === date}
+                      onClick={() => selectedDate !== date && onDateClick(date)}
+                      className="mr-3"
+                      dataTab={date}
                     >
-                      {item}
-                    </button>
+                      {formatDateLabel(date, dateGroupingMode)}
+                    </TabButton>
                   ))}
-                </div>
-              </div>
-            </div>
-          )}
-
-        <SearchAllSuggestion
-          scopeLabel={searchAllScopeLabel}
-          query={searchQuery}
-          onClick={onSearchAllClick}
-        />
-
-        {/* 展开式筛选栏 - 在同一个容器内 */}
-        <AnimatePresence custom={instantFilterTransition}>
-          {isFilterExpanded && sortOption && onSortChange && (
+              </>
+            )}
+          </>
+        }
+        search={{
+          active: isSearching,
+          input: {
+            ref: searchInputRef,
+            value: searchQuery,
+            onChange: onSearchChange,
+            onKeyDown: onSearchKeyDown,
+            placeholder: '搜索笔记...',
+          },
+          onOpen: handleSearchClick,
+          onClose: handleSearchClick,
+          history: searchHistory,
+          onHistoryClick: onSearchHistoryClick,
+          scopeLabel: searchAllScopeLabel,
+          onSearchAll: onSearchAllClick,
+        }}
+      >
+        <FilterPanel {...panelProps}>
+          {sortOption && onSortChange && (
             <>
-              {/* 固定的半透明分割线 - 只在展开时显示 */}
-              <div className="border-t border-neutral-200/50 dark:border-neutral-800/50"></div>
+              <FilterModeSection
+                filterMode={filterMode}
+                onFilterModeChange={onFilterModeChange}
+              />
 
-              <motion.div
-                ref={filterDropdownRef}
-                custom={instantFilterTransition}
-                variants={filterAnimation}
-                initial="closed"
-                animate="open"
-                exit="closed"
-                className="overflow-hidden"
-              >
-                <div ref={filterContentRef} className="px-6 py-4">
-                  <div className="space-y-4">
-                    <FilterModeSection
-                      filterMode={filterMode}
-                      onFilterModeChange={onFilterModeChange}
-                    />
+              {/* 日期粒度选择 - 只在选择"按日期"时显示 */}
+              {filterMode === 'date' && (
+                <DateGroupingSection
+                  dateGroupingMode={dateGroupingMode}
+                  onDateGroupingModeChange={onDateGroupingModeChange}
+                />
+              )}
 
-                    {/* 日期粒度选择 - 只在选择"按日期"时显示 */}
-                    {filterMode === 'date' && (
-                      <DateGroupingSection
-                        dateGroupingMode={dateGroupingMode}
-                        onDateGroupingModeChange={onDateGroupingModeChange}
-                      />
-                    )}
+              {viewMode !== 'table' && (
+                <SortSection
+                  sortOption={sortOption}
+                  onSortChange={onSortChange}
+                />
+              )}
 
-                    {viewMode !== 'table' && (
-                      <SortSection
-                        sortOption={sortOption}
-                        onSortChange={onSortChange}
-                      />
-                    )}
+              {onViewModeChange && (
+                <ViewModeSection
+                  viewMode={viewMode}
+                  onViewModeChange={onViewModeChange}
+                  isImageFlowMode={isImageFlowMode}
+                  onToggleImageFlowMode={onToggleImageFlowMode}
+                  isDateImageFlowMode={isDateImageFlowMode}
+                  onToggleDateImageFlowMode={onToggleDateImageFlowMode}
+                  hasImageNotes={hasImageNotes}
+                />
+              )}
 
-                    {onViewModeChange && (
-                      <ViewModeSection
-                        viewMode={viewMode}
-                        onViewModeChange={onViewModeChange}
-                        isImageFlowMode={isImageFlowMode}
-                        onToggleImageFlowMode={onToggleImageFlowMode}
-                        isDateImageFlowMode={isDateImageFlowMode}
-                        onToggleDateImageFlowMode={onToggleDateImageFlowMode}
-                        hasImageNotes={hasImageNotes}
-                      />
-                    )}
+              {viewMode === 'table' &&
+                onTableColumnsChange &&
+                tableColumnOptions.length > 0 && (
+                  <div>
+                    <div className="mb-2 text-xs font-medium text-neutral-700 dark:text-neutral-300">
+                      表格列
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {tableColumnOptions.map(column => (
+                        <FilterButton
+                          key={column.key}
+                          isActive={tableVisibleColumns.includes(column.key)}
+                          onClick={() => {
+                            const isVisible = tableVisibleColumns.includes(
+                              column.key
+                            );
 
-                    {viewMode === 'table' &&
-                      onTableColumnsChange &&
-                      tableColumnOptions.length > 0 && (
-                        <div>
-                          <div className="mb-2 text-xs font-medium text-neutral-700 dark:text-neutral-300">
-                            表格列
-                          </div>
-                          <div className="flex flex-wrap items-center gap-2">
-                            {tableColumnOptions.map(column => (
-                              <FilterButton
-                                key={column.key}
-                                isActive={tableVisibleColumns.includes(
-                                  column.key
-                                )}
-                                onClick={() => {
-                                  const isVisible =
-                                    tableVisibleColumns.includes(column.key);
+                            if (isVisible) {
+                              if (tableVisibleColumns.length > 1) {
+                                onTableColumnsChange(
+                                  tableVisibleColumns.filter(
+                                    key => key !== column.key
+                                  )
+                                );
+                              }
+                              return;
+                            }
 
-                                  if (isVisible) {
-                                    if (tableVisibleColumns.length > 1) {
-                                      onTableColumnsChange(
-                                        tableVisibleColumns.filter(
-                                          key => key !== column.key
-                                        )
-                                      );
-                                    }
-                                    return;
-                                  }
-
-                                  onTableColumnsChange([
-                                    ...tableVisibleColumns,
-                                    column.key,
-                                  ]);
-                                }}
-                              >
-                                {column.label}
-                              </FilterButton>
-                            ))}
-                          </div>
-                        </div>
-                      )}
+                            onTableColumnsChange([
+                              ...tableVisibleColumns,
+                              column.key,
+                            ]);
+                          }}
+                        >
+                          {column.label}
+                        </FilterButton>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              </motion.div>
+                )}
             </>
           )}
-        </AnimatePresence>
-      </div>
+        </FilterPanel>
+      </ListFilterBar>
     </div>
   );
 });

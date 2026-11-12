@@ -48,6 +48,7 @@ import {
   getSearchHistoryPreference,
   addSearchHistory,
 } from './globalCache';
+import { ListHeaderSummary } from '@/components/common/ui/ListFilterBar';
 import ListView from './ListView';
 import {
   getNotesViewPreference,
@@ -987,40 +988,31 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
           {...navigationSwipeHandlers}
         >
           {/* 数量显示 */}
-          <div className="mb-6 flex items-center justify-between px-6">
-            <div
-              className={`relative min-w-0 ${navigationToggleControl ? 'pl-6' : ''}`}
-            >
-              {navigationToggleControl && (
-                <div className="absolute top-1/2 -left-1.5 -translate-y-1/2">
-                  {navigationToggleControl}
-                </div>
-              )}
-              <div className="min-w-0 text-xs font-medium tracking-wide wrap-break-word text-neutral-800 dark:text-neutral-100">
-                <span>
-                  {`${summaryNotes.length} 条${isGalleryView ? '图片' : ''}`}
-                  {hasRoastingNotes ? (
-                    <span
-                      className="cursor-pointer text-xs leading-none font-medium tracking-wide text-neutral-800 underline decoration-neutral-300 underline-offset-2 dark:text-neutral-100 dark:decoration-neutral-600"
-                      onClick={() => {
-                        const nextMode =
-                          noteDisplayMode === 'roasting' ? 'notes' : 'roasting';
-                        setNoteDisplayModeOverride(nextMode);
-                      }}
-                      title="点击切换记录/烘焙记录"
-                    >
-                      {recordLabel}
-                    </span>
-                  ) : (
-                    <span className="text-xs leading-none font-medium tracking-wide text-neutral-800 dark:text-neutral-100">
-                      {recordLabel}
-                    </span>
-                  )}
-                  {`，${usageLabel} ${formatConsumption(currentConsumption)}`}
-                </span>
-              </div>
+          <ListHeaderSummary navigation={navigationToggleControl}>
+            <div className="min-w-0 text-xs font-medium tracking-wide wrap-break-word text-neutral-800 dark:text-neutral-100">
+              <span>
+                {`${summaryNotes.length} 条${isGalleryView ? '图片' : ''}`}
+                {hasRoastingNotes ? (
+                  <span
+                    className="cursor-pointer text-xs leading-none font-medium tracking-wide text-neutral-800 underline decoration-neutral-300 underline-offset-2 dark:text-neutral-100 dark:decoration-neutral-600"
+                    onClick={() => {
+                      const nextMode =
+                        noteDisplayMode === 'roasting' ? 'notes' : 'roasting';
+                      setNoteDisplayModeOverride(nextMode);
+                    }}
+                    title="点击切换记录/烘焙记录"
+                  >
+                    {recordLabel}
+                  </span>
+                ) : (
+                  <span className="text-xs leading-none font-medium tracking-wide text-neutral-800 dark:text-neutral-100">
+                    {recordLabel}
+                  </span>
+                )}
+                {`，${usageLabel} ${formatConsumption(currentConsumption)}`}
+              </span>
             </div>
-          </div>
+          </ListHeaderSummary>
 
           {/* 设备筛选选项卡 */}
           <FilterTabs

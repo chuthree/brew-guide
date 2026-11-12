@@ -1,42 +1,24 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React from 'react';
 import { differenceInCalendarDays } from 'date-fns/differenceInCalendarDays';
-import { AlignLeft } from 'lucide-react';
 import TabButton from '@/components/common/ui/TabButton';
-import TabBar from '@/components/common/ui/TabBar';
-import { AnimatePresence, motion } from 'framer-motion';
+import {
+  ListFilterBar,
+  ListHeaderSummary,
+} from '@/components/common/ui/ListFilterBar';
+import {
+  FilterButton,
+  FilterPanel,
+  FilterPanelTrigger,
+} from '@/components/common/ui/FilterPanel';
+import { useFilterPanel } from '@/lib/hooks/useFilterPanel';
 import { DATE_GROUPING_MODES, type DateGroupingMode } from './types';
 import { DATE_GROUPING_LABELS, formatWeekLabel } from '@/lib/utils/dateUtils';
 import {
   useNavigationSwipe,
   type NavigationSwipeControl,
 } from '@/lib/navigation/navigationSwipe';
-
-// Apple风格动画配置
-const FILTER_ANIMATION = {
-  initial: {
-    height: 0,
-    opacity: 0,
-    y: -10,
-  },
-  animate: {
-    height: 'auto',
-    opacity: 1,
-    y: 0,
-  },
-  exit: {
-    height: 0,
-    opacity: 0,
-    y: -10,
-  },
-  transition: {
-    duration: 0.35,
-    opacity: {
-      duration: 0.25,
-    },
-  },
-};
 
 export const getNextDateGroupingMode = (
   currentMode: DateGroupingMode
@@ -98,33 +80,6 @@ const formatDateLabel = (
 };
 
 // 筛选按钮组件
-interface FilterButtonProps {
-  isActive: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-  className?: string;
-}
-
-const FilterButton: React.FC<FilterButtonProps> = ({
-  isActive,
-  onClick,
-  children,
-  className = '',
-}) => (
-  <button
-    type="button"
-    aria-pressed={isActive}
-    onClick={onClick}
-    className={`px-2 py-1 text-xs font-medium whitespace-nowrap transition-colors ${
-      isActive
-        ? 'bg-neutral-300/30 text-neutral-800 dark:bg-neutral-600/50 dark:text-neutral-200'
-        : 'bg-neutral-200/30 text-neutral-400 dark:bg-neutral-800/50 dark:text-neutral-400'
-    } ${className}`}
-  >
-    {children}
-  </button>
-);
-
 interface StatsFilterBarProps {
   dateGroupingMode: DateGroupingMode;
   onDateGroupingModeChange: (mode: DateGroupingMode) => void;
@@ -153,58 +108,27 @@ const StatsFilterBar: React.FC<StatsFilterBarProps> = ({
   navigationToggleControl,
   navigationSwipeControl,
 }) => {
-  // 筛选展开栏状态
-  const [isFilterExpanded, setIsFilterExpanded] = useState(false);
-  const filterExpandRef = useRef<HTMLDivElement>(null);
+  const {
+    isOpen: isFilterExpanded,
+    handleTriggerClick,
+    interactionProps,
+    panelProps,
+  } = useFilterPanel();
   const navigationSwipeHandlers = useNavigationSwipe(navigationSwipeControl);
   const now = new Date();
-
-  // 处理筛选展开栏
-  const handleFilterToggle = () => {
-    setIsFilterExpanded(!isFilterExpanded);
-  };
-
-  // 点击外部关闭筛选展开栏
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        filterExpandRef.current &&
-        !filterExpandRef.current.contains(event.target as Node)
-      ) {
-        setIsFilterExpanded(false);
-      }
-    };
-
-    if (isFilterExpanded) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isFilterExpanded]);
 
   return (
     <div
       className={`relative ${
         navigationSwipeControl?.isCollapsed ? 'pt-0' : 'pt-6'
       } md:pt-0`}
-      ref={filterExpandRef}
       {...navigationSwipeHandlers}
+      {...interactionProps}
     >
       {/* 时间范围文案 - 可点击切换时间分组和豆子类型 */}
       {dateRangeLabel && (
-        <div className="mb-6 flex items-center justify-between px-6">
-          <div
-            className={`relative min-w-0 text-left leading-none ${
-              navigationToggleControl ? 'pl-6' : ''
-            }`}
-          >
-            {navigationToggleControl && (
-              <div className="absolute top-1/2 -left-1.5 -translate-y-1/2">
-                {navigationToggleControl}
-              </div>
-            )}
+        <ListHeaderSummary navigation={navigationToggleControl}>
+          <div className="text-left leading-none">
             <button
               type="button"
               onClick={() =>
@@ -238,135 +162,89 @@ const StatsFilterBar: React.FC<StatsFilterBarProps> = ({
               {showBeanStateSwitch ? '' : '，'}数据周期 {dateRangeLabel}
             </span>
           </div>
-        </div>
+        </ListHeaderSummary>
       )}
 
       {/* 整个分类栏容器 */}
-      <div className="border-b border-neutral-200/50 dark:border-neutral-800/50">
-        <div className="relative px-6">
-          <TabBar className="relative flex items-center">
-            {/* 固定在左侧的"全部"和筛选按钮 */}
-            <div className="relative z-10 flex shrink-0 items-center bg-neutral-50 pr-3 dark:bg-neutral-900">
-              <TabButton
-                isActive={selectedDate === null}
-                onClick={() => onDateClick(null)}
-                className="mr-1"
-                dataTab="all"
-              >
-                全部
-              </TabButton>
+      <ListFilterBar
+        leading={
+          <>
+            <TabButton
+              isActive={selectedDate === null}
+              onClick={() => onDateClick(null)}
+              className="mr-1"
+              dataTab="all"
+            >
+              全部
+            </TabButton>
 
-              {/* 筛选图标按钮 */}
-              <button
-                type="button"
-                onClick={handleFilterToggle}
-                className="mr-1 flex items-center pb-1.5 text-xs font-medium text-neutral-400 dark:text-neutral-600"
-              >
-                <AlignLeft size={12} color="currentColor" />
-              </button>
-
-              {/* 左侧固定按钮的右侧渐变遮罩 */}
-              <div className="fade-mask-to-l pointer-events-none absolute top-0 right-0 bottom-0 w-5 bg-neutral-50 dark:bg-neutral-900"></div>
-            </div>
-
-            {/* 中间滚动区域 */}
-            <div className="relative flex-1 overflow-hidden">
-              {/* 左侧渐变阴影 */}
-              <div
-                data-scroll-shadow="left"
-                className="fade-mask-to-r pointer-events-none absolute top-0 bottom-0 left-0 z-10 w-6 bg-neutral-50/95 dark:bg-neutral-900/95"
-              />
-
-              <div data-category-scroll className="flex overflow-x-auto">
-                {/* 日期选项 */}
-                {availableDates.map(date => (
-                  <TabButton
-                    key={date}
-                    isActive={selectedDate === date}
-                    onClick={() => onDateClick(date)}
-                    className="mr-3"
-                    dataTab={date}
-                  >
-                    {formatDateLabel(date, dateGroupingMode, now)}
-                  </TabButton>
-                ))}
+            {/* 筛选图标按钮 */}
+            <FilterPanelTrigger
+              panelId={panelProps.id}
+              isOpen={isFilterExpanded}
+              onClick={handleTriggerClick}
+            />
+          </>
+        }
+        tabs={availableDates.map(date => (
+          <TabButton
+            key={date}
+            isActive={selectedDate === date}
+            onClick={() => onDateClick(date)}
+            className="mr-3"
+            dataTab={date}
+          >
+            {formatDateLabel(date, dateGroupingMode, now)}
+          </TabButton>
+        ))}
+      >
+        <FilterPanel {...panelProps}>
+          {/* 统计类型（生豆/熟豆） */}
+          {showBeanStateSwitch && onBeanStateTypeChange && (
+            <div>
+              <div className="mb-2 text-xs font-medium text-neutral-700 dark:text-neutral-300">
+                统计类型
               </div>
-
-              {/* 右侧渐变阴影 */}
-              <div
-                data-scroll-shadow="right"
-                className="fade-mask-to-l pointer-events-none absolute top-0 right-0 bottom-0 z-10 w-6 bg-neutral-50/95 dark:bg-neutral-900/95"
-              />
+              <div className="flex flex-wrap items-center gap-2">
+                <FilterButton
+                  isActive={beanStateType === 'roasted'}
+                  onClick={() => onBeanStateTypeChange('roasted')}
+                >
+                  熟豆
+                </FilterButton>
+                <FilterButton
+                  isActive={beanStateType === 'green'}
+                  onClick={() => onBeanStateTypeChange('green')}
+                >
+                  生豆
+                </FilterButton>
+              </div>
             </div>
-          </TabBar>
-        </div>
-
-        {/* 展开式筛选栏 */}
-        <AnimatePresence>
-          {isFilterExpanded && (
-            <>
-              {/* 固定的半透明分割线 */}
-              <div className="border-t border-neutral-200/50 dark:border-neutral-700/50"></div>
-
-              <motion.div
-                initial={FILTER_ANIMATION.initial}
-                animate={FILTER_ANIMATION.animate}
-                exit={FILTER_ANIMATION.exit}
-                transition={FILTER_ANIMATION.transition}
-                className="overflow-hidden"
-                style={{ willChange: 'height, opacity, transform' }}
-              >
-                <div className="px-6 py-4">
-                  {/* 统计类型（生豆/熟豆） */}
-                  {showBeanStateSwitch && onBeanStateTypeChange && (
-                    <div className="mb-4">
-                      <div className="mb-2 text-xs font-medium text-neutral-700 dark:text-neutral-300">
-                        统计类型
-                      </div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <FilterButton
-                          isActive={beanStateType === 'roasted'}
-                          onClick={() => onBeanStateTypeChange('roasted')}
-                        >
-                          熟豆
-                        </FilterButton>
-                        <FilterButton
-                          isActive={beanStateType === 'green'}
-                          onClick={() => onBeanStateTypeChange('green')}
-                        >
-                          生豆
-                        </FilterButton>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* 时间分组 */}
-                  <div className="mb-4">
-                    <div className="mb-2 text-xs font-medium text-neutral-700 dark:text-neutral-300">
-                      时间分组
-                    </div>
-                    <div
-                      role="group"
-                      aria-label="时间分组"
-                      className="flex flex-wrap items-center gap-2"
-                    >
-                      {DATE_GROUPING_MODES.map(mode => (
-                        <FilterButton
-                          key={mode}
-                          isActive={dateGroupingMode === mode}
-                          onClick={() => onDateGroupingModeChange(mode)}
-                        >
-                          {DATE_GROUPING_LABELS[mode]}
-                        </FilterButton>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            </>
           )}
-        </AnimatePresence>
-      </div>
+
+          {/* 时间分组 */}
+          <div>
+            <div className="mb-2 text-xs font-medium text-neutral-700 dark:text-neutral-300">
+              时间分组
+            </div>
+            <div
+              role="group"
+              aria-label="时间分组"
+              className="flex flex-wrap items-center gap-2"
+            >
+              {DATE_GROUPING_MODES.map(mode => (
+                <FilterButton
+                  key={mode}
+                  isActive={dateGroupingMode === mode}
+                  onClick={() => onDateGroupingModeChange(mode)}
+                >
+                  {DATE_GROUPING_LABELS[mode]}
+                </FilterButton>
+              ))}
+            </div>
+          </div>
+        </FilterPanel>
+      </ListFilterBar>
     </div>
   );
 };

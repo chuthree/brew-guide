@@ -26,9 +26,13 @@ import {
   getAvailableSortTypesForView,
   getSortTypeLabelByState,
 } from '../SortSelector';
-import { X, AlignLeft, ChevronDown } from 'lucide-react';
-import { AnimatePresence, motion } from 'framer-motion';
-import { useFilterPanelAnimation } from '@/lib/hooks/useFilterPanelAnimation';
+import { AlignLeft, ChevronDown } from 'lucide-react';
+import {
+  FilterButton,
+  FilterPanel,
+  FilterPanelTrigger,
+} from '@/components/common/ui/FilterPanel';
+import { useFilterPanel } from '@/lib/hooks/useFilterPanel';
 import {
   FlavorPeriodStatus,
   FLAVOR_PERIOD_LABELS,
@@ -54,34 +58,19 @@ import type { BeanFieldId } from '@/lib/coffee-beans/beanFields';
 import TabButton from '@/components/common/ui/TabButton';
 import TabBar from '@/components/common/ui/TabBar';
 import type { BeanFilterOptionCounts } from '../beanListPipeline';
-import SearchAllSuggestion from '@/components/common/ui/SearchAllSuggestion';
-import { DATE_GROUPING_LABELS, DATE_GROUPING_MODES } from '@/lib/utils/dateUtils';
+import {
+  ListFilterBar,
+  ListHeaderSummary,
+} from '@/components/common/ui/ListFilterBar';
+import {
+  DATE_GROUPING_LABELS,
+  DATE_GROUPING_MODES,
+} from '@/lib/utils/dateUtils';
 import {
   formatRankingDateLabel,
   type RankingDateGroupingMode,
   type RankingFilterMode,
 } from '../rankingFilters';
-const isInsideFilterInteraction = (
-  event: PointerEvent,
-  elements: Array<HTMLElement | null>
-) => {
-  const target = event.target;
-  const path =
-    typeof event.composedPath === 'function' ? event.composedPath() : [];
-
-  if (
-    target instanceof Element &&
-    target.closest('[data-filter-toggle-button="true"]')
-  ) {
-    return true;
-  }
-
-  return elements.some(element => {
-    if (!element) return false;
-    if (path.includes(element)) return true;
-    return target instanceof Node && element.contains(target);
-  });
-};
 
 const EMPTY_BEAN_GROUPS: CoffeeBeanGroup[] = [];
 type SelectableBeanType = Exclude<BeanType, 'all'>;
@@ -169,38 +158,6 @@ export const getInventoryAllClickAction = ({
 
   return 'none';
 };
-
-// 筛选按钮组件 - 用于筛选区域的轻量样式
-interface FilterButtonProps {
-  isActive: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-  className?: string;
-  disabled?: boolean;
-}
-
-const FilterButton: React.FC<FilterButtonProps> = ({
-  isActive,
-  onClick,
-  children,
-  className = '',
-  disabled = false,
-}) => (
-  <button
-    type="button"
-    onClick={onClick}
-    disabled={disabled}
-    aria-pressed={isActive}
-    data-tab-active={isActive}
-    className={`px-2 py-1 text-xs font-medium whitespace-nowrap transition-colors ${
-      isActive
-        ? 'bg-neutral-300/30 text-neutral-800 dark:bg-neutral-600/50 dark:text-neutral-200'
-        : 'bg-neutral-200/30 text-neutral-400 dark:bg-neutral-800/50 dark:text-neutral-400'
-    } ${disabled ? 'cursor-not-allowed opacity-40' : ''} ${className}`}
-  >
-    {children}
-  </button>
-);
 
 // 排序区域组件 - 使用筛选按钮样式
 interface SortSectionProps {
@@ -901,17 +858,15 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
         ? '图片'
         : '列表';
 
-  // 筛选展开栏状态
-  const [isFilterExpanded, setIsFilterExpanded] = useState(false);
   const {
-    filterDropdownRef,
-    filterContentRef,
-    filterAnimation,
-    instantFilterTransition,
-    setKeyboardInteraction,
-  } = useFilterPanelAnimation(isFilterExpanded);
+    isOpen: isFilterExpanded,
+    setIsOpen: setIsFilterExpanded,
+    triggerRef,
+    handleTriggerClick,
+    interactionProps,
+    panelProps,
+  } = useFilterPanel();
   const multipleFiltering = multiFilters !== undefined;
-  const multiCategoryTriggerRef = useRef<HTMLButtonElement | null>(null);
   const [expandedMultiCategory, setExpandedMultiCategory] =
     useState<MultiFilterCategory | null>(null);
   const multiSelections: Partial<Record<MultiFilterCategory, string>> = {
@@ -1012,11 +967,6 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
             (filterOptionCounts?.[activeMultiCategory]?.get(left) ?? 0)
         )
     : [];
-  // 筛选交互边界：只包含触发按钮和下拉内容，点击其他分类标签会按外部点击处理
-  const filterToggleButtonRef = useRef<HTMLButtonElement>(null);
-
-  // 注：isMinimalistMode 和 hideTotalWeight 功能已移除，始终为 false
-
   // 搜索相关逻辑
   const { inputRef: searchInputRef, activateAndFocus } =
     useInputFocus<HTMLInputElement>(Boolean(isSearching));
@@ -1058,945 +1008,611 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
     }
   };
 
-  // 处理历史记录项点击
-  const handleHistoryClick = (query: string) => {
-    if (onSearchHistoryClick) {
-      onSearchHistoryClick(query);
-    }
-  };
-
-  // 处理筛选展开栏
-  const handleFilterToggle = useCallback(() => {
+  const handleFilterToggle: React.MouseEventHandler<
+    HTMLButtonElement
+  > = event => {
     setExpandedMultiCategory(null);
-    setIsFilterExpanded(
-      isExpanded => activeMultiCategory !== null || !isExpanded
+    handleTriggerClick(
+      event,
+      activeMultiCategory !== null || !isFilterExpanded
     );
-  }, [activeMultiCategory]);
+  };
 
   useEffect(() => {
     setIsFilterExpanded(false);
     setExpandedMultiCategory(null);
-  }, [selectedBeanState, multipleFiltering, viewMode]);
-
-  // 点击外部关闭筛选展开栏
-  useEffect(() => {
-    if (!isFilterExpanded) return;
-
-    const handlePointerDownOutside = (event: PointerEvent) => {
-      setKeyboardInteraction(false);
-      if (
-        isInsideFilterInteraction(event, [
-          filterToggleButtonRef.current,
-          filterDropdownRef.current,
-        ])
-      ) {
-        return;
-      }
-
-      setIsFilterExpanded(false);
-    };
-
-    document.addEventListener('pointerdown', handlePointerDownOutside, true);
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape') return;
-      setKeyboardInteraction(true);
-      setIsFilterExpanded(false);
-      (activeMultiCategory
-        ? multiCategoryTriggerRef.current
-        : filterToggleButtonRef.current
-      )?.focus();
-    };
-    document.addEventListener('keydown', handleEscape);
-
-    return () => {
-      document.removeEventListener('keydown', handleEscape);
-      document.removeEventListener(
-        'pointerdown',
-        handlePointerDownOutside,
-        true
-      );
-    };
-  }, [
-    isFilterExpanded,
-    activeMultiCategory,
-    filterDropdownRef,
-    setKeyboardInteraction,
-  ]);
+  }, [selectedBeanState, multipleFiltering, viewMode, setIsFilterExpanded]);
 
   // 统计视图使用自身的筛选栏。
   if (viewMode === VIEW_OPTIONS.STATS) {
     return null;
   }
 
-  const newLocal =
-    'shrink-0 bg-neutral-200/30 px-2 py-1 text-xs font-medium whitespace-nowrap text-neutral-400 transition-colors dark:bg-neutral-800/50 dark:text-neutral-400';
+  const listSearch = {
+    active: isSearching,
+    input: {
+      ref: searchInputRef,
+      value: searchQuery,
+      onChange: handleSearchChange,
+      onKeyDown: handleSearchKeyDown,
+      placeholder: '输入咖啡豆名称...',
+    },
+    onOpen: handleSearchClick,
+    onClose: handleCloseSearch,
+    history: searchHistory,
+    onHistoryClick: onSearchHistoryClick,
+    scopeLabel: searchAllScopeLabel,
+    onSearchAll: onSearchAllClick,
+  };
+
   return (
     <div
       className={`sticky top-0 flex-none space-y-6 bg-neutral-50 ${
         navigationSwipeControl?.isCollapsed ? 'pt-0' : 'pt-6'
       } md:pt-0 dark:bg-neutral-900`}
       {...navigationSwipeHandlers}
-      onKeyDownCapture={() => setKeyboardInteraction(true)}
-      onPointerDownCapture={() => setKeyboardInteraction(false)}
+      {...interactionProps}
     >
       {/* 视图切换与筛选栏 - 统一布局 */}
-      <div className="mb-6 flex items-center justify-between px-6">
-        <div
-          className={`relative min-w-0 ${navigationToggleControl ? 'pl-6' : ''}`}
-        >
-          {navigationToggleControl && (
-            <div className="absolute top-1/2 -left-1.5 -translate-y-1/2">
-              {navigationToggleControl}
-            </div>
-          )}
-          <div className="min-w-0 text-xs font-medium tracking-wide wrap-break-word text-neutral-800 dark:text-neutral-100">
-            {viewMode === VIEW_OPTIONS.INVENTORY ? (
-              showEmptyBeans ? (
-                <span>
-                  {beansCount} 款
-                  {enableGreenBeanInventory ? (
-                    <span
-                      className="cursor-pointer text-xs leading-none font-medium tracking-wide text-neutral-800 underline decoration-neutral-300 underline-offset-2 dark:text-neutral-100 dark:decoration-neutral-600"
-                      onClick={() => {
-                        // 切换生豆/熟豆
-                        const newState =
-                          selectedBeanState === 'green' ? 'roasted' : 'green';
-                        onBeanStateChange?.(newState);
-                      }}
-                      title="点击切换生豆/熟豆"
-                    >
-                      {beanStateLabel}
-                    </span>
-                  ) : (
-                    <span className="text-xs leading-none font-medium tracking-wide text-neutral-800 dark:text-neutral-100">
-                      {beanStateLabel}
-                    </span>
-                  )}
-                  ，总共 {originalTotalWeight || '0g'}
-                  {totalWeight ? `，剩余 ${totalWeight}` : ''}
-                  {showEstimatedCups &&
-                    selectedBeanState === 'roasted' &&
-                    estimatedCupsLabel &&
-                    `，约 ${estimatedCupsLabel}`}
-                </span>
-              ) : (
-                <span>
-                  {beansCount} 款
-                  {enableGreenBeanInventory ? (
-                    <span
-                      className="cursor-pointer text-xs leading-none font-medium tracking-wide text-neutral-800 underline decoration-neutral-300 underline-offset-2 dark:text-neutral-100 dark:decoration-neutral-600"
-                      onClick={() => {
-                        // 切换生豆/熟豆
-                        const newState =
-                          selectedBeanState === 'green' ? 'roasted' : 'green';
-                        onBeanStateChange?.(newState);
-                      }}
-                      title="点击切换生豆/熟豆"
-                    >
-                      {beanStateLabel}
-                    </span>
-                  ) : (
-                    <span className="text-xs leading-none font-medium tracking-wide text-neutral-800 dark:text-neutral-100">
-                      {beanStateLabel}
-                    </span>
-                  )}
-                  {totalWeight ? `，剩余 ${totalWeight}` : ''}
-                  {showEstimatedCups &&
-                    selectedBeanState === 'roasted' &&
-                    estimatedCupsLabel &&
-                    `，约 ${estimatedCupsLabel}`}
-                  {showBeanSummary && beanSummaryDetailsText}
-                </span>
-              )
-            ) : rankingBeanType === 'all' ? (
-              `${rankingBeansCount} 款已评分咖啡豆`
+      <ListHeaderSummary navigation={navigationToggleControl}>
+        <div className="min-w-0 text-xs font-medium tracking-wide wrap-break-word text-neutral-800 dark:text-neutral-100">
+          {viewMode === VIEW_OPTIONS.INVENTORY ? (
+            showEmptyBeans ? (
+              <span>
+                {beansCount} 款
+                {enableGreenBeanInventory ? (
+                  <span
+                    className="cursor-pointer text-xs leading-none font-medium tracking-wide text-neutral-800 underline decoration-neutral-300 underline-offset-2 dark:text-neutral-100 dark:decoration-neutral-600"
+                    onClick={() => {
+                      // 切换生豆/熟豆
+                      const newState =
+                        selectedBeanState === 'green' ? 'roasted' : 'green';
+                      onBeanStateChange?.(newState);
+                    }}
+                    title="点击切换生豆/熟豆"
+                  >
+                    {beanStateLabel}
+                  </span>
+                ) : (
+                  <span className="text-xs leading-none font-medium tracking-wide text-neutral-800 dark:text-neutral-100">
+                    {beanStateLabel}
+                  </span>
+                )}
+                ，总共 {originalTotalWeight || '0g'}
+                {totalWeight ? `，剩余 ${totalWeight}` : ''}
+                {showEstimatedCups &&
+                  selectedBeanState === 'roasted' &&
+                  estimatedCupsLabel &&
+                  `，约 ${estimatedCupsLabel}`}
+              </span>
             ) : (
-              `${rankingBeansCount} 款已评分${BEAN_TYPE_LABELS[rankingBeanType]}豆`
-            )}
-          </div>
+              <span>
+                {beansCount} 款
+                {enableGreenBeanInventory ? (
+                  <span
+                    className="cursor-pointer text-xs leading-none font-medium tracking-wide text-neutral-800 underline decoration-neutral-300 underline-offset-2 dark:text-neutral-100 dark:decoration-neutral-600"
+                    onClick={() => {
+                      // 切换生豆/熟豆
+                      const newState =
+                        selectedBeanState === 'green' ? 'roasted' : 'green';
+                      onBeanStateChange?.(newState);
+                    }}
+                    title="点击切换生豆/熟豆"
+                  >
+                    {beanStateLabel}
+                  </span>
+                ) : (
+                  <span className="text-xs leading-none font-medium tracking-wide text-neutral-800 dark:text-neutral-100">
+                    {beanStateLabel}
+                  </span>
+                )}
+                {totalWeight ? `，剩余 ${totalWeight}` : ''}
+                {showEstimatedCups &&
+                  selectedBeanState === 'roasted' &&
+                  estimatedCupsLabel &&
+                  `，约 ${estimatedCupsLabel}`}
+                {showBeanSummary && beanSummaryDetailsText}
+              </span>
+            )
+          ) : rankingBeanType === 'all' ? (
+            `${rankingBeansCount} 款已评分咖啡豆`
+          ) : (
+            `${rankingBeansCount} 款已评分${BEAN_TYPE_LABELS[rankingBeanType]}豆`
+          )}
         </div>
-
-        {/* 视图切换功能已移至导航栏 */}
-      </div>
+      </ListHeaderSummary>
 
       {/* 榜单标签筛选 - 仅在榜单视图中显示 */}
       {viewMode === VIEW_OPTIONS.RANKING && (
-          <div>
-            {/* 整个分类栏容器 - 下边框在这里 */}
-            <div className="border-b border-neutral-200/50 dark:border-neutral-800/50">
-              {/* 豆子筛选选项卡 */}
-              <div className="relative px-6">
-                {!isSearching ? (
-                  <TabBar className="relative flex items-center">
-                    {/* 固定在左侧的"全部"和筛选按钮 */}
-                    <div className="relative flex shrink-0 items-center bg-neutral-50 pr-3 dark:bg-neutral-900">
-                      <TabButton
-                        isActive={rankingSelectedCategory === null}
-                        onClick={handleRankingAllClick}
-                        onDoubleClick={() =>
-                          handleRankingBeanTypeDoubleClick(
-                            rankingClickStartType.current
-                          )
-                        }
-                        className="mr-1"
-                        dataTab="all"
-                      >
-                        全部
-                      </TabButton>
+        <div>
+          {/* 整个分类栏容器 - 下边框在这里 */}
+          <ListFilterBar
+            leading={
+              <>
+                <TabButton
+                  isActive={rankingSelectedCategory === null}
+                  onClick={handleRankingAllClick}
+                  onDoubleClick={() =>
+                    handleRankingBeanTypeDoubleClick(
+                      rankingClickStartType.current
+                    )
+                  }
+                  className="mr-1"
+                  dataTab="all"
+                >
+                  全部
+                </TabButton>
 
-                      {/* 筛选图标按钮 */}
-                      <button
-                        type="button"
-                        ref={filterToggleButtonRef}
-                        data-filter-toggle-button="true"
-                        onClick={handleFilterToggle}
-                        className="mr-1 flex items-center pb-1.5 text-xs font-medium text-neutral-400 dark:text-neutral-600"
-                      >
-                        <AlignLeft size={12} color="currentColor" />
-                      </button>
+                {/* 筛选图标按钮 */}
+                <FilterPanelTrigger
+                  panelId={panelProps.id}
+                  isOpen={isFilterExpanded}
+                  onClick={handleFilterToggle}
+                />
+              </>
+            }
+            tabs={rankingCategoryTabs.map(tab => (
+              <TabButton
+                key={tab.value}
+                isActive={rankingSelectedCategory === tab.value}
+                onClick={() => handleRankingCategoryClick(tab.value)}
+                className="mr-3"
+                dataTab={tab.value}
+              >
+                {tab.label}
+              </TabButton>
+            ))}
+            search={listSearch}
+          >
+            <FilterPanel {...panelProps}>
+              {onRankingFilterModeChange && (
+                <RankingFilterModeSection
+                  filterMode={rankingFilterMode}
+                  onFilterModeChange={onRankingFilterModeChange}
+                />
+              )}
 
-                      {/* 左侧固定按钮的右侧渐变遮罩 */}
-                      <div className="fade-mask-to-l pointer-events-none absolute top-0 right-0 bottom-0 w-5 bg-neutral-50 dark:bg-neutral-900"></div>
-                    </div>
-
-                    {/* 中间滚动区域 */}
-                    <div className="relative flex-1 overflow-hidden">
-                      {/* 左侧渐变阴影 - 覆盖在滚动内容上 */}
-                      <div
-                        data-scroll-shadow="left"
-                        className="fade-mask-to-r pointer-events-none absolute top-0 bottom-0 left-0 z-10 w-6 bg-neutral-50/95 dark:bg-neutral-900/95"
-                      />
-
-                      <div
-                        data-category-scroll
-                        className="flex overflow-x-auto"
-                      >
-                        {rankingCategoryTabs.map(tab => (
-                          <TabButton
-                            key={tab.value}
-                            isActive={rankingSelectedCategory === tab.value}
-                            onClick={() =>
-                              handleRankingCategoryClick(tab.value)
-                            }
-                            className="mr-3"
-                            dataTab={tab.value}
-                          >
-                            {tab.label}
-                          </TabButton>
-                        ))}
-                      </div>
-
-                      {/* 右侧渐变阴影 - 覆盖在滚动内容上 */}
-                      <div
-                        data-scroll-shadow="right"
-                        className="fade-mask-to-l pointer-events-none absolute top-0 right-0 bottom-0 w-6 bg-neutral-50/95 dark:bg-neutral-900/95"
-                      />
-                    </div>
-
-                    {/* 固定在右侧的搜索按钮 */}
-                    <div className="relative flex shrink-0 items-center bg-neutral-50 pl-3 dark:bg-neutral-900">
-                      {/* 竖直分割线 */}
-                      <div className="mr-3 mb-1.5 h-3 w-px bg-neutral-200 dark:bg-neutral-800"></div>
-                      <button
-                        type="button"
-                        onClick={handleSearchClick}
-                        className="flex items-center pb-1.5 text-xs font-medium whitespace-nowrap text-neutral-600 dark:text-neutral-400"
-                      >
-                        <span className="relative">搜索</span>
-                      </button>
-
-                      {/* 右侧固定按钮的左侧渐变遮罩 */}
-                      <div className="fade-mask-to-r pointer-events-none absolute top-0 bottom-0 left-0 w-5 bg-neutral-50 dark:bg-neutral-900"></div>
-                    </div>
-                  </TabBar>
-                ) : (
-                  /* 搜索框 - 替换整个分类栏 */
-                  <div className="relative flex items-center pb-1.5">
-                    <div className="relative flex flex-1 items-center">
-                      <input
-                        ref={searchInputRef}
-                        type="text"
-                        value={searchQuery}
-                        onChange={handleSearchChange}
-                        onKeyDown={handleSearchKeyDown}
-                        placeholder="输入咖啡豆名称..."
-                        className="w-full border-none bg-transparent pr-2 text-xs font-medium text-neutral-800 placeholder-neutral-400 outline-hidden dark:text-neutral-100 dark:placeholder-neutral-500"
-                        autoComplete="off"
-                        autoFocus
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      onClick={handleCloseSearch}
-                      className="-m-2 ml-1 flex items-center p-2 text-neutral-500 dark:text-neutral-400"
-                    >
-                      <X size={14} color="currentColor" />
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {/* 搜索历史下拉框 - 在搜索框没有内容时显示 */}
-              {isSearching &&
-                !searchQuery.trim() &&
-                searchHistory &&
-                searchHistory.length > 0 && (
-                  <div className="border-t border-neutral-200/50 dark:border-neutral-800/50">
-                    <div className="px-6 py-3">
-                      <div
-                        className="flex flex-wrap items-center gap-2 overflow-hidden"
-                        style={{ maxHeight: '3.5rem' }}
-                      >
-                        <div className="shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                          历史搜索:
-                        </div>
-                        {searchHistory.map((item, index) => (
-                          <button
-                            type="button"
-                            key={index}
-                            onClick={() => handleHistoryClick(item)}
-                            className="shrink-0 bg-neutral-200/30 px-2 py-1 text-xs font-medium whitespace-nowrap text-neutral-400 transition-colors dark:bg-neutral-800/50 dark:text-neutral-400"
-                          >
-                            {item}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
+              {rankingFilterMode === 'date' &&
+                onRankingDateGroupingModeChange && (
+                  <RankingDateGroupingSection
+                    dateGroupingMode={rankingDateGroupingMode}
+                    onDateGroupingModeChange={onRankingDateGroupingModeChange}
+                  />
                 )}
 
-              {/* 展开式筛选栏 - 在同一个容器内 */}
-              <AnimatePresence custom={instantFilterTransition}>
-                {isFilterExpanded && (
-                  <>
-                    {/* 固定的半透明分割线 - 只在展开时显示 */}
-                    <div className="border-t border-neutral-200/50 dark:border-neutral-800/50"></div>
+              {rankingFilterMode !== 'type' && (
+                <BeanTypeFilter
+                  selectedBeanType={rankingBeanType}
+                  onBeanTypeChange={onRankingBeanTypeChange}
+                  totalEspressoCount={rankingEspressoCount}
+                  totalFilterCount={rankingFilterCount}
+                  totalOmniCount={rankingOmniCount}
+                />
+              )}
 
-                    <motion.div
-                      ref={filterDropdownRef}
-                      custom={instantFilterTransition}
-                      variants={filterAnimation}
-                      initial="closed"
-                      animate="open"
-                      exit="closed"
-                      className="overflow-hidden"
-                    >
-                      <div ref={filterContentRef} className="px-6 py-4">
-                        <div className="space-y-4">
-                          {onRankingFilterModeChange && (
-                            <RankingFilterModeSection
-                              filterMode={rankingFilterMode}
-                              onFilterModeChange={onRankingFilterModeChange}
-                            />
-                          )}
-
-                          {rankingFilterMode === 'date' &&
-                            onRankingDateGroupingModeChange && (
-                              <RankingDateGroupingSection
-                                dateGroupingMode={rankingDateGroupingMode}
-                                onDateGroupingModeChange={
-                                  onRankingDateGroupingModeChange
-                                }
-                              />
-                            )}
-
-                          {rankingFilterMode !== 'type' && (
-                            <BeanTypeFilter
-                              selectedBeanType={rankingBeanType}
-                              onBeanTypeChange={onRankingBeanTypeChange}
-                              totalEspressoCount={rankingEspressoCount}
-                              totalFilterCount={rankingFilterCount}
-                              totalOmniCount={rankingOmniCount}
-                            />
-                          )}
-
-                          {/* 表格视图下隐藏排序，因为表格有列头排序 */}
-                          {externalDisplayMode !== 'table' && (
-                            <SortSection
-                              viewMode={viewMode}
-                              sortOption={sortOption}
-                              onSortChange={onSortChange}
-                              selectedBeanState={selectedBeanState}
-                            />
-                          )}
-                        </div>
-                      </div>
-                    </motion.div>
-                  </>
-                )}
-              </AnimatePresence>
-            </div>
-          </div>
-        )}
+              {/* 表格视图下隐藏排序，因为表格有列头排序 */}
+              {externalDisplayMode !== 'table' && (
+                <SortSection
+                  viewMode={viewMode}
+                  sortOption={sortOption}
+                  onSortChange={onSortChange}
+                  selectedBeanState={selectedBeanState}
+                />
+              )}
+            </FilterPanel>
+          </ListFilterBar>
+        </div>
+      )}
 
       {/* 库存视图的品种标签筛选 - 仅在库存视图中显示 */}
       {viewMode === VIEW_OPTIONS.INVENTORY ? (
         <div className="relative">
           {/* 整个分类栏容器 - 下边框在这里 */}
-          <div className="border-b border-neutral-200/50 dark:border-neutral-800/50">
-            <div className="relative px-6">
-              {!isSearching ? (
-                <TabBar
-                  multiple={multipleFiltering}
-                  className="relative flex items-center"
+          <ListFilterBar
+            multiple={multipleFiltering}
+            leading={
+              multipleFiltering ? (
+                <button
+                  type="button"
+                  aria-expanded={
+                    isFilterExpanded && activeMultiCategory === null
+                  }
+                  aria-controls={panelProps.id}
+                  aria-label={`${displayModeLabel}，调整排序和显示`}
+                  onClick={handleFilterToggle}
+                  className="mr-1 flex items-center gap-1 border-b border-transparent pb-[5px] text-xs leading-4 font-medium whitespace-nowrap text-neutral-600 hover:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-400 dark:text-neutral-400"
                 >
-                  {/* 多重模式提供统一的列表选项入口，普通模式保留全部分类。 */}
-                  <div className="relative flex shrink-0 items-center bg-neutral-50 pr-3 dark:bg-neutral-900">
-                    {multipleFiltering ? (
-                      <button
-                        type="button"
-                        ref={filterToggleButtonRef}
-                        data-filter-toggle-button="true"
-                        aria-expanded={
-                          isFilterExpanded && activeMultiCategory === null
-                        }
-                        aria-controls="bean-list-options"
-                        aria-label={`${displayModeLabel}，调整排序和显示`}
-                        onClick={handleFilterToggle}
-                        className="mr-1 flex items-center gap-1 border-b border-transparent pb-[5px] text-xs leading-4 font-medium whitespace-nowrap text-neutral-600 hover:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-400 dark:text-neutral-400"
-                      >
-                        {displayModeLabel}
-                        <AlignLeft
-                          size={12}
-                          className="text-neutral-400 dark:text-neutral-600"
-                          aria-hidden="true"
-                        />
-                      </button>
-                    ) : (
-                      <>
-                        <TabButton
-                          isActive={
-                            (currentBeanFieldId &&
-                              selectedBeanFieldValue === null) ||
-                            (filterMode === 'flavorPeriod' &&
-                              selectedFlavorPeriod === null) ||
-                            (filterMode === 'roaster' &&
-                              selectedRoaster === null) ||
-                            (filterMode === 'group' &&
-                              selectedBeanGroupId === null)
-                          }
-                          onClick={handleInventoryAllClick}
-                          onDoubleClick={handleBeanTypeDoubleClick}
-                          className="mr-1"
-                          dataTab="all"
-                        >
-                          全部
-                        </TabButton>
+                  {displayModeLabel}
+                  <AlignLeft
+                    size={12}
+                    className="text-neutral-400 dark:text-neutral-600"
+                    aria-hidden="true"
+                  />
+                </button>
+              ) : (
+                <>
+                  <TabButton
+                    isActive={
+                      (currentBeanFieldId && selectedBeanFieldValue === null) ||
+                      (filterMode === 'flavorPeriod' &&
+                        selectedFlavorPeriod === null) ||
+                      (filterMode === 'roaster' && selectedRoaster === null) ||
+                      (filterMode === 'group' && selectedBeanGroupId === null)
+                    }
+                    onClick={handleInventoryAllClick}
+                    onDoubleClick={handleBeanTypeDoubleClick}
+                    className="mr-1"
+                    dataTab="all"
+                  >
+                    全部
+                  </TabButton>
 
-                        {/* 筛选图标按钮 */}
-                        <button
-                          type="button"
-                          ref={filterToggleButtonRef}
-                          data-filter-toggle-button="true"
-                          onClick={handleFilterToggle}
-                          className="mr-1 flex items-center pb-1.5 text-xs font-medium text-neutral-400 dark:text-neutral-600"
+                  {/* 筛选图标按钮 */}
+                  <FilterPanelTrigger
+                    panelId={panelProps.id}
+                    isOpen={isFilterExpanded}
+                    onClick={handleFilterToggle}
+                  />
+                </>
+              )
+            }
+            tabs={
+              multiFilters ? (
+                multiCategories.map(mode => {
+                  const value = multiSelections[mode];
+                  const isSelected = value !== undefined;
+                  return (
+                    <TabButton
+                      key={mode}
+                      isActive={false}
+                      aria-pressed={isSelected}
+                      aria-label={`${getMultiCategoryLabel(mode)}${value ? `：${getMultiValueLabel(mode, value)}` : ''}`}
+                      aria-expanded={
+                        isFilterExpanded && activeMultiCategory === mode
+                      }
+                      aria-controls={panelProps.id}
+                      onClick={event => {
+                        setExpandedMultiCategory(mode);
+                        handleTriggerClick(
+                          event,
+                          !isFilterExpanded || activeMultiCategory !== mode
+                        );
+                      }}
+                      className={`mr-3 flex items-center gap-1 ${isSelected ? 'text-neutral-800 dark:text-neutral-200' : ''}`}
+                      dataTab={mode}
+                    >
+                      {value
+                        ? getMultiValueLabel(mode, value)
+                        : getMultiCategoryLabel(mode)}
+                      <ChevronDown
+                        size={12}
+                        className={`shrink-0 ${isSelected ? 'text-neutral-500 dark:text-neutral-400' : 'text-neutral-400 dark:text-neutral-600'}`}
+                        aria-hidden="true"
+                      />
+                    </TabButton>
+                  );
+                })
+              ) : (
+                <>
+                  {currentBeanFieldId &&
+                    sortCategoryValuesByName(
+                      filterMode,
+                      availableCurrentBeanFieldValues
+                    ).map(value => (
+                      <TabButton
+                        key={value}
+                        isActive={selectedBeanFieldValue === value}
+                        onClick={() => handleBeanFieldValueClick(value)}
+                        className="mr-3"
+                        dataTab={value}
+                      >
+                        {value}
+                      </TabButton>
+                    ))}
+
+                  {filterMode === 'flavorPeriod' &&
+                    sortCategoryValuesByName(
+                      'flavorPeriod',
+                      availableFlavorPeriods
+                    ).map((status: FlavorPeriodStatus) => (
+                      <TabButton
+                        key={status}
+                        isActive={selectedFlavorPeriod === status}
+                        onClick={() =>
+                          selectedFlavorPeriod !== status &&
+                          onFlavorPeriodClick?.(status)
+                        }
+                        className="mr-3"
+                        dataTab={status}
+                      >
+                        {FLAVOR_PERIOD_LABELS[status]}
+                      </TabButton>
+                    ))}
+
+                  {filterMode === 'roaster' &&
+                    sortCategoryValuesByName('roaster', availableRoasters).map(
+                      (roaster: string) => (
+                        <TabButton
+                          key={roaster}
+                          isActive={selectedRoaster === roaster}
+                          onClick={() =>
+                            selectedRoaster !== roaster &&
+                            onRoasterClick?.(roaster)
+                          }
+                          className="mr-3"
+                          dataTab={roaster}
                         >
-                          <AlignLeft size={12} color="currentColor" />
-                        </button>
-                      </>
+                          {roaster}
+                        </TabButton>
+                      )
                     )}
 
-                    {/* 左侧固定按钮的右侧渐变遮罩 */}
-                    <div className="fade-mask-to-l pointer-events-none absolute top-0 right-0 bottom-0 w-5 bg-neutral-50 dark:bg-neutral-900"></div>
-                  </div>
-
-                  {/* 中间滚动区域 */}
-                  <div className="relative min-w-0 flex-1 overflow-hidden">
-                    {/* 左侧渐变阴影 - 覆盖在滚动内容上 */}
-                    <div
-                      data-scroll-shadow="left"
-                      className="fade-mask-to-r pointer-events-none absolute top-0 bottom-0 left-0 z-10 w-6 bg-neutral-50/95 dark:bg-neutral-900/95"
-                    />
-
-                    <div data-category-scroll className="flex overflow-x-auto">
-                      {/* 根据分类模式显示不同的筛选按钮 */}
-                      {multiFilters ? (
-                        multiCategories.map(mode => {
-                          const value = multiSelections[mode];
-                          const isSelected = value !== undefined;
-                          return (
-                            <TabButton
-                              key={mode}
-                              isActive={false}
-                              aria-pressed={isSelected}
-                              data-filter-toggle-button="true"
-                              aria-label={`${getMultiCategoryLabel(mode)}${value ? `：${getMultiValueLabel(mode, value)}` : ''}`}
-                              aria-expanded={
-                                isFilterExpanded && activeMultiCategory === mode
-                              }
-                              aria-controls="bean-multi-filter-options"
-                              onClick={event => {
-                                multiCategoryTriggerRef.current =
-                                  event.currentTarget;
-                                setExpandedMultiCategory(mode);
-                                setIsFilterExpanded(
-                                  !isFilterExpanded ||
-                                    activeMultiCategory !== mode
-                                );
-                              }}
-                              className={`mr-3 flex items-center gap-1 ${isSelected ? 'text-neutral-800 dark:text-neutral-200' : ''}`}
-                              dataTab={mode}
-                            >
-                              {value
-                                ? getMultiValueLabel(mode, value)
-                                : getMultiCategoryLabel(mode)}
-                              <ChevronDown
-                                size={12}
-                                className={`shrink-0 ${isSelected ? 'text-neutral-500 dark:text-neutral-400' : 'text-neutral-400 dark:text-neutral-600'}`}
-                                aria-hidden="true"
-                              />
-                            </TabButton>
-                          );
-                        })
-                      ) : (
-                        <>
-                          {currentBeanFieldId &&
-                            sortCategoryValuesByName(
-                              filterMode,
-                              availableCurrentBeanFieldValues
-                            ).map(value => (
-                              <TabButton
-                                key={value}
-                                isActive={selectedBeanFieldValue === value}
-                                onClick={() => handleBeanFieldValueClick(value)}
-                                className="mr-3"
-                                dataTab={value}
-                              >
-                                {value}
-                              </TabButton>
-                            ))}
-
-                          {filterMode === 'flavorPeriod' &&
-                            sortCategoryValuesByName(
-                              'flavorPeriod',
-                              availableFlavorPeriods
-                            ).map((status: FlavorPeriodStatus) => (
-                              <TabButton
-                                key={status}
-                                isActive={selectedFlavorPeriod === status}
-                                onClick={() =>
-                                  selectedFlavorPeriod !== status &&
-                                  onFlavorPeriodClick?.(status)
-                                }
-                                className="mr-3"
-                                dataTab={status}
-                              >
-                                {FLAVOR_PERIOD_LABELS[status]}
-                              </TabButton>
-                            ))}
-
-                          {filterMode === 'roaster' &&
-                            sortCategoryValuesByName(
-                              'roaster',
-                              availableRoasters
-                            ).map((roaster: string) => (
-                              <TabButton
-                                key={roaster}
-                                isActive={selectedRoaster === roaster}
-                                onClick={() =>
-                                  selectedRoaster !== roaster &&
-                                  onRoasterClick?.(roaster)
-                                }
-                                className="mr-3"
-                                dataTab={roaster}
-                              >
-                                {roaster}
-                              </TabButton>
-                            ))}
-
-                          {filterMode === 'group' &&
-                            sortCategoryValuesByName(
-                              'group',
-                              availableBeanGroups.map(group => group.id)
-                            ).map(groupId => (
-                              <TabButton
-                                key={groupId}
-                                isActive={selectedBeanGroupId === groupId}
-                                onClick={() =>
-                                  selectedBeanGroupId !== groupId &&
-                                  onBeanGroupClick?.(groupId)
-                                }
-                                className="mr-3"
-                                dataTab={groupId}
-                              >
-                                {getMultiValueLabel('group', groupId)}
-                              </TabButton>
-                            ))}
-                        </>
-                      )}
-                    </div>
-
-                    {/* 右侧渐变阴影 - 覆盖在滚动内容上 */}
-                    <div
-                      data-scroll-shadow="right"
-                      className="fade-mask-to-l pointer-events-none absolute top-0 right-0 bottom-0 w-6 bg-neutral-50/95 dark:bg-neutral-900/95"
-                    />
-                  </div>
-
-                  {/* 固定在右侧的搜索按钮 */}
-                  <div className="relative flex shrink-0 items-center bg-neutral-50 pl-3 dark:bg-neutral-900">
-                    {/* 竖直分割线 */}
-                    <div className="mr-3 mb-1.5 h-3 w-px bg-neutral-200 dark:bg-neutral-800"></div>
-                    <button
-                      type="button"
-                      onClick={handleSearchClick}
-                      className="flex items-center pb-1.5 text-xs font-medium whitespace-nowrap text-neutral-600 dark:text-neutral-400"
-                    >
-                      <span className="relative">搜索</span>
-                    </button>
-
-                    {/* 右侧固定按钮的左侧渐变遮罩 */}
-                    <div className="fade-mask-to-r pointer-events-none absolute top-0 bottom-0 left-0 w-5 bg-neutral-50 dark:bg-neutral-900"></div>
-                  </div>
-                </TabBar>
-              ) : (
-                <div className="relative flex items-center pb-1.5">
-                  <div className="relative flex flex-1 items-center">
-                    <input
-                      ref={searchInputRef}
-                      type="text"
-                      value={searchQuery}
-                      onChange={handleSearchChange}
-                      onKeyDown={handleSearchKeyDown}
-                      placeholder="输入咖啡豆名称..."
-                      className="w-full border-none bg-transparent pr-2 text-xs font-medium text-neutral-800 placeholder-neutral-400 outline-hidden dark:text-neutral-100 dark:placeholder-neutral-500"
-                      autoComplete="off"
-                      autoFocus
-                    />
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleCloseSearch}
-                    className="-m-2 ml-1 flex items-center p-2 text-neutral-500 dark:text-neutral-400"
-                  >
-                    <X size={14} color="currentColor" />
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* 搜索历史下拉框 - 在搜索框没有内容时显示 */}
-            {isSearching &&
-              !searchQuery.trim() &&
-              searchHistory &&
-              searchHistory.length > 0 && (
-                <div className="border-t border-neutral-200/50 dark:border-neutral-800/50">
-                  <div className="px-6 py-3">
-                    <div
-                      className="flex flex-wrap items-center gap-2 overflow-hidden"
-                      style={{ maxHeight: '3.5rem' }}
-                    >
-                      <div className="shrink-0 text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                        历史搜索:
+                  {filterMode === 'group' &&
+                    sortCategoryValuesByName(
+                      'group',
+                      availableBeanGroups.map(group => group.id)
+                    ).map(groupId => (
+                      <TabButton
+                        key={groupId}
+                        isActive={selectedBeanGroupId === groupId}
+                        onClick={() =>
+                          selectedBeanGroupId !== groupId &&
+                          onBeanGroupClick?.(groupId)
+                        }
+                        className="mr-3"
+                        dataTab={groupId}
+                      >
+                        {getMultiValueLabel('group', groupId)}
+                      </TabButton>
+                    ))}
+                </>
+              )
+            }
+            search={listSearch}
+          >
+            <FilterPanel {...panelProps}>
+              {activeMultiCategory ? (
+                <div
+                  role="group"
+                  aria-label={getMultiCategoryLabel(activeMultiCategory)}
+                >
+                  <div className="mb-2 flex items-center justify-between gap-3 text-xs font-medium text-neutral-700 dark:text-neutral-300">
+                    <span>{getMultiCategoryLabel(activeMultiCategory)}</span>
+                    {multiSelectionCount > 0 && (
+                      <div className="flex shrink-0 items-center gap-3 whitespace-nowrap text-neutral-500 dark:text-neutral-400">
+                        {multiSelections[activeMultiCategory] !== undefined && (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              changeMultiSelection(activeMultiCategory, null)
+                            }
+                            className="-my-1 py-1 hover:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-400"
+                          >
+                            清除当前
+                          </button>
+                        )}
+                        {multiSelections[activeMultiCategory] !== undefined &&
+                          multiSelectionCount > 1 && (
+                            <span
+                              aria-hidden="true"
+                              className="h-3 w-px bg-neutral-200 dark:bg-neutral-800"
+                            />
+                          )}
+                        {(multiSelections[activeMultiCategory] === undefined ||
+                          multiSelectionCount > 1) && (
+                          <button
+                            type="button"
+                            onClick={onClearMultiFilters}
+                            className="-my-1 py-1 hover:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-400"
+                          >
+                            清除全部
+                          </button>
+                        )}
                       </div>
-                      {searchHistory.map((item, index) => (
-                        <button
-                          type="button"
-                          key={index}
-                          onClick={() => handleHistoryClick(item)}
-                          className={newLocal}
+                    )}
+                  </div>
+                  <TabBar
+                    key={activeMultiCategory}
+                    className="relative overflow-hidden"
+                  >
+                    <div
+                      data-category-scroll
+                      className="flex gap-2 overflow-x-auto"
+                    >
+                      {activeMultiCategoryValues.length === 0 && (
+                        <FilterButton
+                          isActive={false}
+                          disabled
+                          onClick={() => {}}
+                          className="shrink-0"
                         >
-                          {item}
-                        </button>
+                          暂无选项
+                        </FilterButton>
+                      )}
+                      {activeMultiCategoryValues.map(value => (
+                        <FilterButton
+                          key={value}
+                          className="shrink-0 pr-1.5"
+                          isActive={
+                            multiSelections[activeMultiCategory] === value
+                          }
+                          onClick={() => {
+                            changeMultiSelection(activeMultiCategory, value);
+                            setIsFilterExpanded(false);
+                            triggerRef.current?.focus();
+                          }}
+                        >
+                          {getMultiValueLabel(activeMultiCategory, value)}
+                          <span className="ml-1">
+                            (
+                            {filterOptionCounts?.[activeMultiCategory]?.get(
+                              value
+                            ) ?? 0}
+                            )
+                          </span>
+                        </FilterButton>
                       ))}
                     </div>
-                  </div>
+                    <div
+                      data-scroll-shadow="left"
+                      className="fade-mask-to-r pointer-events-none absolute inset-y-0 left-0 w-3 bg-neutral-50 dark:bg-neutral-900"
+                    />
+                    <div
+                      data-scroll-shadow="right"
+                      className="fade-mask-to-l pointer-events-none absolute inset-y-0 right-0 w-3 bg-neutral-50 dark:bg-neutral-900"
+                    />
+                  </TabBar>
                 </div>
-              )}
+              ) : (
+                <div className="space-y-4">
+                  {/* 分类模式选择 - 仅在库存视图显示 */}
+                  {viewMode === VIEW_OPTIONS.INVENTORY &&
+                    !multiFilters &&
+                    onFilterModeChange && (
+                      <FilterModeSection
+                        filterMode={filterMode}
+                        onFilterModeChange={onFilterModeChange}
+                        selectedBeanState={selectedBeanState}
+                        hasBeanGroups={hasBeanGroups}
+                        enabledBeanFieldFilterModes={
+                          enabledBeanFieldFilterModes
+                        }
+                      />
+                    )}
 
-            <SearchAllSuggestion
-              scopeLabel={searchAllScopeLabel}
-              query={searchQuery}
-              onClick={onSearchAllClick}
-            />
+                  {/* 表格视图下隐藏排序，因为表格有列头排序 */}
+                  {externalDisplayMode !== 'table' && (
+                    <SortSection
+                      viewMode={viewMode}
+                      sortOption={sortOption}
+                      onSortChange={onSortChange}
+                      selectedBeanState={selectedBeanState}
+                    />
+                  )}
 
-            {/* 展开式筛选栏 - 在同一个容器内 */}
-            <AnimatePresence custom={instantFilterTransition}>
-              {isFilterExpanded && (
-                <>
-                  {/* 固定的半透明分割线 - 只在展开时显示 */}
-                  <div className="border-t border-neutral-200/50 dark:border-neutral-800/50"></div>
+                  {!multipleFiltering && (
+                    <BeanTypeFilter
+                      selectedBeanType={selectedBeanType}
+                      onBeanTypeChange={onBeanTypeChange}
+                      showAll={true}
+                      espressoCount={espressoCount}
+                      filterCount={filterCount}
+                      omniCount={omniCount}
+                      totalEspressoCount={totalEspressoCount}
+                      totalFilterCount={totalFilterCount}
+                      totalOmniCount={totalOmniCount}
+                    />
+                  )}
 
-                  <motion.div
-                    ref={filterDropdownRef}
-                    custom={instantFilterTransition}
-                    variants={filterAnimation}
-                    initial="closed"
-                    animate="open"
-                    exit="closed"
-                    className="overflow-hidden"
-                  >
-                    <div ref={filterContentRef} className="px-6 py-4">
-                      {activeMultiCategory ? (
-                        <div
-                          id="bean-multi-filter-options"
-                          role="group"
-                          aria-label={getMultiCategoryLabel(
-                            activeMultiCategory
-                          )}
-                        >
-                          <div className="mb-2 flex items-center justify-between gap-3 text-xs font-medium text-neutral-700 dark:text-neutral-300">
-                            <span>
-                              {getMultiCategoryLabel(activeMultiCategory)}
-                            </span>
-                            {multiSelectionCount > 0 && (
-                              <div className="flex shrink-0 items-center gap-3 whitespace-nowrap text-neutral-500 dark:text-neutral-400">
-                                {multiSelections[activeMultiCategory] !==
-                                  undefined && (
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      changeMultiSelection(
-                                        activeMultiCategory,
-                                        null
-                                      )
-                                    }
-                                    className="-my-1 py-1 hover:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-400"
-                                  >
-                                    清除当前
-                                  </button>
-                                )}
-                                {multiSelections[activeMultiCategory] !==
-                                  undefined &&
-                                  multiSelectionCount > 1 && (
-                                    <span
-                                      aria-hidden="true"
-                                      className="h-3 w-px bg-neutral-200 dark:bg-neutral-800"
-                                    />
-                                  )}
-                                {(multiSelections[activeMultiCategory] ===
-                                  undefined ||
-                                  multiSelectionCount > 1) && (
-                                  <button
-                                    type="button"
-                                    onClick={onClearMultiFilters}
-                                    className="-my-1 py-1 hover:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-400"
-                                  >
-                                    清除全部
-                                  </button>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                          <TabBar
-                            key={activeMultiCategory}
-                            className="relative overflow-hidden"
+                  {/* 显示选项 */}
+                  <div>
+                    <div className="mb-2 text-xs font-medium text-neutral-700 dark:text-neutral-300">
+                      显示
+                    </div>
+                    <div className="space-y-2">
+                      {onDisplayModeChange && (
+                        <div className="flex flex-wrap items-center gap-2">
+                          <FilterButton
+                            isActive={
+                              externalDisplayMode === 'list' ||
+                              (!externalDisplayMode && !isImageFlowMode)
+                            }
+                            onClick={() => onDisplayModeChange('list')}
                           >
-                            <div
-                              data-category-scroll
-                              className="flex gap-2 overflow-x-auto"
-                            >
-                              {activeMultiCategoryValues.length === 0 && (
-                                <FilterButton
-                                  isActive={false}
-                                  disabled
-                                  onClick={() => {}}
-                                  className="shrink-0"
-                                >
-                                  暂无选项
-                                </FilterButton>
-                              )}
-                              {activeMultiCategoryValues.map(value => (
-                                <FilterButton
-                                  key={value}
-                                  className="shrink-0 pr-1.5"
-                                  isActive={
-                                    multiSelections[activeMultiCategory] ===
-                                    value
-                                  }
-                                  onClick={() => {
-                                    changeMultiSelection(
-                                      activeMultiCategory,
-                                      value
-                                    );
-                                    setIsFilterExpanded(false);
-                                    multiCategoryTriggerRef.current?.focus();
-                                  }}
-                                >
-                                  {getMultiValueLabel(
-                                    activeMultiCategory,
-                                    value
-                                  )}
-                                  <span className="ml-1">
-                                    (
-                                    {filterOptionCounts?.[
-                                      activeMultiCategory
-                                    ]?.get(value) ?? 0}
-                                    )
-                                  </span>
-                                </FilterButton>
-                              ))}
-                            </div>
-                            <div
-                              data-scroll-shadow="left"
-                              className="fade-mask-to-r pointer-events-none absolute inset-y-0 left-0 w-3 bg-neutral-50 dark:bg-neutral-900"
-                            />
-                            <div
-                              data-scroll-shadow="right"
-                              className="fade-mask-to-l pointer-events-none absolute inset-y-0 right-0 w-3 bg-neutral-50 dark:bg-neutral-900"
-                            />
-                          </TabBar>
-                        </div>
-                      ) : (
-                        <div id="bean-list-options" className="space-y-4">
-                          {/* 分类模式选择 - 仅在库存视图显示 */}
-                          {viewMode === VIEW_OPTIONS.INVENTORY &&
-                            !multiFilters &&
-                            onFilterModeChange && (
-                              <FilterModeSection
-                                filterMode={filterMode}
-                                onFilterModeChange={onFilterModeChange}
-                                selectedBeanState={selectedBeanState}
-                                hasBeanGroups={hasBeanGroups}
-                                enabledBeanFieldFilterModes={
-                                  enabledBeanFieldFilterModes
-                                }
-                              />
-                            )}
-
-                          {/* 表格视图下隐藏排序，因为表格有列头排序 */}
-                          {externalDisplayMode !== 'table' && (
-                            <SortSection
-                              viewMode={viewMode}
-                              sortOption={sortOption}
-                              onSortChange={onSortChange}
-                              selectedBeanState={selectedBeanState}
-                            />
-                          )}
-
-                          {!multipleFiltering && (
-                            <BeanTypeFilter
-                              selectedBeanType={selectedBeanType}
-                              onBeanTypeChange={onBeanTypeChange}
-                              showAll={true}
-                              espressoCount={espressoCount}
-                              filterCount={filterCount}
-                              omniCount={omniCount}
-                              totalEspressoCount={totalEspressoCount}
-                              totalFilterCount={totalFilterCount}
-                              totalOmniCount={totalOmniCount}
-                            />
-                          )}
-
-                          {/* 显示选项 */}
-                          <div>
-                            <div className="mb-2 text-xs font-medium text-neutral-700 dark:text-neutral-300">
-                              显示
-                            </div>
-                            <div className="space-y-2">
-                              {onDisplayModeChange && (
-                                <div className="flex flex-wrap items-center gap-2">
-                                  <FilterButton
-                                    isActive={
-                                      externalDisplayMode === 'list' ||
-                                      (!externalDisplayMode && !isImageFlowMode)
-                                    }
-                                    onClick={() => onDisplayModeChange('list')}
-                                  >
-                                    列表
-                                  </FilterButton>
-                                  <FilterButton
-                                    isActive={externalDisplayMode === 'table'}
-                                    onClick={() => onDisplayModeChange('table')}
-                                  >
-                                    表格
-                                  </FilterButton>
-                                  <FilterButton
-                                    isActive={
-                                      externalDisplayMode === 'imageFlow' ||
-                                      (!externalDisplayMode && isImageFlowMode)
-                                    }
-                                    onClick={() => {
-                                      if (!hasImageBeans) return;
-                                      onDisplayModeChange('imageFlow');
-                                    }}
-                                    disabled={!hasImageBeans}
-                                  >
-                                    图片流
-                                  </FilterButton>
-                                </div>
-                              )}
-                              <div className="flex flex-wrap items-center gap-2">
-                                <FilterButton
-                                  isActive={showEmptyBeans || false}
-                                  onClick={() => onToggleShowEmptyBeans?.()}
-                                >
-                                  展示已用完
-                                </FilterButton>
-                                <FilterButton
-                                  isActive={false}
-                                  onClick={() => onExportPreview?.()}
-                                >
-                                  导出预览图
-                                </FilterButton>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* 表格列配置区域 - 仅在表格模式下显示 */}
-                          {externalDisplayMode === 'table' &&
-                            onTableColumnsChange && (
-                              <div>
-                                <div className="mb-2 text-xs font-medium text-neutral-700 dark:text-neutral-300">
-                                  表格列
-                                </div>
-                                <div className="flex flex-wrap items-center gap-2">
-                                  {TABLE_COLUMN_CONFIG.map(col => {
-                                    const displayLabel =
-                                      col.key === 'flavorPeriod'
-                                        ? getDateDisplayColumnLabel(
-                                            dateDisplayMode,
-                                            hasGreenBeans
-                                          )
-                                        : hasGreenBeans && col.greenBeanLabel
-                                          ? col.greenBeanLabel
-                                          : col.label;
-
-                                    return (
-                                      <FilterButton
-                                        key={col.key}
-                                        isActive={tableVisibleColumns.includes(
-                                          col.key
-                                        )}
-                                        onClick={() => {
-                                          const isVisible =
-                                            tableVisibleColumns.includes(
-                                              col.key
-                                            );
-                                          if (isVisible) {
-                                            // 至少保留一列
-                                            if (
-                                              tableVisibleColumns.length > 1
-                                            ) {
-                                              onTableColumnsChange(
-                                                tableVisibleColumns.filter(
-                                                  k => k !== col.key
-                                                )
-                                              );
-                                            }
-                                          } else {
-                                            onTableColumnsChange([
-                                              ...tableVisibleColumns,
-                                              col.key,
-                                            ]);
-                                          }
-                                        }}
-                                      >
-                                        {displayLabel}
-                                      </FilterButton>
-                                    );
-                                  })}
-                                </div>
-                              </div>
-                            )}
+                            列表
+                          </FilterButton>
+                          <FilterButton
+                            isActive={externalDisplayMode === 'table'}
+                            onClick={() => onDisplayModeChange('table')}
+                          >
+                            表格
+                          </FilterButton>
+                          <FilterButton
+                            isActive={
+                              externalDisplayMode === 'imageFlow' ||
+                              (!externalDisplayMode && isImageFlowMode)
+                            }
+                            onClick={() => {
+                              if (!hasImageBeans) return;
+                              onDisplayModeChange('imageFlow');
+                            }}
+                            disabled={!hasImageBeans}
+                          >
+                            图片流
+                          </FilterButton>
                         </div>
                       )}
+                      <div className="flex flex-wrap items-center gap-2">
+                        <FilterButton
+                          isActive={showEmptyBeans || false}
+                          onClick={() => onToggleShowEmptyBeans?.()}
+                        >
+                          展示已用完
+                        </FilterButton>
+                        <FilterButton
+                          isActive={false}
+                          onClick={() => onExportPreview?.()}
+                        >
+                          导出预览图
+                        </FilterButton>
+                      </div>
                     </div>
-                  </motion.div>
-                </>
+                  </div>
+
+                  {/* 表格列配置区域 - 仅在表格模式下显示 */}
+                  {externalDisplayMode === 'table' && onTableColumnsChange && (
+                    <div>
+                      <div className="mb-2 text-xs font-medium text-neutral-700 dark:text-neutral-300">
+                        表格列
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        {TABLE_COLUMN_CONFIG.map(col => {
+                          const displayLabel =
+                            col.key === 'flavorPeriod'
+                              ? getDateDisplayColumnLabel(
+                                  dateDisplayMode,
+                                  hasGreenBeans
+                                )
+                              : hasGreenBeans && col.greenBeanLabel
+                                ? col.greenBeanLabel
+                                : col.label;
+
+                          return (
+                            <FilterButton
+                              key={col.key}
+                              isActive={tableVisibleColumns.includes(col.key)}
+                              onClick={() => {
+                                const isVisible = tableVisibleColumns.includes(
+                                  col.key
+                                );
+                                if (isVisible) {
+                                  // 至少保留一列
+                                  if (tableVisibleColumns.length > 1) {
+                                    onTableColumnsChange(
+                                      tableVisibleColumns.filter(
+                                        k => k !== col.key
+                                      )
+                                    );
+                                  }
+                                } else {
+                                  onTableColumnsChange([
+                                    ...tableVisibleColumns,
+                                    col.key,
+                                  ]);
+                                }
+                              }}
+                            >
+                              {displayLabel}
+                            </FilterButton>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
               )}
-            </AnimatePresence>
-          </div>
+            </FilterPanel>
+          </ListFilterBar>
         </div>
       ) : null}
     </div>
