@@ -43,9 +43,7 @@ async function setLegacySetting(
 ): Promise<void> {
   const row = encodeLegacySetting({ key, value } satisfies LegacySettingEntry);
   await executor.execute(
-    `INSERT INTO legacy_settings (key, value)
-     VALUES (?, ?)
-     ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
+    'INSERT OR REPLACE INTO legacy_settings (key, value) VALUES (?, ?)',
     [row.key, row.value]
   );
 }
@@ -71,10 +69,9 @@ async function setLargeSyncBaseline(
     position = end;
   }
   await executor.execute(
-    `INSERT INTO legacy_settings (key, value)
+    `INSERT OR REPLACE INTO legacy_settings (key, value)
      VALUES (?, (SELECT group_concat(value, '') FROM
-       (SELECT value FROM sync_baseline_chunks ORDER BY position)))
-     ON CONFLICT(key) DO UPDATE SET value = excluded.value`,
+       (SELECT value FROM sync_baseline_chunks ORDER BY position)))`,
     [row.key]
   );
   await executor.execute('DROP TABLE sync_baseline_chunks');

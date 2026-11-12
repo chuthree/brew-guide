@@ -21,9 +21,7 @@ export async function saveGrinder(
 ): Promise<void> {
   const row = encodeGrinder(grinder);
   await executor.execute(
-    `INSERT INTO grinders (id, record_json)
-     VALUES (?, ?)
-     ON CONFLICT(id) DO UPDATE SET record_json = excluded.record_json`,
+    'INSERT OR REPLACE INTO grinders (id, record_json) VALUES (?, ?)',
     [row.id, row.record_json]
   );
 }

@@ -91,7 +91,7 @@ for (const backend of ['Dexie', 'SQLite'] as const) {
                 operation({
                   ...tx,
                   execute: async (sql, params) => {
-                    if (sql.includes('INSERT INTO brewing_notes'))
+                    if (sql.startsWith('INSERT OR REPLACE INTO brewing_notes'))
                       throw new Error('QA injected note failure');
                     return tx.execute(sql, params);
                   },

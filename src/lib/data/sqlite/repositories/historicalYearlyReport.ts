@@ -21,7 +21,9 @@ export async function saveHistoricalYearlyReport(
 ): Promise<void> {
   const r = encodeHistoricalYearlyReport(report);
   await tx.execute(
-    `INSERT INTO historical_yearly_reports (id,year,username,content,created_at_ms,extra_json) VALUES (?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET year=excluded.year,username=excluded.username,content=excluded.content,created_at_ms=excluded.created_at_ms,extra_json=excluded.extra_json`,
+    `INSERT OR REPLACE INTO historical_yearly_reports
+       (id, year, username, content, created_at_ms, extra_json)
+     VALUES (?, ?, ?, ?, ?, ?)`,
     [r.id, r.year, r.username, r.content, r.created_at_ms, r.extra_json]
   );
 }

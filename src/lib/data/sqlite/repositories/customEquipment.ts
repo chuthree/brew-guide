@@ -30,15 +30,13 @@ async function getCustomEquipment(
     : undefined;
 }
 
-async function saveCustomEquipment(
+export async function saveCustomEquipment(
   executor: SqliteExecutor,
   equipment: CustomEquipment
 ): Promise<void> {
   const row = encodeCustomEquipment(equipment);
   await executor.execute(
-    `INSERT INTO custom_equipments (id, record_json)
-     VALUES (?, ?)
-     ON CONFLICT(id) DO UPDATE SET record_json = excluded.record_json`,
+    'INSERT OR REPLACE INTO custom_equipments (id, record_json) VALUES (?, ?)',
     [row.id, row.record_json]
   );
 }

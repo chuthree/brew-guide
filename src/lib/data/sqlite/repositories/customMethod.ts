@@ -36,17 +36,14 @@ async function getCustomMethods(
     : undefined;
 }
 
-async function saveCustomMethods(
+export async function saveCustomMethods(
   executor: SqliteExecutor,
   record: CustomMethodRecord
 ): Promise<void> {
   const row = encodeCustomMethods(record);
   await executor.execute(
-    `INSERT INTO custom_methods (equipment_id, methods_json, extra_json)
-     VALUES (?, ?, ?)
-     ON CONFLICT(equipment_id) DO UPDATE SET
-       methods_json = excluded.methods_json,
-       extra_json = excluded.extra_json`,
+    `INSERT OR REPLACE INTO custom_methods (equipment_id, methods_json, extra_json)
+     VALUES (?, ?, ?)`,
     [row.equipment_id, row.methods_json, row.extra_json]
   );
 }

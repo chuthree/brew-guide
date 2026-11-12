@@ -494,13 +494,15 @@ async function insertTargetRows(
   await driver.transaction(async tx => {
     for (const spec of specs) {
       const placeholders = spec.columns.map(() => '?').join(', ');
+      const parameterColumns = [...spec.columns, spec.keyColumn];
       const sql =
         `INSERT INTO ${spec.table} (${spec.columns.join(', ')}) ` +
-        `VALUES (${placeholders}) ON CONFLICT(${spec.keyColumn}) DO NOTHING`;
+        `SELECT ${placeholders} WHERE NOT EXISTS (` +
+        `SELECT 1 FROM ${spec.table} WHERE ${spec.keyColumn} = ?)`;
       for (const value of spec.rows) {
         await tx.execute(
           sql,
-          sqlValues(value as Record<string, unknown>, spec.columns)
+          sqlValues(value as Record<string, unknown>, parameterColumns)
         );
       }
     }

@@ -58,11 +58,8 @@ export async function saveCoffeeBean(
 
   const { row } = encoded;
   await executor.execute(
-    `INSERT INTO coffee_beans (id, timestamp_ms, record_json)
-     VALUES (?, ?, ?)
-     ON CONFLICT(id) DO UPDATE SET
-       timestamp_ms = excluded.timestamp_ms,
-       record_json = excluded.record_json`,
+    `INSERT OR REPLACE INTO coffee_beans (id, timestamp_ms, record_json)
+     VALUES (?, ?, ?)`,
     [row.id, row.timestamp_ms, row.record_json]
   );
 }

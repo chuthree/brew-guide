@@ -73,15 +73,9 @@ export async function saveBrewingNote(
 
   const { row } = encoded;
   await executor.execute(
-    `INSERT INTO brewing_notes (
+    `INSERT OR REPLACE INTO brewing_notes (
        id, timestamp_ms, updated_at_ms, bean_id, record_json
-     )
-     VALUES (?, ?, ?, ?, ?)
-     ON CONFLICT(id) DO UPDATE SET
-       timestamp_ms = excluded.timestamp_ms,
-       updated_at_ms = excluded.updated_at_ms,
-       bean_id = excluded.bean_id,
-       record_json = excluded.record_json`,
+     ) VALUES (?, ?, ?, ?, ?)`,
     [row.id, row.timestamp_ms, row.updated_at_ms, row.bean_id, row.record_json]
   );
 }

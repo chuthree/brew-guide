@@ -1003,7 +1003,7 @@ describeNodeSqlite(
       const oldKeyList = await store.listObjectKeys();
       const failing = createPersistence(
         makeDriverProxy(driver(), {
-          failExecute: sql => sql.startsWith('INSERT INTO coffee_beans'),
+          failExecute: sql => sql.startsWith('INSERT OR REPLACE INTO coffee_beans'),
         }),
         store
       );
@@ -1125,7 +1125,7 @@ describeNodeSqlite(
       const before = await store.listObjectKeys();
       const uncertainRollback = createPersistence(
         makeDriverProxy(driver(), {
-          failExecute: sql => sql.startsWith('INSERT INTO coffee_beans'),
+          failExecute: sql => sql.startsWith('INSERT OR REPLACE INTO coffee_beans'),
           rollbackDiagnostic: true,
         }),
         store

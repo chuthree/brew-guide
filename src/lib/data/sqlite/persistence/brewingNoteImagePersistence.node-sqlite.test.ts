@@ -733,7 +733,7 @@ describeNodeSqlite(
     it('rolls back subject and metadata writes together and removes new files', async () => {
       const failing = createPersistence(
         makeDriverProxy(database.driver, {
-          failExecute: sql => sql.startsWith('INSERT INTO brewing_notes'),
+          failExecute: sql => sql.startsWith('INSERT OR REPLACE INTO brewing_notes'),
         }),
         store
       );
@@ -758,7 +758,7 @@ describeNodeSqlite(
       const oldKeys = await store.listObjectKeys();
       const failing = createPersistence(
         makeDriverProxy(database.driver, {
-          failExecute: sql => sql.startsWith('INSERT INTO brewing_notes'),
+          failExecute: sql => sql.startsWith('INSERT OR REPLACE INTO brewing_notes'),
         }),
         store
       );
@@ -779,7 +779,7 @@ describeNodeSqlite(
     it('retains new files when rollback outcome has a diagnostic failure', async () => {
       const failing = createPersistence(
         makeDriverProxy(database.driver, {
-          failExecute: sql => sql.startsWith('INSERT INTO brewing_notes'),
+          failExecute: sql => sql.startsWith('INSERT OR REPLACE INTO brewing_notes'),
           rollbackDiagnostic: true,
         }),
         store

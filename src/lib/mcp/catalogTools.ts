@@ -19,15 +19,12 @@ import {
   type MethodParams,
 } from '@/lib/core/config';
 import type { CustomMethodRecord } from '@/lib/data/contracts';
-import type { AppSettings, Grinder } from '@/lib/data/models';
+import type { Grinder } from '@/lib/data/models';
 import type { SqliteExecutor } from '@/lib/data/sqlite/driver';
 import {
   decodeCustomEquipment,
-  encodeCustomEquipment,
   decodeCustomMethods,
-  encodeCustomMethods,
   decodeGrinder,
-  encodeGrinder,
 } from '@/lib/data/sqlite/codecs';
 import type {
   CustomEquipmentRow,
@@ -49,6 +46,9 @@ import {
 import { defaultSettings } from '@/lib/stores/settingsStore';
 import { getCommonMethodsForEquipment } from '@/lib/brewing/methodAvailability';
 import { listBrewingNotes } from '@/lib/data/sqlite/repositories/brewingNote';
+import { saveCustomEquipment as saveEquipment } from '@/lib/data/sqlite/repositories/customEquipment';
+import { saveCustomMethods as saveMethods } from '@/lib/data/sqlite/repositories/customMethod';
+import { saveGrinder } from '@/lib/data/sqlite/repositories/grinder';
 import { invalid, McpToolError, recordVersion, validate } from './validation';
 import {
   getMcpDriver,
@@ -495,28 +495,6 @@ async function assertVersion(record: unknown, expected: unknown) {
       'Record changed; read it again before editing.'
     );
 }
-async function saveEquipment(tx: SqliteExecutor, record: CustomEquipment) {
-  const row = encodeCustomEquipment(record);
-  await tx.execute(
-    'INSERT INTO custom_equipments (id, record_json) VALUES (?, ?) ON CONFLICT(id) DO UPDATE SET record_json = excluded.record_json',
-    [row.id, row.record_json]
-  );
-}
-async function saveMethods(tx: SqliteExecutor, record: CustomMethodRecord) {
-  const row = encodeCustomMethods(record);
-  await tx.execute(
-    'INSERT INTO custom_methods (equipment_id, methods_json, extra_json) VALUES (?, ?, ?) ON CONFLICT(equipment_id) DO UPDATE SET methods_json = excluded.methods_json, extra_json = excluded.extra_json',
-    [row.equipment_id, row.methods_json, row.extra_json]
-  );
-}
-async function saveGrinder(tx: SqliteExecutor, record: Grinder) {
-  const row = encodeGrinder(record);
-  await tx.execute(
-    'INSERT INTO grinders (id, record_json) VALUES (?, ?) ON CONFLICT(id) DO UPDATE SET record_json = excluded.record_json',
-    [row.id, row.record_json]
-  );
-}
-
 const previews = new Map<
   string,
   { key: string; fingerprint: string; expiresAt: number; generation: number }

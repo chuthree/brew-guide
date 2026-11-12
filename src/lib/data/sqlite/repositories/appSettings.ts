@@ -29,9 +29,7 @@ export async function saveAppSettings(
 ): Promise<void> {
   const row = encodeAppSettings({ id: MAIN_SETTINGS_ID, data: settings });
   await executor.execute(
-    `INSERT INTO app_settings (id, data_json)
-     VALUES (?, ?)
-     ON CONFLICT(id) DO UPDATE SET data_json = excluded.data_json`,
+    'INSERT OR REPLACE INTO app_settings (id, data_json) VALUES (?, ?)',
     [row.id, row.data_json]
   );
 }
