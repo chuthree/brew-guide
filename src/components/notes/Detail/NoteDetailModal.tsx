@@ -37,7 +37,6 @@ import {
   EMPTY_EQUIPMENT_NAME_OVERRIDES,
   normalizeBrewingNoteParams,
   getNoteEspressoParamParts,
-  isEspressoNote,
   resolveNoteBean,
   resolveNoteBeanDisplayName,
   resolveNoteEquipmentName,
@@ -379,7 +378,10 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
       return [];
     }
 
-    if (isEspressoNote(note)) {
+    if (
+      note.equipment?.toLowerCase().includes('espresso') ||
+      note.equipment?.includes('意式')
+    ) {
       return getNoteEspressoParamParts(note);
     }
 

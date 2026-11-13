@@ -1,6 +1,6 @@
-import type { Method } from '../core/config';
-import type { BrewingStep } from '../hooks/useBrewingState';
-import type { ParameterInfo } from './constants';
+import { Method } from '../core/config';
+import { BrewingStep } from '../hooks/useBrewingState';
+import { ParameterInfo } from './constants';
 import { emitEvent } from './events';
 import { BREWING_EVENTS } from './constants';
 
@@ -8,11 +8,6 @@ interface EquipmentItem {
   id: string;
   name: string;
 }
-
-export const isEspressoMethod = (method: Method | null): boolean =>
-  method?.params?.stages?.some(
-    stage => stage.pourType === 'extraction' || stage.pourType === 'beverage'
-  ) ?? false;
 
 /**
  * 获取设备名称

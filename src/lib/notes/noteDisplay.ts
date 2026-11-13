@@ -176,19 +176,6 @@ export const isCoffeeOnlyNoteParams = (
   );
 };
 
-export const isEspressoNote = (
-  note: Pick<BrewingNote, 'params' | 'equipment' | 'equipmentId'>,
-  isEspressoEquipment = false
-): boolean =>
-  note.params?.extractionTime !== undefined ||
-  Boolean(note.params?.liquidWeight?.trim()) ||
-  isEspressoEquipment ||
-  note.equipmentId === 'Espresso' ||
-  Boolean(
-    note.equipment?.toLowerCase().includes('espresso') ||
-      note.equipment?.includes('意式')
-  );
-
 /** Read measured espresso values; old notes used totalTime/water for these fields. */
 export const getNoteEspressoMeasurements = (
   note: Pick<BrewingNote, 'params' | 'totalTime'>

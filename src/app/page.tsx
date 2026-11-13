@@ -99,7 +99,7 @@ import hapticsUtils from '@/lib/ui/haptics';
 import { BREWING_EVENTS } from '@/lib/brewing/constants';
 import type { BrewingNoteData } from '@/types/app';
 import type { BrewingNoteSaveOptions } from '@/lib/notes/inventory';
-import { isEspressoMethod, updateParameterInfo } from '@/lib/brewing/parameters';
+import { updateParameterInfo } from '@/lib/brewing/parameters';
 import BrewingNoteFormModal from '@/components/notes/Form/BrewingNoteFormModal';
 import CoffeeBeans from '@/components/coffee-bean/List';
 import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
@@ -1797,12 +1797,25 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     type: keyof EditableParams,
     value: string
   ) => {
+    // 🎯 如果在笔记步骤，直接通过事件通知 BrewingNoteForm 更新参数
+    // 不触发全局的参数更新流程，避免 brewing:paramsUpdated 事件导致数据覆盖
     if (activeBrewingStep === 'notes') {
-      window.dispatchEvent(
-        new CustomEvent('brewing:updateNoteParams', {
-          detail: { type, value, isEspresso: isEspressoMethod(selectedMethod) },
-        })
-      );
+      const event = new CustomEvent('brewing:updateNoteParams', {
+        detail: {
+          type,
+          value,
+        },
+      });
+      window.dispatchEvent(event);
+
+      // 🎯 同时触发导航栏显示更新事件，更新UI显示
+      const displayEvent = new CustomEvent('brewing:updateNavbarDisplay', {
+        detail: {
+          type,
+          value,
+        },
+      });
+      window.dispatchEvent(displayEvent);
       return;
     }
 
@@ -1826,7 +1839,14 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         ? currentBrewingMethod
         : selectedMethod;
 
-    if (!baseMethod || !isEspressoMethod(baseMethod)) return;
+    if (!baseMethod || !baseMethod.params.stages) return;
+
+    // 只处理意式咖啡，查找萃取步骤
+    const isEspresso = baseMethod.params.stages.some(
+      stage => stage.pourType === 'extraction' || stage.pourType === 'beverage'
+    );
+
+    if (!isEspresso) return;
 
     // 创建新的方法对象
     const updatedMethod = {

@@ -17,7 +17,6 @@ import { openImageViewer } from '@/lib/ui/imageViewer';
 import {
   getBeanUnitPrice,
   normalizeBrewingNoteParams,
-  isEspressoNote,
   resolveNoteBean,
   resolveNoteBeanDisplayName,
   resolveNoteEquipmentName,
@@ -247,7 +246,16 @@ const NoteItem: React.FC<NoteItemProps> = ({
   const imageSlotCount = noteImages.length || storedImageCount;
   const equipmentName = resolveNoteEquipmentName(note, equipmentNames);
   const normalizedParams = normalizeBrewingNoteParams(note.params);
-  const footerGrindSize = isEspressoNote(note) ? normalizedParams?.grindSize : '';
+  const isEspresso = React.useMemo(
+    () =>
+      Boolean(
+        note.equipment &&
+        (note.equipment.toLowerCase().includes('espresso') ||
+          note.equipment.includes('意式'))
+      ),
+    [note.equipment]
+  );
+  const footerGrindSize = isEspresso ? normalizedParams?.grindSize : '';
 
   // 获取完整的咖啡豆信息（包括图片），优先使用实时关联的咖啡豆
   const beanInfo =
