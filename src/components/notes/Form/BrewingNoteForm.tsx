@@ -327,8 +327,8 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     onTimestampChange?.(newTimestamp);
   };
 
-  // 添加方案参数状态 - 分离数值和单位
-  const [methodParams, setMethodParams] = useState({
+  // 独立笔记编辑持有本地参数；冲煮入口直接读取本次冲煮快照。
+  const [localMethodParams, setMethodParams] = useState({
     ...EMPTY_METHOD_PARAMS,
     ...normalizeBrewingNoteParams(initialData?.params),
   });
@@ -357,9 +357,16 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
   );
 
   // 添加时间状态
-  const [totalTimeStr, setTotalTimeStr] = useState(() =>
+  const [localTotalTimeStr, setTotalTimeStr] = useState(() =>
     initialData.totalTime ? String(initialData.totalTime) : ''
   );
+
+  const methodParams = inBrewPage
+    ? { ...EMPTY_METHOD_PARAMS, ...initialData.params }
+    : localMethodParams;
+  const totalTimeStr = inBrewPage
+    ? String(initialData.totalTime ?? '')
+    : localTotalTimeStr;
 
   const applyMethodParams = useCallback(
     (params?: Partial<Method['params']>, totalTimeOverride?: string) => {
@@ -467,10 +474,10 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
 
   // 监听initialData.totalTime的变化
   useEffect(() => {
-    if (initialData.totalTime) {
+    if (!inBrewPage && initialData.totalTime) {
       setTotalTimeStr(String(initialData.totalTime));
     }
-  }, [initialData.totalTime]);
+  }, [inBrewPage, initialData.totalTime]);
 
   const formRef = useRef<HTMLFormElement>(null);
   const [generatedNoteId] = useState(() => initialData.id || nanoid());
@@ -629,106 +636,6 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     loadEquipmentsAndMethods();
   }, [initialData.equipment, settings]);
 
-  // 事件监听
-  useEffect(() => {
-    const handleMethodParamsChange = (e: CustomEvent) => {
-      if (e.detail?.params) {
-        applyMethodParams(e.detail.params);
-      }
-    };
-
-    // 🎯 处理笔记步骤中的参数修改（直接修改，不触发外部事件）
-    const handleUpdateNoteParams = (e: CustomEvent) => {
-      const { type, value } = e.detail;
-
-      // 根据参数类型计算相关值
-      const currentCoffeeNum = parseFloat(
-        extractNumericValue(methodParams.coffee)
-      );
-      const currentRatioNum = parseFloat(
-        extractNumericValue(methodParams.ratio.split(':')[1])
-      );
-
-      switch (type) {
-        case 'coffee': {
-          const coffeeValue = parseFloat(value);
-          if (isNaN(coffeeValue) || coffeeValue <= 0) return;
-
-          const calculatedWater = Math.round(coffeeValue * currentRatioNum);
-          setMethodParams(prev => ({
-            ...prev,
-            coffee: `${coffeeValue}g`,
-            water: `${calculatedWater}g`,
-          }));
-          break;
-        }
-        case 'ratio': {
-          const ratioValue = parseFloat(value);
-          if (isNaN(ratioValue) || ratioValue <= 0) return;
-
-          const calculatedWater = Math.round(currentCoffeeNum * ratioValue);
-          setMethodParams(prev => ({
-            ...prev,
-            ratio: `1:${ratioValue}`,
-            water: `${calculatedWater}g`,
-          }));
-          break;
-        }
-        case 'grindSize': {
-          setMethodParams(prev => ({
-            ...prev,
-            grindSize: value,
-          }));
-          break;
-        }
-        case 'temp': {
-          const formattedTemp = value.includes('°C') ? value : `${value}°C`;
-          setMethodParams(prev => ({
-            ...prev,
-            temp: formattedTemp,
-          }));
-          break;
-        }
-        case 'water': {
-          const waterValue = parseFloat(value);
-          if (isNaN(waterValue) || waterValue <= 0) return;
-
-          setMethodParams(prev => ({
-            ...prev,
-            water: `${waterValue}g`,
-          }));
-          break;
-        }
-        case 'time': {
-          const timeValue = parseFloat(value);
-          if (isNaN(timeValue) || timeValue < 0) return;
-          setTotalTimeStr(String(timeValue));
-          break;
-        }
-      }
-    };
-
-    document.addEventListener(
-      'methodParamsChanged',
-      handleMethodParamsChange as EventListener
-    );
-    window.addEventListener(
-      'brewing:updateNoteParams',
-      handleUpdateNoteParams as EventListener
-    );
-
-    return () => {
-      document.removeEventListener(
-        'methodParamsChanged',
-        handleMethodParamsChange as EventListener
-      );
-      window.removeEventListener(
-        'brewing:updateNoteParams',
-        handleUpdateNoteParams as EventListener
-      );
-    };
-  }, [applyMethodParams, methodParams]);
-
   // 更新方案参数的通用函数
   const updateMethodParams = useCallback(
     (params: Method['params']) => {
@@ -815,7 +722,10 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     }
 
     // 检查参数变化
-    if (JSON.stringify(prev.params) !== JSON.stringify(current.params)) {
+    if (
+      !inBrewPage &&
+      JSON.stringify(prev.params) !== JSON.stringify(current.params)
+    ) {
       applyMethodParams(
         current.params,
         current.totalTime ? String(current.totalTime) : ''
@@ -826,6 +736,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
   }, [
     applyMethodParams,
     canUseCoffeeBeanModule,
+    inBrewPage,
     initialData,
     selectedCoffeeBean?.id,
     flavorDimensions,

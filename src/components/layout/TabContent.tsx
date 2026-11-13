@@ -1,3 +1,4 @@
+import { getBrewingNoteParams } from '@/lib/brewing/parameters';
 import { useCoordinatedAction } from '@/lib/hooks/useCoordinatedAction';
 import { callStoreActionInMutation } from '@/lib/data/storeMutationBoundary';
 import React, { useCallback, useState, useEffect } from 'react';
@@ -114,7 +115,6 @@ interface TabContentProps {
   onHideMethod?: (method: Method) => Promise<void>; // 新增隐藏方案的回调
   setActiveMainTab?: (tab: MainTabType) => void;
   resetBrewingState?: (shouldReset: boolean) => void;
-  setIsNoteSaved?: (saved: boolean) => void;
   expandedStages?: {
     type: 'pour' | 'wait';
     label: string;
@@ -159,7 +159,6 @@ const TabContent: React.FC<TabContentProps> = ({
   onHideMethod,
   setActiveMainTab,
   resetBrewingState,
-  setIsNoteSaved,
   expandedStages,
   customEquipments,
   setShowEquipmentForm,
@@ -300,7 +299,6 @@ const TabContent: React.FC<TabContentProps> = ({
         );
 
         setNoteSaved(true);
-        setIsNoteSaved?.(true);
 
         // 清理状态
         localStorage.removeItem('brewingNoteInProgress');
@@ -354,39 +352,11 @@ const TabContent: React.FC<TabContentProps> = ({
     return undefined;
   }, [selectedEquipment, customEquipments]);
 
-  // 笔记表单的设备名称状态 - 移到组件顶层避免重新挂载问题
-  const [noteEquipmentName, setNoteEquipmentName] = useState('');
-
-  // 获取设备名称
-  const getEquipmentNameForNote = useCallback(
-    async (equipmentId: string): Promise<string> => {
-      const standardEquipment = equipmentList.find(e => e.id === equipmentId);
-      if (standardEquipment) return standardEquipment.name;
-
-      try {
-        // 使用动态导入，但只导入一次模块
-        const customEquipmentsModule =
-          await import('@/lib/stores/customEquipmentStore');
-        const customEquipments =
-          await customEquipmentsModule.loadCustomEquipments();
-        return (
-          getEquipmentName(equipmentId, equipmentList, customEquipments) ||
-          equipmentId
-        );
-      } catch (error) {
-        console.error('加载自定义设备失败:', error);
-        return equipmentId;
-      }
-    },
-    []
+  const noteEquipmentName = getEquipmentName(
+    selectedEquipment,
+    equipmentList,
+    customEquipments
   );
-
-  // 获取设备名称用于笔记表单
-  useEffect(() => {
-    if (selectedEquipment) {
-      getEquipmentNameForNote(selectedEquipment).then(setNoteEquipmentName);
-    }
-  }, [selectedEquipment, getEquipmentNameForNote]);
 
   // 检查当前是否为意式咖啡方案
   const isEspressoMethod =
@@ -795,7 +765,9 @@ const TabContent: React.FC<TabContentProps> = ({
           initialData={{
             equipment: noteEquipmentName || selectedEquipment || '',
             method: currentBrewingMethod?.name || '',
-            params: currentBrewingMethod?.params,
+            params: currentBrewingMethod
+              ? getBrewingNoteParams(currentBrewingMethod)
+              : undefined,
             totalTime: calculateTotalTime(),
             coffeeBean: canUseCoffeeBeanModule
               ? selectedCoffeeBeanData || undefined

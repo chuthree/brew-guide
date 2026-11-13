@@ -1,7 +1,6 @@
 import { useCallback } from 'react';
-import { Method, Stage, type CustomEquipment } from '@/lib/core/config';
-import { EditableParams } from './useBrewingParameters';
-import { getEquipmentNameById } from '@/lib/utils/equipmentUtils';
+import { Method, type CustomEquipment } from '@/lib/core/config';
+import { createBrewingMethod } from '@/lib/brewing/parameters';
 import { TabType, BrewingStep } from './useBrewingState';
 import { MethodStepConfig } from '@/lib/types/method';
 import {
@@ -11,41 +10,25 @@ import {
 import { showToast } from '@/components/common/feedback/LightToast';
 
 export interface UseMethodSelectorProps {
-  selectedEquipment: string | null;
   customMethods: Record<string, Method[]>;
   customEquipments: CustomEquipment[];
   setSelectedMethod: (method: Method | null) => void;
   setCurrentBrewingMethod: (method: Method | null) => void;
-  setEditableParams: (params: EditableParams | null) => void;
-  setParameterInfo: (info: {
-    equipment: string | null;
-    method: string | null;
-    params: Record<string, string | undefined> | null;
-  }) => void;
   setActiveTab: (tab: TabType) => void;
   setActiveBrewingStep: (step: BrewingStep) => void;
-  updateBrewingSteps: (stages: Stage[]) => void;
 }
 
 export function useMethodSelector({
-  selectedEquipment,
   customMethods,
   customEquipments,
   setSelectedMethod,
   setCurrentBrewingMethod,
-  setEditableParams,
-  setParameterInfo,
   setActiveTab,
   setActiveBrewingStep,
-  updateBrewingSteps,
 }: UseMethodSelectorProps) {
   // 简化方法选择处理
   const processSelectedMethod = useCallback(
-    async (
-      method: Method | null,
-      equipmentId = selectedEquipment,
-      equipmentCatalog = customEquipments
-    ) => {
+    (method: Method | null) => {
       if (!method) return false;
       if (!hasBrewingStages(method)) {
         showToast({
@@ -56,37 +39,8 @@ export function useMethodSelector({
       }
 
       // 设置选中的方案
-      setCurrentBrewingMethod(method);
+      setCurrentBrewingMethod(createBrewingMethod(method));
       setSelectedMethod(method);
-
-      // 设置可编辑参数
-      setEditableParams({
-        coffee: method.params.coffee || '',
-        water: method.params.water || '',
-        ratio: method.params.ratio || '',
-        grindSize: method.params.grindSize || '',
-        temp: method.params.temp || '',
-      });
-
-      // 更新注水步骤内容
-      updateBrewingSteps(method.params.stages);
-
-      // 更新参数栏信息
-      const equipmentName = equipmentId
-        ? getEquipmentNameById(equipmentId, equipmentCatalog)
-        : null;
-
-      setParameterInfo({
-        equipment: equipmentName,
-        method: method.name,
-        params: {
-          coffee: method.params.coffee,
-          water: method.params.water,
-          ratio: method.params.ratio,
-          grindSize: method.params.grindSize,
-          temp: method.params.temp,
-        },
-      });
 
       // 简单的步骤切换：选择方案后进入注水步骤
       setActiveTab('注水');
@@ -95,13 +49,8 @@ export function useMethodSelector({
       return true;
     },
     [
-      selectedEquipment,
-      customEquipments,
       setSelectedMethod,
       setCurrentBrewingMethod,
-      setEditableParams,
-      setParameterInfo,
-      updateBrewingSteps,
       setActiveTab,
       setActiveBrewingStep,
     ]
@@ -148,7 +97,7 @@ export function useMethodSelector({
           };
         }
 
-        await processSelectedMethod(method, selectedEquipment);
+        if (!processSelectedMethod(method)) return null;
       }
 
       return method;
@@ -157,7 +106,6 @@ export function useMethodSelector({
   );
 
   return {
-    processSelectedMethod,
     handleMethodSelect,
   };
 }

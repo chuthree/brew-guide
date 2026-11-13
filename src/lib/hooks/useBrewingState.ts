@@ -1,11 +1,6 @@
-import {
-  callStoreActionInMutation,
-  coordinateStoreActions,
-} from '@/lib/data/storeMutationBoundary';
-import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import { Method, equipmentList, CustomEquipment } from '@/lib/core/config';
-import { BrewingNoteData, CoffeeBean } from '@/types/app';
-import type { BrewingNoteSaveOptions } from '@/lib/notes/inventory';
+import { useState, useCallback, useEffect, useRef } from 'react';
+import { Method, CustomEquipment } from '@/lib/core/config';
+import { CoffeeBean } from '@/types/app';
 import {
   loadCustomMethods,
   saveCustomMethod as apiSaveCustomMethod,
@@ -13,8 +8,7 @@ import {
   useCustomMethodStore,
 } from '@/lib/stores/customMethodStore';
 import { loadCustomEquipments } from '@/lib/stores/customEquipmentStore';
-import { NavigationOptions, STEP_RULES } from '../brewing/constants';
-import { updateParameterInfo } from '../brewing/parameters';
+import { NavigationOptions, BREWING_STEP_TABS } from '../brewing/constants';
 import { getStringState, saveStringState } from '@/lib/core/statePersistence';
 import {
   getMainTabPreference,
@@ -23,7 +17,6 @@ import {
 import { getEquipmentIdByName } from '@/lib/utils/equipmentUtils';
 import { MethodType } from '@/lib/types/method';
 import { useEquipmentStore } from '@/lib/stores/equipmentStore';
-import { modalHistory } from '@/lib/hooks/useModalHistory';
 
 // 器具选择缓存
 const MODULE_NAME = 'brewing-equipment';
@@ -150,7 +143,6 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
   const [currentStage, setCurrentStage] = useState(-1);
   const [showHistory, setShowHistory] = useState(false);
   const [showComplete, setShowComplete] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
 
   const [methodType, setMethodType] = useState<MethodType>('common');
 
@@ -166,8 +158,6 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
   );
   // 添加导入方案表单状态
   const [showImportForm, setShowImportForm] = useState(false);
-  // 添加笔记保存状态追踪
-  const [isNoteSaved, setIsNoteSaved] = useState(false);
 
   // 在PourOverRecipes组件的开头添加前一个标签的引用
   const prevMainTabRef = useRef<MainTabType | null>(null);
@@ -225,37 +215,16 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
 
       // 设置步骤和标签
       setActiveBrewingStep(step);
-      setActiveTab(STEP_RULES.tabMapping[step]);
+      setActiveTab(BREWING_STEP_TABS[step]);
 
       // 如果跳转到记录步骤，清理替代头部状态
       if (step === 'notes') {
         window.dispatchEvent(new CustomEvent('clearAlternativeHeader'));
       }
 
-      // 更新参数栏 - 在记录步骤中使用currentBrewingMethod
-      const methodForUpdate =
-        step === 'notes' && currentBrewingMethod
-          ? currentBrewingMethod
-          : selectedMethod;
-      updateParameterInfo(
-        step,
-        selectedEquipment,
-        methodForUpdate,
-        equipmentList,
-        customEquipments
-      );
-
       return true;
     },
-    [
-      activeMainTab,
-      isTimerRunning,
-      showComplete,
-      selectedMethod,
-      selectedEquipment,
-      currentBrewingMethod,
-      customEquipments,
-    ]
+    [activeMainTab, isTimerRunning, showComplete, selectedMethod]
   );
 
   // 简化的重置函数
@@ -306,15 +275,6 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
       setActiveTab('方案');
       setActiveBrewingStep('method');
 
-      // 显式更新参数栏为 method 状态（清空参数）
-      updateParameterInfo(
-        'method',
-        equipment,
-        null,
-        equipmentList,
-        customEquipments
-      );
-
       return equipmentName;
     },
     [activeMainTab, showComplete, resetBrewingState, customEquipments]
@@ -355,68 +315,6 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
       if (retryTimer) clearTimeout(retryTimer);
     };
   }, []);
-
-  // 简化的保存笔记函数 - 统一数据流避免竞态条件
-  const handleSaveNoteRaw = useCallback(
-    async (data: BrewingNoteData, options?: BrewingNoteSaveOptions) => {
-      try {
-        const stages = selectedMethod?.params.stages || [];
-        const newNote: any = {
-          ...data,
-          equipment: data.equipment || '',
-          method: data.method || '',
-          params: data.params || {
-            coffee: '',
-            water: '',
-            ratio: '',
-            grindSize: '',
-            temp: '',
-          },
-          stages,
-          beanId: data.beanId ?? selectedCoffeeBean ?? undefined,
-        };
-
-        {
-          // 🔥 使用 Zustand store 保存笔记
-          const { useBrewingNoteStore } =
-            await import('@/lib/stores/brewingNoteStore');
-          await callStoreActionInMutation(
-            useBrewingNoteStore.getState().saveNoteWithInventory,
-            newNote,
-            {
-              ...options,
-              initializeBeanId:
-                options?.initializeBeanId ??
-                (selectedCoffeeBeanCreatedFromSearch
-                  ? (selectedCoffeeBean ?? undefined)
-                  : undefined),
-            }
-          );
-        }
-
-        // 跳转到笔记页面前，清空历史栈并清理浏览器历史
-        modalHistory.clearAndNavigate();
-
-        setActiveMainTab('笔记');
-        setShowHistory(true);
-        resetBrewingState();
-      } catch (_error) {
-        throw _error;
-      }
-    },
-    [
-      selectedMethod,
-      selectedCoffeeBean,
-      selectedCoffeeBeanCreatedFromSearch,
-      currentBrewingMethod,
-      resetBrewingState,
-    ]
-  );
-
-  const handleSaveNote = useMemo(
-    () => coordinateStoreActions({ save: handleSaveNoteRaw }, ['save']).save,
-    [handleSaveNoteRaw]
-  );
 
   // 简化的自定义方案保存
   const handleSaveCustomMethod = useCallback(
@@ -594,8 +492,6 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
     setCurrentStage,
     showComplete,
     setShowComplete,
-    currentTime,
-    setCurrentTime,
     countdownTime,
     setCountdownTime,
 
@@ -610,8 +506,6 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
     setEditingMethod,
     showImportForm,
     setShowImportForm,
-    isNoteSaved,
-    setIsNoteSaved,
 
     // 数据
     customMethods,
@@ -625,7 +519,6 @@ export function useBrewingState(initialBrewingStep?: BrewingStep) {
     resetBrewingState,
     handleEquipmentSelect,
     handleCoffeeBeanSelect,
-    handleSaveNote,
     handleSaveCustomMethod,
     handleEditCustomMethod,
     handleDeleteCustomMethod,

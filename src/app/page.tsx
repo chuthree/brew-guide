@@ -35,10 +35,8 @@ import {
   BrewingStep,
   Step,
 } from '@/lib/hooks/useBrewingState';
-import { useBrewingParameters } from '@/lib/hooks/useBrewingParameters';
 import { useBrewingContent } from '@/lib/hooks/useBrewingContent';
 import { useMethodSelector } from '@/lib/hooks/useMethodSelector';
-import { EditableParams } from '@/lib/hooks/useBrewingParameters';
 import { MethodType } from '@/lib/types/method';
 import CustomMethodFormModal from '@/components/method/forms/CustomMethodFormModal';
 import NavigationBar from '@/components/layout/NavigationBar';
@@ -99,7 +97,11 @@ import hapticsUtils from '@/lib/ui/haptics';
 import { BREWING_EVENTS } from '@/lib/brewing/constants';
 import type { BrewingNoteData } from '@/types/app';
 import type { BrewingNoteSaveOptions } from '@/lib/notes/inventory';
-import { updateParameterInfo } from '@/lib/brewing/parameters';
+import {
+  updateBrewingParameter,
+  getBrewingNoteParams,
+  type BrewingParameter,
+} from '@/lib/brewing/parameters';
 import BrewingNoteFormModal from '@/components/notes/Form/BrewingNoteFormModal';
 import CoffeeBeans from '@/components/coffee-bean/List';
 import { useCoffeeBeanStore } from '@/lib/stores/coffeeBeanStore';
@@ -119,10 +121,7 @@ import {
   BackupReminderType,
 } from '@/lib/utils/backupReminderUtils';
 import type { BeanReadyReminderItem } from '@/lib/utils/beanReadyReminderUtils';
-import {
-  getEquipmentNameById,
-  getEquipmentById,
-} from '@/lib/utils/equipmentUtils';
+import { getEquipmentById } from '@/lib/utils/equipmentUtils';
 import {
   IOS_TRANSITION_CONFIG,
   pageStackManager,
@@ -990,15 +989,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     [executeHideMethod]
   );
 
-  const parameterHooks = useBrewingParameters();
-  const {
-    parameterInfo,
-    setParameterInfo,
-    editableParams,
-    setEditableParams,
-    handleParamChange,
-  } = parameterHooks;
-
   const customEquipments = useCustomEquipmentStore(state => state.equipments);
   const loadEquipments = useCustomEquipmentStore(state => state.loadEquipments);
   const refreshEquipments = useCustomEquipmentStore(
@@ -1170,24 +1160,20 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     selectedEquipment,
     methodType,
     customMethods,
-    selectedMethod,
+    currentBrewingMethod,
     settings,
     customEquipments,
   });
 
-  const { content, updateBrewingSteps } = contentHooks;
+  const { content } = contentHooks;
 
   const methodSelector = useMethodSelector({
-    selectedEquipment,
     customMethods,
     customEquipments,
     setSelectedMethod,
     setCurrentBrewingMethod,
-    setEditableParams,
-    setParameterInfo,
     setActiveTab,
     setActiveBrewingStep,
-    updateBrewingSteps,
   });
 
   const { handleMethodSelect } = methodSelector;
@@ -1793,83 +1779,12 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
       document.removeEventListener('keydown', handleViewDropdownKeyDown);
   }, [showViewDropdown]);
 
-  const handleParamChangeWrapper = async (
-    type: keyof EditableParams,
-    value: string
-  ) => {
-    // 🎯 如果在笔记步骤，直接通过事件通知 BrewingNoteForm 更新参数
-    // 不触发全局的参数更新流程，避免 brewing:paramsUpdated 事件导致数据覆盖
-    if (activeBrewingStep === 'notes') {
-      const event = new CustomEvent('brewing:updateNoteParams', {
-        detail: {
-          type,
-          value,
-        },
-      });
-      window.dispatchEvent(event);
-
-      // 🎯 同时触发导航栏显示更新事件，更新UI显示
-      const displayEvent = new CustomEvent('brewing:updateNavbarDisplay', {
-        detail: {
-          type,
-          value,
-        },
-      });
-      window.dispatchEvent(displayEvent);
-      return;
-    }
-
-    // 其他步骤正常处理参数更新
-    await handleParamChange(
-      type,
-      value,
-      selectedMethod,
-      currentBrewingMethod,
-      updateBrewingSteps,
-      setCurrentBrewingMethod,
-      selectedCoffeeBean
+  const handleParamChange = (type: BrewingParameter, value: string) => {
+    setCurrentBrewingMethod(current =>
+      current && selectedMethod
+        ? updateBrewingParameter(current, type, value, selectedMethod)
+        : current
     );
-  };
-
-  const handleExtractionTimeChange = (time: number) => {
-    // 优先使用 currentBrewingMethod，因为它包含了用户已修改的其他参数（如粉量、液重）
-    // 如果只使用 selectedMethod，会丢失这些修改，导致参数重置
-    const baseMethod =
-      activeBrewingStep === 'brewing' && currentBrewingMethod
-        ? currentBrewingMethod
-        : selectedMethod;
-
-    if (!baseMethod || !baseMethod.params.stages) return;
-
-    // 只处理意式咖啡，查找萃取步骤
-    const isEspresso = baseMethod.params.stages.some(
-      stage => stage.pourType === 'extraction' || stage.pourType === 'beverage'
-    );
-
-    if (!isEspresso) return;
-
-    // 创建新的方法对象
-    const updatedMethod = {
-      ...baseMethod,
-      params: {
-        ...baseMethod.params,
-        stages: baseMethod.params.stages.map(stage => {
-          // 只更新萃取类型的步骤时间（使用 duration 字段）
-          if (stage.pourType === 'extraction') {
-            return { ...stage, duration: time };
-          }
-          return stage;
-        }),
-      },
-    };
-
-    // 更新方法
-    setSelectedMethod(updatedMethod);
-
-    // 如果在冲煮步骤，同步更新当前冲煮方法
-    if (activeBrewingStep === 'brewing') {
-      setCurrentBrewingMethod(updatedMethod);
-    }
   };
 
   // 简化的主标签切换处理
@@ -2029,7 +1944,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
             equipment: selectedEquipment || '',
             method: currentBrewingMethod.name,
             params: normalizeBrewingNoteParams({
-              ...currentBrewingMethod.params,
+              ...getBrewingNoteParams(currentBrewingMethod),
               coffee: CapacitySyncManager.formatCoffeeParam(coffeeAmount),
             }),
             totalTime: currentBrewingMethod.params.stages?.reduce(
@@ -2136,41 +2051,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     const handleMethodToBrewing = () => {
       setShowComplete(false);
       setIsCoffeeBrewed(false);
-
-      if (selectedEquipment && (currentBrewingMethod || selectedMethod)) {
-        const method = currentBrewingMethod || selectedMethod;
-        updateParameterInfo(
-          'brewing',
-          selectedEquipment,
-          method,
-          equipmentList,
-          customEquipments
-        );
-      }
-    };
-
-    const handleGetParams = () => {
-      if (currentBrewingMethod && currentBrewingMethod.params) {
-        const paramsUpdatedEvent = new CustomEvent('brewing:paramsUpdated', {
-          detail: {
-            params: {
-              coffee: currentBrewingMethod.params.coffee,
-              water: currentBrewingMethod.params.water,
-              ratio: currentBrewingMethod.params.ratio,
-              grindSize: currentBrewingMethod.params.grindSize,
-              temp: currentBrewingMethod.params.temp,
-            },
-            coffeeBean: selectedCoffeeBeanData
-              ? {
-                  name: selectedCoffeeBeanData.name || '',
-                  roastLevel: selectedCoffeeBeanData.roastLevel || '中度烘焙',
-                  roastDate: selectedCoffeeBeanData.roastDate || '',
-                }
-              : null,
-          },
-        });
-        window.dispatchEvent(paramsUpdatedEvent);
-      }
     };
 
     const handleTimerStatusChange = (e: CustomEvent) => {
@@ -2214,7 +2094,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
       handleResetAutoNavigation
     );
     window.addEventListener('brewing:methodToBrewing', handleMethodToBrewing);
-    window.addEventListener('brewing:getParams', handleGetParams);
     window.addEventListener(
       'brewing:timerStatus',
       handleTimerStatusChange as EventListener
@@ -2243,7 +2122,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         'brewing:methodToBrewing',
         handleMethodToBrewing
       );
-      window.removeEventListener('brewing:getParams', handleGetParams);
       window.removeEventListener(
         'brewing:timerStatus',
         handleTimerStatusChange as EventListener
@@ -2786,11 +2664,11 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
           resetBrewingState(false);
 
           // 使用统一导航函数确保切换到方案步骤
-          navigateToStep('method', { resetParams: true });
+          navigateToStep('method');
 
           // 延迟再次确认步骤，确保UI更新正确
           setTimeout(() => {
-            navigateToStep('method', { resetParams: true });
+            navigateToStep('method');
           }, 100);
         }
       }
@@ -2947,17 +2825,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
       // 使用统一工具函数获取器具信息
       const equipment = getEquipmentById(equipmentIdOrName, customEquipments);
       const equipmentId = equipment?.id || equipmentIdOrName;
-      const equipmentName = getEquipmentNameById(
-        equipmentIdOrName,
-        customEquipments
-      );
-
-      setParameterInfo({
-        equipment: equipmentName,
-        method: null,
-        params: null,
-      });
-
       const isCustomPresetEquipment =
         equipment &&
         'animationType' in equipment &&
@@ -2972,7 +2839,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
 
       // 设备选择完成
     },
-    [handleEquipmentSelect, setParameterInfo, customEquipments, setMethodType]
+    [handleEquipmentSelect, customEquipments, setMethodType]
   );
 
   useEffect(() => {
@@ -3147,34 +3014,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
 
       const methodIndex = allMethods.findIndex(m => m.name === methodName);
       if (methodIndex !== -1) {
-        const method = allMethods[methodIndex];
-        setParameterInfo(prevInfo => ({
-          ...prevInfo,
-          method: method.name,
-          params: {
-            coffee: method.params.coffee,
-            water: method.params.water,
-            ratio: method.params.ratio,
-            grindSize: method.params.grindSize,
-            temp: method.params.temp,
-            stages: method.params.stages.map(stage => ({
-              label: stage.label,
-              duration: stage.duration,
-              water: stage.water,
-              detail: stage.detail,
-              pourType: stage.pourType,
-            })),
-          },
-        }));
         handleMethodSelectWrapper(methodIndex);
-      }
-    };
-
-    // 参数更新
-    const handleParamsUpdate = (e: CustomEvent) => {
-      const { params } = e.detail;
-      if (params) {
-        setParameterInfo(prevInfo => ({ ...prevInfo, params }));
       }
     };
 
@@ -3206,10 +3046,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
       BREWING_EVENTS.SELECT_METHOD,
       handleMethodSelection as EventListener
     );
-    document.addEventListener(
-      BREWING_EVENTS.UPDATE_BREWING_PARAMS,
-      handleParamsUpdate as EventListener
-    );
     window.addEventListener(
       'methodTypeChange',
       handleMethodTypeEvent as EventListener
@@ -3236,10 +3072,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         BREWING_EVENTS.SELECT_METHOD,
         handleMethodSelection as EventListener
       );
-      document.removeEventListener(
-        BREWING_EVENTS.UPDATE_BREWING_PARAMS,
-        handleParamsUpdate as EventListener
-      );
       window.removeEventListener(
         'methodTypeChange',
         handleMethodTypeEvent as EventListener
@@ -3256,7 +3088,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     handleMethodSelectWrapper,
     setActiveMainTab,
     handleMethodTypeChange,
-    setParameterInfo,
   ]);
 
   // 冲煮页面历史栈管理 - 使用统一的多步骤历史栈系统
@@ -3910,36 +3741,11 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         activeMainTab={activeMainTab}
         setActiveMainTab={handleMainTabClick}
         activeBrewingStep={activeBrewingStep}
-        parameterInfo={parameterInfo}
-        setParameterInfo={setParameterInfo}
-        editableParams={editableParams}
-        setEditableParams={setEditableParams}
         isTimerRunning={isTimerRunning}
         showComplete={showComplete}
         selectedEquipment={selectedEquipment}
-        selectedMethod={
-          currentBrewingMethod
-            ? {
-                name: currentBrewingMethod.name,
-                params: {
-                  coffee: currentBrewingMethod.params.coffee,
-                  water: currentBrewingMethod.params.water,
-                  ratio: currentBrewingMethod.params.ratio,
-                  grindSize: currentBrewingMethod.params.grindSize,
-                  temp: currentBrewingMethod.params.temp,
-                  stages: currentBrewingMethod.params.stages.map(stage => ({
-                    label: stage.label,
-                    duration: stage.duration,
-                    water: stage.water,
-                    detail: stage.detail,
-                    pourType: stage.pourType,
-                  })),
-                },
-              }
-            : null
-        }
-        handleParamChange={handleParamChangeWrapper}
-        handleExtractionTimeChange={handleExtractionTimeChange}
+        selectedMethod={currentBrewingMethod}
+        handleParamChange={handleParamChange}
         setShowHistory={setShowHistory}
         onTitleDoubleClick={() => setIsSettingsOpen(true)}
         settings={settings}
@@ -4254,7 +4060,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                       expandedStagesRef.current = stages;
                     }}
                     settings={settings}
-                    selectedEquipment={selectedEquipment}
                     isCoffeeBrewed={isCoffeeBrewed}
                     layoutSettings={settings.layoutSettings}
                   />
