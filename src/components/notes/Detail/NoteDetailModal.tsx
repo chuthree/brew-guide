@@ -16,6 +16,7 @@ import {
   getNoteDeleteDisplay,
 } from '@/components/notes/utils';
 import ActionMenu from '@/components/coffee-bean/ui/action-menu';
+import { copyBrewingNote } from '../Form/copyBrewingNote';
 import { useFlavorDimensions } from '@/lib/hooks/useFlavorDimensions';
 import {
   getChildPageStyle,
@@ -764,10 +765,8 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
     if (onDelete) {
       items.push({
         id: 'delete',
-        label: note?.source === 'roasting' ? '撤销烘焙' : '删除',
-        onClick: () => {
-          setShowDeleteConfirm(true);
-        },
+        label: note.source === 'roasting' ? '撤销烘焙' : '删除',
+        onClick: () => setShowDeleteConfirm(true),
         color: 'danger' as const,
       });
     }
@@ -784,20 +783,24 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
       });
     }
 
+    items.push({
+      id: 'copy',
+      label: '复制',
+      onClick: () => void copyBrewingNote(note.id),
+      color: 'default' as const,
+    });
+
     if (onEdit) {
       items.push({
         id: 'edit',
         label: '编辑',
-        onClick: () => {
-          onEdit(note);
-          // 不关闭详情页，让编辑表单叠加在上面
-        },
+        onClick: handleEditClick,
         color: 'default' as const,
       });
     }
 
     return items;
-  }, [note, onDelete, onShare, onEdit, onClose]);
+  }, [note, onDelete, onShare, onEdit, onClose, handleEditClick]);
 
   // 只在需要时渲染DOM
   if (!isLargeScreen && !shouldRender) return null;

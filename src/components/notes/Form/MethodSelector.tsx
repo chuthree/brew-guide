@@ -175,13 +175,6 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
   );
   const selectedMethodElementRef = useRef<HTMLDivElement | null>(null);
 
-  // Store 方法 - 使用 stable selector
-  const setMethodParamOverride = useSettingsStore(
-    state => state.setMethodParamOverride
-  );
-  const clearMethodParamOverride = useSettingsStore(
-    state => state.clearMethodParamOverride
-  );
   // 直接获取 methodParamOverrides 对象
   const methodParamOverrides = useSettingsStore(
     state => state.settings.methodParamOverrides
@@ -192,16 +185,6 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
       customMethods.find(m => m.id === methodId || m.name === methodId) ??
       commonMethods.find(m => m.id === methodId || m.name === methodId),
     [customMethods, commonMethods]
-  );
-
-  // 检查是否有覆盖参数
-  const hasOverride = useCallback(
-    (methodId: string): boolean => {
-      if (!selectedEquipment || !methodId) return false;
-      const key = `${selectedEquipment}:${methodId}`;
-      return methodParamOverrides?.[key] != null;
-    },
-    [selectedEquipment, methodParamOverrides]
   );
 
   // 获取覆盖参数
@@ -427,14 +410,12 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
 
   // 还原方案参数
   const handleResetParams = useCallback(
-    async (method: Method) => {
-      const methodId = method.id || method.name;
-      await clearMethodParamOverride(selectedEquipment, methodId);
+    (method: Method) => {
       setEditingValues(extractEditingValues(method, isEspresso));
       setEffectiveParams(method.params);
       onParamsChange(method);
     },
-    [selectedEquipment, clearMethodParamOverride, isEspresso, onParamsChange]
+    [isEspresso, onParamsChange]
   );
 
   // 参数更新 - 简单直接，不做过多干涉
@@ -461,20 +442,6 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
       };
       setEffectiveParams(updatedMethod.params);
 
-      // 保存覆盖参数
-      const methodId = method.id || method.name;
-      setMethodParamOverride(selectedEquipment, methodId, {
-        coffee: updatedMethod.params.coffee,
-        water: updatedMethod.params.water,
-        ratio: updatedMethod.params.ratio,
-        grindSize: updatedMethod.params.grindSize,
-        temp: updatedMethod.params.temp,
-        extractionTime:
-          isEspresso && updatedMethod.params.extractionTime !== undefined
-            ? updatedMethod.params.extractionTime
-            : undefined,
-      });
-
       onParamsChange(updatedMethod);
     },
     [
@@ -483,8 +450,6 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
       editingValues,
       effectiveParams,
       isEspresso,
-      selectedEquipment,
-      setMethodParamOverride,
       onParamsChange,
     ]
   );
@@ -593,18 +558,20 @@ const MethodSelector: React.FC<MethodSelectorProps> = ({
               <h3 className="truncate text-xs font-medium tracking-wider text-neutral-800 dark:text-neutral-100">
                 {method.name}
               </h3>
-              {isSelected && hasOverride(methodId) && (
-                <button
-                  type="button"
-                  onClick={e => {
-                    e.stopPropagation();
-                    handleResetParams(method);
-                  }}
-                  className="text-xs font-medium text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200"
-                >
-                  [还原]
-                </button>
-              )}
+              {isSelected &&
+                JSON.stringify(effectiveParams) !==
+                  JSON.stringify(method.params) && (
+                  <button
+                    type="button"
+                    onClick={e => {
+                      e.stopPropagation();
+                      handleResetParams(method);
+                    }}
+                    className="text-xs font-medium text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200"
+                  >
+                    [还原]
+                  </button>
+                )}
             </div>
           </div>
 

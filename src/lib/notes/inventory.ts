@@ -10,6 +10,7 @@ import type { AppSettings } from '@/lib/data/models';
 import type { PendingOperation } from '@/lib/supabase/realtime/types';
 
 export interface BrewingNoteSaveOptions {
+  /** Omit for creation/retry with the same ID; editing requires the loaded version. */
   expectedUpdatedAt?: number;
   newBean?: CoffeeBean;
   initializeBeanId?: string;
@@ -138,8 +139,14 @@ export async function prepareBrewingNoteInventory(
     const available =
       (parseCoffeeBeanAmount(bean.remaining) ?? 0) -
       (previous?.beanId === bean.id ? stockEffect(previous) : 0);
-    const amount = Math.min(-stockEffect(note), available);
-    if (amount <= 0) throw new Error('当前咖啡豆剩余量不足，无法扣除');
+    const requestedAmount = -stockEffect(note);
+    if (requestedAmount <= 0) throw new Error('用量须大于 0g');
+    const amount = Math.min(requestedAmount, available);
+    if (amount <= 0) {
+      throw new Error(
+        `咖啡豆不足，可用 ${formatInventoryAmount(Math.max(0, available))}g`
+      );
+    }
     note = {
       ...note,
       quickDecrementAmount: amount,
@@ -163,7 +170,16 @@ export async function prepareBrewingNoteInventory(
     if (remaining === null && bean.remaining?.trim()) {
       throw new Error('咖啡豆剩余量无效，请先修正库存');
     }
-    let amount = Math.max(0, (remaining ?? 0) + delta);
+    const nextRemaining = (remaining ?? 0) + delta;
+    if (nextRemaining < -0.000001) {
+      const available =
+        (remaining ?? 0) -
+        (previous?.beanId === id ? stockEffect(previous) : 0);
+      throw new Error(
+        `咖啡豆不足，可用 ${formatInventoryAmount(Math.max(0, available))}g`
+      );
+    }
+    let amount = Math.max(0, nextRemaining);
     const capacity = parseCoffeeBeanAmount(bean.capacity);
     if (delta > 0 && capacity !== null && capacity > 0) {
       amount = Math.min(amount, capacity);
@@ -173,6 +189,26 @@ export async function prepareBrewingNoteInventory(
       remaining: formatInventoryAmount(amount),
       timestamp: Math.max(now, bean.timestamp + 1),
     });
+  }
+  if (!previous && note?.source === 'capacity-adjustment' && note.beanId) {
+    const adjustment = note.changeRecord?.capacityAdjustment;
+    const bean = beans.get(note.beanId);
+    if (adjustment && bean) {
+      note = {
+        ...note,
+        changeRecord: {
+          ...note.changeRecord,
+          capacityAdjustment: {
+            ...adjustment,
+            originalAmount: parseCoffeeBeanAmount(bean.remaining) ?? 0,
+            newAmount:
+              parseCoffeeBeanAmount(
+                changedBeans.get(bean.id)?.remaining ?? bean.remaining
+              ) ?? 0,
+          },
+        },
+      };
+    }
   }
   return {
     note,

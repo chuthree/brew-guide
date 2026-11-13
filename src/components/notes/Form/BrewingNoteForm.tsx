@@ -2,6 +2,7 @@
 import { withDataMutation } from '@/lib/data/mutationCoordinator';
 import { callStoreActionInMutation } from '@/lib/data/storeMutationBoundary';
 import { nanoid } from 'nanoid';
+import { showToast } from '@/components/common/feedback/LightToast';
 import type { BrewingNoteSaveOptions } from '@/lib/notes/inventory';
 
 import React, {
@@ -121,6 +122,8 @@ const BREWING_NOTE_FORM_INTENTS = {
 interface BrewingNoteFormProps {
   /** Existing record identity, never a DOM-only form identifier. */
   id?: string;
+  formId?: string;
+  showEquipmentMethodSelector?: boolean;
   onClose: () => void;
   onSave: (
     data: BrewingNoteData,
@@ -130,7 +133,8 @@ interface BrewingNoteFormProps {
     coffeeBean?: SelectableCoffeeBean | null;
   };
   initialCoffeeBeanCreatedFromSearch?: boolean;
-  inBrewPage?: boolean;
+  /** Parameters owned by the brewing session or the parent draft. */
+  methodSnapshot?: Pick<BrewingNoteData, 'params' | 'totalTime' | 'stages'>;
   showSaveButton?: boolean;
   onSaveSuccess?: () => void;
   hideHeader?: boolean;
@@ -194,11 +198,13 @@ const validateNumericInput = (value: string): boolean => {
 
 const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
   id,
+  formId = id,
+  showEquipmentMethodSelector = !!id,
   onClose: _onClose,
   onSave,
   initialData,
   initialCoffeeBeanCreatedFromSearch = false,
-  inBrewPage = false,
+  methodSnapshot,
   showSaveButton = true,
   onSaveSuccess,
   onTimestampChange,
@@ -331,6 +337,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
   const [localMethodParams, setMethodParams] = useState({
     ...EMPTY_METHOD_PARAMS,
     ...normalizeBrewingNoteParams(initialData?.params),
+    stages: initialData.stages,
   });
 
   // 添加器具和方案选择相关状态
@@ -339,7 +346,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
   >([]);
   const [availableMethods, setAvailableMethods] = useState<Method[]>([]);
   const [selectedEquipment, setSelectedEquipment] = useState(
-    initialData.equipment || ''
+    initialData.equipmentId || initialData.equipment || ''
   );
   const [equipmentPickerEquipmentId, setEquipmentPickerEquipmentId] = useState(
     initialData.equipment || ''
@@ -348,7 +355,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     state => state.setSelectedEquipment
   );
   const [selectedMethod, setSelectedMethod] = useState(
-    initialData.method || ''
+    initialData.methodId || initialData.method || ''
   );
 
   const [selectionChanged, setSelectionChanged] = useState(false);
@@ -361,11 +368,15 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     initialData.totalTime ? String(initialData.totalTime) : ''
   );
 
-  const methodParams = inBrewPage
-    ? { ...EMPTY_METHOD_PARAMS, ...initialData.params }
+  const methodParams = methodSnapshot
+    ? {
+        ...EMPTY_METHOD_PARAMS,
+        ...methodSnapshot.params,
+        stages: methodSnapshot.stages,
+      }
     : localMethodParams;
-  const totalTimeStr = inBrewPage
-    ? String(initialData.totalTime ?? '')
+  const totalTimeStr = methodSnapshot
+    ? String(methodSnapshot.totalTime ?? '')
     : localTotalTimeStr;
 
   const applyMethodParams = useCallback(
@@ -373,6 +384,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
       const normalizedParams = {
         ...EMPTY_METHOD_PARAMS,
         ...normalizeBrewingNoteParams(params),
+        stages: params?.stages,
       };
 
       setMethodParams(normalizedParams);
@@ -472,16 +484,8 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     );
   }, [id, initialData.changeRecord?.roastingRecord]);
 
-  // 监听initialData.totalTime的变化
-  useEffect(() => {
-    if (!inBrewPage && initialData.totalTime) {
-      setTotalTimeStr(String(initialData.totalTime));
-    }
-  }, [inBrewPage, initialData.totalTime]);
-
   const formRef = useRef<HTMLFormElement>(null);
   const [generatedNoteId] = useState(() => initialData.id || nanoid());
-  const generatedNoteIdRef = useRef(generatedNoteId);
   const initialNoteVersionRef = useRef({
     id,
     updatedAt: initialData.updatedAt ?? initialData.timestamp,
@@ -496,12 +500,6 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
       };
     }
   }, [id, initialData.updatedAt, initialData.timestamp]);
-
-  useEffect(() => {
-    if (initialData.id) {
-      generatedNoteIdRef.current = initialData.id;
-    }
-  }, [initialData.id]);
 
   // 创建显示维度（包含历史维度）
   const displayDimensions = useMemo(() => {
@@ -636,14 +634,6 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     loadEquipmentsAndMethods();
   }, [initialData.equipment, settings]);
 
-  // 更新方案参数的通用函数
-  const updateMethodParams = useCallback(
-    (params: Method['params']) => {
-      applyMethodParams(params);
-    },
-    [applyMethodParams]
-  );
-
   // 简化的数据更新逻辑
   const prevInitialDataRef = useRef<typeof initialData>(initialData);
 
@@ -721,22 +711,9 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
       }));
     }
 
-    // 检查参数变化
-    if (
-      !inBrewPage &&
-      JSON.stringify(prev.params) !== JSON.stringify(current.params)
-    ) {
-      applyMethodParams(
-        current.params,
-        current.totalTime ? String(current.totalTime) : ''
-      );
-    }
-
     prevInitialDataRef.current = current;
   }, [
-    applyMethodParams,
     canUseCoffeeBeanModule,
-    inBrewPage,
     initialData,
     selectedCoffeeBean?.id,
     flavorDimensions,
@@ -747,7 +724,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
   const isAdding = !id;
 
   const shouldShowQuickDecrementButton =
-    canUseCoffeeBeanModule && inBrewPage && isAdding && !!selectedCoffeeBean;
+    canUseCoffeeBeanModule && isAdding && !!selectedCoffeeBean;
 
   // 判断是否是快捷扣除记录编辑模式
   const isQuickDecrementEdit =
@@ -764,13 +741,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
       : undefined;
   const isChangeRecordEdit = isQuickDecrementEdit || isCapacityAdjustmentEdit;
 
-  // 跟踪当前是否处于快捷记录模式（用于切换按钮）
-  // 优先使用外部传入的状态，否则使用内部状态
-  const [internalIsQuickMode] = useState(isChangeRecordEdit);
-  const isQuickMode =
-    externalIsQuickMode !== undefined
-      ? externalIsQuickMode
-      : internalIsQuickMode;
+  const isQuickMode = externalIsQuickMode ?? isChangeRecordEdit;
   const isPlainNoteQuickRecordMode =
     !isAdding && !initialData.source && isQuickMode;
   const isQuickRecordMode =
@@ -852,10 +823,10 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
 
         // 更新方案
         if (selection.methodId) {
-          setSelectedMethod(selection.methodName || selection.methodId);
+          setSelectedMethod(selection.methodId);
           // 如果有方案参数，更新参数
           if (selection.method?.params) {
-            updateMethodParams(selection.method.params);
+            applyMethodParams(selection.method.params);
           }
         } else {
           // 没有选择方案，清空方案
@@ -871,7 +842,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         }
       }
     },
-    [applyMethodParams, id, setPersistedEquipment, updateMethodParams]
+    [applyMethodParams, id, setPersistedEquipment]
   );
 
   // 获取当前器具和方案名称 - 使用useMemo优化
@@ -964,7 +935,10 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     }
 
     if (errors.length > 0) {
-      alert(getImageProcessingErrorMessage(errors));
+      showToast({
+        type: 'error',
+        title: getImageProcessingErrorMessage(errors),
+      });
     }
   };
 
@@ -980,7 +954,10 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     try {
       await appendSelectedImages(files, remainCount);
     } catch (error) {
-      alert(error instanceof Error ? error.message : '图片处理失败，请重试');
+      showToast({
+        type: 'error',
+        title: error instanceof Error ? error.message : '图片处理失败，请重试',
+      });
     }
 
     // 清除 input 值，允许再次选择同一文件
@@ -1000,7 +977,10 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     } catch (error) {
       if (isImageSelectionCancelled(error)) return;
 
-      alert(error instanceof Error ? error.message : '图片处理失败，请重试');
+      showToast({
+        type: 'error',
+        title: error instanceof Error ? error.message : '图片处理失败，请重试',
+      });
     }
   };
 
@@ -1016,7 +996,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
   const handleImageSelect = async (source: 'camera' | 'gallery') => {
     // 检查是否已达到最大数量
     if (formData.images.length >= 9) {
-      alert('最多只能上传9张图片');
+      showToast({ type: 'warning', title: '最多只能上传9张图片' });
       return;
     }
 
@@ -1036,7 +1016,10 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
 
       await appendSelectedImages([file], 1);
     } catch (error) {
-      alert(error instanceof Error ? error.message : '打开相机失败，请重试');
+      showToast({
+        type: 'error',
+        title: error instanceof Error ? error.message : '打开相机失败，请重试',
+      });
     }
   };
 
@@ -1173,6 +1156,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         let finalTaste = formData.taste;
         if (
           isAdding &&
+          !Object.values(initialData.taste || {}).some(value => value > 0) &&
           (!settings?.showFlavorRatingInForm ||
             (settings?.flavorRatingFollowOverall &&
               flavorRatingsOnlySyncedRef.current))
@@ -1217,7 +1201,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
 
         // 创建完整的笔记数据
         const noteData: BrewingNoteData = {
-          id: initialData.id || generatedNoteIdRef.current,
+          id: initialData.id || generatedNoteId,
           // 使用当前的时间戳状态
           timestamp: timestamp.getTime(),
           ...noteFormData,
@@ -1226,6 +1210,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
           }),
           taste: noteTaste, // 使用处理后的风味评分
           ...selection,
+          stages: methodParams.stages,
           ...(noteParams && { params: noteParams }),
           ...(finalTotalTime > 0 && { totalTime: finalTotalTime }),
           // 使用最终确定的咖啡豆ID（可能是新建的或已有的）
@@ -1370,8 +1355,18 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
           };
         }
 
+        await callStoreActionInMutation(onSave, noteData, {
+          expectedUpdatedAt: id
+            ? initialNoteVersionRef.current.updatedAt
+            : undefined,
+          newBean,
+          initializeBeanId: initialCoffeeBeanCreatedFromSearch
+            ? noteBeanId
+            : undefined,
+        });
+
         try {
-          // 同步磨豆机刻度到设置
+          // 只有笔记保存成功后才记住刻度，同步失败不撤销已保存的笔记。
           if (methodParams.grindSize && finalEquipment && finalMethod) {
             const { syncGrinderToSettings } = await import('@/lib/grinder');
             const coffeeBeanContext = canUseCoffeeBeanModule
@@ -1402,29 +1397,18 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
               coffeeBeanContext
             );
           }
-
-          // 保存笔记
-          await callStoreActionInMutation(onSave, noteData, {
-            expectedUpdatedAt: id
-              ? initialNoteVersionRef.current.updatedAt
-              : undefined,
-            newBean,
-            initializeBeanId: initialCoffeeBeanCreatedFromSearch
-              ? noteBeanId
-              : undefined,
-          });
         } catch (error) {
-          // Log error in development only
-          if (process.env.NODE_ENV === 'development') {
-            console.error('保存笔记时出错:', error);
-          }
-          throw error;
+          console.error('笔记已保存，但磨豆机刻度同步失败:', error);
         }
       });
       // Dialogs and completion callbacks never retain the native mutation lease.
       if (onSaveSuccess) await Promise.resolve(onSaveSuccess());
     } catch (error) {
-      alert(error instanceof Error ? error.message : '保存笔记时出错，请重试');
+      showToast({
+        type: 'error',
+        title:
+          error instanceof Error ? error.message : '保存笔记时出错，请重试',
+      });
     } finally {
       isSubmittingRef.current = false;
       onSubmitStateChange?.(false);
@@ -1620,8 +1604,8 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
   };
 
   const initialMethodStages = useMemo(() => {
-    if (initialData?.stages && initialData.stages.length > 0) {
-      return initialData.stages;
+    if (methodParams.stages && methodParams.stages.length > 0) {
+      return methodParams.stages;
     }
     const parsedTime = parseFloat(totalTimeStr);
     if (!Number.isNaN(parsedTime) && parsedTime > 0) {
@@ -1635,7 +1619,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
       ];
     }
     return undefined;
-  }, [initialData?.stages, totalTimeStr]);
+  }, [methodParams.stages, totalTimeStr]);
 
   // 处理风味评分变化（从抽屉）
   const handleTasteChange = useCallback((newTaste: Record<string, number>) => {
@@ -1690,6 +1674,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
           }
         : pickNoteSelection(initialData)),
       params: methodParams,
+      stages: methodParams.stages,
       totalTime,
       source: initialData.source,
       changeRecord: initialData.changeRecord,
@@ -1725,7 +1710,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
 
   return (
     <form
-      id={id}
+      id={formId}
       ref={formRef}
       onSubmit={handleSubmit}
       className={containerClassName}
@@ -1855,7 +1840,8 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                 <input
                   type="tel"
                   inputMode="decimal"
-                  pattern="^\\d*(\\.\\d+)?$"
+                  pattern="[0-9]*([.][0-9]+)?"
+                  aria-label="扣除量"
                   value={quickDecrementAmount}
                   onChange={e => {
                     const nextValue = e.target.value;
@@ -1914,7 +1900,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                 <input
                   type="tel"
                   inputMode="decimal"
-                  pattern="^\\d*(\\.\\d+)?$"
+                  pattern="[0-9]*([.][0-9]+)?"
                   aria-label="烘焙量"
                   value={roastingAmount}
                   onChange={e => {
@@ -1943,7 +1929,10 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                   <input
                     type="tel"
                     inputMode="decimal"
-                    pattern="^\\d*(\\.\\d+)?$"
+                    pattern="[0-9]*([.][0-9]+)?"
+                    aria-label={
+                      isCapacityAdjustmentIncrease ? '增加量' : '减少量'
+                    }
                     value={capacityAdjustmentAmount}
                     onChange={e => {
                       const nextValue = e.target.value;
@@ -1977,10 +1966,10 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
             </div>
           )}
 
-          {/* 器具方案 - 编辑模式且非快捷模式时显示 */}
-          {!isAdding &&
-            !isCompactRecordMode &&
-            (initialData?.id || selectedEquipment) && (
+          {/* 器具方案 */}
+          {showEquipmentMethodSelector &&
+            !methodSnapshot &&
+            !isCompactRecordMode && (
               <FeatureListItem
                 label="器具方案"
                 value={equipmentMethodValue}
@@ -2062,19 +2051,21 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
       )}
 
       {/* 器具方案选择抽屉 */}
-      <EquipmentMethodPickerDrawer
-        isOpen={showEquipmentMethodDrawer}
-        onClose={() => setShowEquipmentMethodDrawer(false)}
-        onSelect={handleEquipmentMethodSelection}
-        selectedEquipmentId={selectedEquipment || equipmentPickerEquipmentId}
-        selectedMethodId={selectedMethod}
-        initialParams={{
-          ...methodParams,
-          ...(initialMethodStages && { stages: initialMethodStages }),
-        }}
-        settings={settings}
-        hapticFeedback={settings?.hapticFeedback}
-      />
+      {showEquipmentMethodDrawer && (
+        <EquipmentMethodPickerDrawer
+          isOpen={showEquipmentMethodDrawer}
+          onClose={() => setShowEquipmentMethodDrawer(false)}
+          onSelect={handleEquipmentMethodSelection}
+          selectedEquipmentId={selectedEquipment || equipmentPickerEquipmentId}
+          selectedMethodId={selectedMethod}
+          initialParams={{
+            ...methodParams,
+            ...(initialMethodStages && { stages: initialMethodStages }),
+          }}
+          settings={settings}
+          hapticFeedback={settings?.hapticFeedback}
+        />
+      )}
 
       {/* 评分抽屉（合并风味评分和总体评分） */}
       <RatingDrawer

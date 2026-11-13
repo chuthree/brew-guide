@@ -993,6 +993,11 @@ const AppModals: React.FC<AppModalsProps> = ({
 
       {/* 笔记编辑模态框 */}
       <BrewingNoteEditModal
+        key={
+          brewingNoteEditData
+            ? `${brewingNoteEditData.id}:${brewingNoteEditData.timestamp}`
+            : 'closed'
+        }
         showModal={brewingNoteEditOpen}
         initialData={brewingNoteEditData}
         onSave={handleSaveBrewingNoteEdit}

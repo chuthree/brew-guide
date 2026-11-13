@@ -277,24 +277,9 @@ const TabContent: React.FC<TabContentProps> = ({
         const { useBrewingNoteStore } =
           await import('@/lib/stores/brewingNoteStore');
 
-        const noteData: any = {
-          ...note,
-          id: note.id || Date.now().toString(),
-          timestamp: note.timestamp || Date.now(),
-          equipment: note.equipment || '',
-          method: note.method || '',
-          params: note.params || {
-            coffee: '',
-            water: '',
-            ratio: '',
-            grindSize: '',
-            temp: '',
-          },
-        };
-
         await callStoreActionInMutation(
           useBrewingNoteStore.getState().saveNoteWithInventory,
-          noteData,
+          note,
           options
         );
 
@@ -761,14 +746,15 @@ const TabContent: React.FC<TabContentProps> = ({
           id={undefined}
           onClose={handleCloseNoteForm}
           onSave={handleSaveNote}
-          inBrewPage={true}
-          initialData={{
-            equipment: noteEquipmentName || selectedEquipment || '',
-            method: currentBrewingMethod?.name || '',
+          methodSnapshot={{
             params: currentBrewingMethod
               ? getBrewingNoteParams(currentBrewingMethod)
               : undefined,
             totalTime: calculateTotalTime(),
+          }}
+          initialData={{
+            equipment: noteEquipmentName || selectedEquipment || '',
+            method: currentBrewingMethod?.name || '',
             coffeeBean: canUseCoffeeBeanModule
               ? selectedCoffeeBeanData || undefined
               : undefined,

@@ -18,6 +18,10 @@ import {
 } from '@/lib/data/repositories';
 import { nanoid } from 'nanoid';
 import { normalizeBrewingNote } from '@/lib/notes/cleanup';
+import {
+  normalizeBrewingNoteParams,
+  normalizeBrewingNoteSelection,
+} from '@/lib/notes/noteDisplay';
 import { recordCrashCheckpoint } from '@/lib/app/crashDiagnostics';
 import {
   clearExpectedCoreDataDeletion,
@@ -59,6 +63,7 @@ interface BrewingNoteStore {
   addNote: (
     note: BrewingNote | Omit<BrewingNote, 'id'>
   ) => Promise<BrewingNote>;
+  /** Normalize and atomically save the note, stock and sync queue before publishing. */
   saveNoteWithInventory: (
     note: BrewingNote,
     options?: BrewingNoteSaveOptions
@@ -262,7 +267,15 @@ export const useBrewingNoteStore = create<BrewingNoteStore>()(
 
         saveNoteWithInventory: async (note, options) => {
           const changes = await brewingNotePersistence.saveWithInventory(
-            normalizeBrewingNote(note).note,
+            normalizeBrewingNote({
+              ...note,
+              ...normalizeBrewingNoteSelection(note),
+              params: normalizeBrewingNoteParams(note.params),
+              totalTime:
+                typeof note.totalTime === 'number' && note.totalTime > 0
+                  ? note.totalTime
+                  : undefined,
+            }).note,
             options
           );
           const savedNote = changes.note!;

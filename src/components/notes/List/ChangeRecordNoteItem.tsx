@@ -2,6 +2,7 @@
 
 import React, { useMemo } from 'react';
 import ActionMenu from '@/components/coffee-bean/ui/action-menu';
+import { copyBrewingNote } from '../Form/copyBrewingNote';
 import HighlightText from '@/components/common/ui/HighlightText';
 import { BrewingNote } from '@/lib/core/config';
 import { formatNoteBeanDisplayName } from '@/lib/utils/beanVarietyUtils';
@@ -206,6 +207,11 @@ const ChangeRecordNoteItem: React.FC<ChangeRecordNoteItemProps> = ({
                   id: 'edit',
                   label: '编辑',
                   onClick: () => onEdit && onEdit(note),
+                },
+                {
+                  id: 'copy',
+                  label: '复制',
+                  onClick: () => void copyBrewingNote(note.id),
                 },
                 {
                   id: 'share',

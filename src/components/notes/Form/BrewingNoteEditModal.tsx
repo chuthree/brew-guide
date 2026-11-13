@@ -4,7 +4,7 @@ import {
   coordinateStoreActions,
 } from '@/lib/data/storeMutationBoundary';
 
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useId, useMemo, useState } from 'react';
 import { ArrowLeft, CornerDownRight } from 'lucide-react';
 import BrewingNoteForm from './BrewingNoteForm';
 import { BrewingNoteData } from '@/types/app';
@@ -33,6 +33,7 @@ const BrewingNoteEditModal: React.FC<BrewingNoteEditModalProps> = ({
   onClose,
   settings,
 }) => {
+  const formId = useId();
   const navigationState = deriveNavigationSettings(
     settings?.navigationSettings
   );
@@ -55,7 +56,9 @@ const BrewingNoteEditModal: React.FC<BrewingNoteEditModalProps> = ({
       ? quickModeOverride.isQuickMode
       : isChangeRecordEdit || isRoastingRecordEdit;
   const currentDraft =
-    draftSnapshot && draftSnapshot.id === noteId ? draftSnapshot : null;
+    draftSnapshot && (!noteId || draftSnapshot.id === noteId)
+      ? draftSnapshot
+      : null;
   const currentContent = currentDraft || initialData;
   const canShowQuickRecordConversionButton = canSwitchPlainNoteToQuickRecord({
     noteId,
@@ -123,20 +126,6 @@ const BrewingNoteEditModal: React.FC<BrewingNoteEditModalProps> = ({
     onClose();
   }, [onClose, setDraftSnapshot, setQuickModeOverride]);
 
-  // 处理保存按钮点击
-  const handleSaveClick = useCallback(() => {
-    if (!initialData || isSubmitting) return;
-    // 触发表单提交
-    const form = document.querySelector(
-      `form[id="${initialData.id}"]`
-    ) as HTMLFormElement;
-    if (form) {
-      form.dispatchEvent(
-        new Event('submit', { cancelable: true, bubbles: true })
-      );
-    }
-  }, [initialData, isSubmitting]);
-
   return (
     <AdaptiveModal
       isOpen={showModal}
@@ -168,10 +157,11 @@ const BrewingNoteEditModal: React.FC<BrewingNoteEditModalProps> = ({
             {initialData && (
               <BrewingNoteForm
                 id={initialData.id}
+                formId={formId}
+                showEquipmentMethodSelector
                 onClose={handleClose}
                 onSave={handleSave}
                 initialData={initialData}
-                inBrewPage={true}
                 showSaveButton={false}
                 hideHeader={true}
                 settings={settings}
@@ -199,9 +189,9 @@ const BrewingNoteEditModal: React.FC<BrewingNoteEditModalProps> = ({
 
             {/* 保存按钮 */}
             <button
-              type="button"
-              onClick={handleSaveClick}
-              disabled={isSubmitting}
+              type="submit"
+              form={formId}
+              disabled={!initialData || isSubmitting}
               aria-busy={isSubmitting}
               className="flex items-center justify-center rounded-full bg-neutral-100 px-6 py-3 text-neutral-800 dark:bg-neutral-800 dark:text-neutral-100"
             >

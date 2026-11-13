@@ -144,10 +144,7 @@ import {
   normalizeBeanComponentFieldValue,
   normalizeCoffeeBeanForFieldConfig,
 } from '@/lib/coffee-beans/beanFields';
-import {
-  normalizeBrewingNoteParams,
-  normalizeBrewingNoteSelection,
-} from '@/lib/notes/noteDisplay';
+import { normalizeBrewingNoteParams } from '@/lib/notes/noteDisplay';
 import { getCommonMethodsForEquipment } from '@/lib/brewing/methodAvailability';
 import { isPullToSyncEnabled } from '@/lib/sync/settings';
 import { syncService } from '@/lib/sync/UnifiedSyncService';
@@ -3217,33 +3214,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     [setActiveMainTab]
   );
 
-  const buildPersistedBrewingNote = useCallback(
-    (note: BrewingNoteData, overrides?: Partial<BrewingNote>): BrewingNote => {
-      const relation = normalizeBrewingNoteSelection({
-        equipment: overrides?.equipment ?? note.equipment,
-        method: overrides?.method ?? note.method,
-      });
-      const params = normalizeBrewingNoteParams(
-        overrides?.params ?? note.params
-      );
-      const totalTime =
-        typeof (overrides?.totalTime ?? note.totalTime) === 'number' &&
-        (overrides?.totalTime ?? note.totalTime)! > 0
-          ? (overrides?.totalTime ?? note.totalTime)
-          : undefined;
-
-      return {
-        ...note,
-        ...overrides,
-        equipment: relation.equipment,
-        method: relation.method,
-        params,
-        totalTime,
-      } as BrewingNote;
-    },
-    []
-  );
-
   const handleSaveBrewingNote = useCoordinatedAction(
     async (note: BrewingNoteData, options?: BrewingNoteSaveOptions) => {
       try {
@@ -3253,7 +3223,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
 
         await callStoreActionInMutation(
           useBrewingNoteStore.getState().saveNoteWithInventory,
-          buildPersistedBrewingNote(note),
+          note,
           options
         );
 
@@ -3282,7 +3252,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         const isNewNote = options?.expectedUpdatedAt === undefined;
 
         // 构建保存数据
-        let noteToSave = buildPersistedBrewingNote(note);
+        let noteToSave: BrewingNote = note;
 
         if (noteToSave.source === 'roasting') {
           const { RoastingManager } =

@@ -504,6 +504,7 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
           params: shouldResetMethod
             ? normalizeBrewingNoteParams(undefined)
             : prev.params,
+          stages: shouldResetMethod ? undefined : prev.stages,
           totalTime: shouldResetMethod ? undefined : prev.totalTime,
         };
       });
@@ -563,10 +564,7 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
   const handleMethodParamsChange = useCallback(
     (method: Method) => {
       const methodIdentifier = method.id || method.name;
-      const nextParams = {
-        ...normalizeBrewingNoteParams(method.params),
-        stages: method.params.stages || [],
-      };
+      const nextParams = normalizeBrewingNoteParams(method.params);
       const totalTime =
         method.params.stages?.reduce(
           (acc, stage) => acc + (stage.duration || 0),
@@ -582,6 +580,7 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
         equipment: methodStepEquipmentId,
         method: methodIdentifier,
         params: nextParams,
+        stages: method.params.stages,
         totalTime,
       }));
     },
@@ -760,6 +759,15 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
                 allowCreate
                 selectedEquipment={methodStepEquipmentId}
                 selectedMethod={selectedMethodId}
+                initialParams={
+                  draftSession.note.params
+                    ? {
+                        ...draftSession.note.params,
+                        stages: draftSession.note.stages,
+                      }
+                    : undefined
+                }
+                preserveMeasuredParams={!!draftSession.note.params}
                 customMethods={customMethods}
                 commonMethods={commonMethodsOnly}
                 onMethodSelect={(methodId: string) => {
@@ -772,6 +780,7 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
                     equipment: methodStepEquipmentId,
                     method: methodId,
                     params: normalizeBrewingNoteParams(undefined),
+                    stages: undefined,
                     totalTime: undefined,
                   }));
                 }}
@@ -785,6 +794,7 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
                     equipment: '',
                     method: '',
                     params: normalizeBrewingNoteParams(undefined),
+                    stages: undefined,
                     totalTime: undefined,
                   }));
                   setDraftStep(prev => prev + 1);
@@ -805,7 +815,7 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
             onClose={() => {}}
             onSave={handleSaveNote}
             initialData={draftSession.note}
-            inBrewPage={true}
+            methodSnapshot={draftSession.note}
             showSaveButton={false}
             onSaveSuccess={onSaveSuccess}
             settings={settings}
