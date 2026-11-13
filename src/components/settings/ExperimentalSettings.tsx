@@ -201,6 +201,18 @@ const ExperimentalSettings: React.FC<ExperimentalSettingsProps> = ({
             handleChange={handleChange}
           />
 
+          <SettingSection footer="开启后，在咖啡豆库存的排序菜单中选择「自定义」，长按列表中的咖啡豆，即可上下拖动调整顺序。">
+            <SettingRow label="自定义排序" isLast>
+              <SettingToggle
+                checked={settings.experimentalBeanCustomSortEnabled || false}
+                onChange={checked =>
+                  handleChange('experimentalBeanCustomSortEnabled', checked)
+                }
+                ariaLabel="自定义排序"
+              />
+            </SettingRow>
+          </SettingSection>
+
           <SettingSection footer="开启后，分享咖啡豆会生成包含图片的压缩包；添加咖啡豆时也会显示选择压缩包入口。">
             <SettingRow label="分享导入压缩包" isLast>
               <SettingToggle

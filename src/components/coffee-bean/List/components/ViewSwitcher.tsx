@@ -175,6 +175,9 @@ const SortSection: React.FC<SortSectionProps> = ({
 }) => {
   const { type: currentType, order: currentOrder } =
     getSortTypeAndOrder(sortOption);
+  const customSortEnabled = useSettingsStore(
+    state => state.settings.experimentalBeanCustomSortEnabled === true
+  );
 
   return (
     <div>
@@ -201,10 +204,18 @@ const SortSection: React.FC<SortSectionProps> = ({
               </FilterButton>
             )
           )}
+          {customSortEnabled && viewMode === VIEW_OPTIONS.INVENTORY && (
+            <FilterButton
+              isActive={currentType === 'custom'}
+              onClick={() => onSortChange('custom')}
+            >
+              自定义
+            </FilterButton>
+          )}
         </div>
 
         {/* 排序顺序 */}
-        {currentType !== 'original' && (
+        {currentType !== 'original' && currentType !== 'custom' && (
           <div className="flex flex-wrap items-center gap-2">
             {getSortOrdersForType(currentType).map(order => (
               <FilterButton

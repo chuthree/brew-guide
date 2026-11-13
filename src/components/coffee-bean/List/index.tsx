@@ -33,6 +33,7 @@ import {
 } from './types';
 import {
   globalCache,
+  isBeanEmpty,
   getMultiFiltersByStatePreference,
   saveMultiFiltersByStatePreference,
   saveShowEmptyBeansPreference,
@@ -82,6 +83,7 @@ import {
 } from './preferences';
 import { useBeanOperations } from './hooks/useBeanOperations';
 import { useEnhancedBeanFiltering } from './hooks/useEnhancedBeanFiltering';
+import { orderBeans, reorderVisibleBeans } from './customOrder';
 import {
   FlavorPeriodStatus,
   FLAVOR_PERIOD_LABELS,
@@ -193,8 +195,12 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
       globalCache.viewMode = view;
       saveViewModePreference(view);
     });
-  const sortOption =
-    viewMode === VIEW_OPTIONS.RANKING ? rankingSortOption : inventorySortOption;
+  const customSortEnabled = useSettingsStore(
+    state => state.settings.experimentalBeanCustomSortEnabled === true
+  );
+  const coffeeBeanOrder = useSettingsStore(
+    state => state.settings.coffeeBeanOrder
+  );
 
   // 评分相关状态
   const [showRatingModal, setShowRatingModal] = useState(false);
@@ -217,6 +223,16 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     globalCache.selectedBeanState = validState;
     return validState;
   });
+  const effectiveInventorySort =
+    inventorySortOption === 'custom' && !customSortEnabled
+      ? selectedBeanState === 'green'
+        ? 'last_modified_desc'
+        : 'remaining_days_asc'
+      : inventorySortOption;
+  const sortOption =
+    viewMode === VIEW_OPTIONS.RANKING
+      ? rankingSortOption
+      : effectiveInventorySort;
   const [showEmptyBeans, setShowEmptyBeans] = useState<boolean>(
     globalCache.showEmptyBeans
   );
@@ -449,6 +465,28 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     [selectedBeanState]
   );
 
+  const inventorySourceBeans = useMemo(
+    () =>
+      sortOption === 'custom' ? orderBeans(beans, coffeeBeanOrder) : beans,
+    [beans, coffeeBeanOrder, sortOption]
+  );
+
+  const handleReorderBeans = async (
+    visibleIds: string[],
+    activeId: string,
+    overId: string
+  ) => {
+    const store = useSettingsStore.getState();
+    if (!store.settings.experimentalBeanCustomSortEnabled) return;
+    const fullOrder = orderBeans(
+      useCoffeeBeanStore.getState().beans.filter(bean => !isBeanEmpty(bean)),
+      store.settings.coffeeBeanOrder
+    ).map(bean => bean.id);
+    const next = reorderVisibleBeans(fullOrder, visibleIds, activeId, overId);
+    if (!next) return;
+    await store.updateSettings({ coffeeBeanOrder: next });
+  };
+
   // 使用增强的筛选Hook
   const {
     filterOptionCounts,
@@ -470,7 +508,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     typeStats,
   } = useEnhancedBeanFiltering({
     multiFilters,
-    beans,
+    beans: inventorySourceBeans,
     filterMode,
     selectedVariety,
     selectedOrigin,
@@ -2311,6 +2349,11 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
             }}
           >
             <InventoryView
+              onReorder={
+                sortOption === 'custom' && !isSearching
+                  ? handleReorderBeans
+                  : undefined
+              }
               onClearFilters={
                 storeInitialized &&
                 multiFilters &&

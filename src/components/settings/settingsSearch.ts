@@ -669,6 +669,7 @@ export const buildSettingsSearchItems = ({
       ...createRowItems('experimental-settings', '实验性功能', [
         '最大显示容量',
         '分享导入压缩包',
+        '自定义排序',
         '自定义识别咖啡豆 API',
       ])
     );

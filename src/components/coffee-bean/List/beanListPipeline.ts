@@ -252,7 +252,8 @@ const sortInventoryRecords = (
 
   const shouldUseTimestampSort =
     isEmptyFilter &&
-    (sortOption === 'remaining_amount_asc' ||
+    (sortOption === 'custom' ||
+      sortOption === 'remaining_amount_asc' ||
       sortOption === 'remaining_amount_desc' ||
       sortOption === 'remaining_days_asc' ||
       sortOption === 'remaining_days_desc');

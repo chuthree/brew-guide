@@ -8,6 +8,10 @@ import ImageFlowView from './ImageFlowView';
 import TableView from './TableView';
 import type { TableColumnKey } from './tableColumns';
 import RemainingEditor from './RemainingEditor';
+import SortableInventory, {
+  SortableBeanRow,
+  type ReorderBeans,
+} from './SortableInventory';
 import { showToast } from '@/components/common/feedback/LightToast';
 import {
   buildInventoryVirtuosoData,
@@ -16,8 +20,6 @@ import {
 
 // 显示模式类型
 export type DisplayMode = 'list' | 'imageFlow' | 'table';
-
-// 已移除手动分页，改用 react-virtuoso 虚拟列表
 
 type VirtuosoListProps = React.HTMLAttributes<HTMLDivElement> & {
   ref?: React.Ref<HTMLDivElement>;
@@ -44,6 +46,10 @@ const InventoryVirtuosoHeader = () => <div className="h-5" />;
 const INVENTORY_VIRTUOSO_COMPONENTS = {
   List: InventoryVirtuosoList,
   Header: InventoryVirtuosoHeader,
+};
+const INVENTORY_EMPTY_VIRTUOSO_COMPONENTS = {
+  List: InventoryVirtuosoList,
+  Header: () => <div className="h-3.5" />,
 };
 const INVENTORY_VIRTUOSO_OVERSCAN = { top: 240, bottom: 480 };
 const EMPTY_EXPANDED_NOTES: Record<string, boolean> = {};
@@ -94,6 +100,7 @@ const getEmptyStateMessage = ({
 };
 
 interface InventoryViewProps {
+  onReorder?: ReorderBeans;
   filteredBeans: ExtendedCoffeeBean[];
   emptyBeans: ExtendedCoffeeBean[]; // 已用完的豆子
   selectedVariety: string | null;
@@ -152,6 +159,7 @@ interface InventoryViewProps {
 }
 
 const InventoryView: React.FC<InventoryViewProps> = ({
+  onReorder,
   filteredBeans,
   emptyBeans,
   selectedVariety,
@@ -268,16 +276,16 @@ const InventoryView: React.FC<InventoryViewProps> = ({
     }
   };
 
-  // 兼容之前编辑剩余量时的就地更新
-  // 虚拟列表场景下直接依赖 filteredBeans 的外部更新即可
-
+  // 拖动行与排序上下文同步提交位置；用完的豆子继续虚拟渲染。
+  const reorderEnabled = Boolean(onReorder && !isShareMode);
   const virtuosoData = React.useMemo(() => {
-    return buildInventoryVirtuosoData(
+    const items = buildInventoryVirtuosoData(
       filteredBeans,
       emptyBeans,
       showEmptyBeans
     );
-  }, [filteredBeans, emptyBeans, showEmptyBeans]);
+    return reorderEnabled ? items.slice(filteredBeans.length) : items;
+  }, [filteredBeans, emptyBeans, showEmptyBeans, reorderEnabled]);
 
   // 判断是否为生豆
   const isGreenBean = selectedBeanState === 'green';
@@ -298,6 +306,25 @@ const InventoryView: React.FC<InventoryViewProps> = ({
     : isImageFlowMode
       ? 'imageFlow'
       : 'list';
+
+  const renderBean = (bean: ExtendedCoffeeBean) => (
+    <BeanListItem
+      bean={bean}
+      isLast={false}
+      onRemainingClick={handleRemainingClick}
+      onDetailClick={handleDetailClick}
+      searchQuery={isSearching ? searchQuery : ''}
+      imageSourceHint={
+        beanFrontImageIds.has(bean.id) ? 'coffeeBeanFront' : undefined
+      }
+      isNotesExpanded={expandedNotes[bean.id]}
+      onNotesExpandToggle={onNotesExpandToggle}
+      isShareMode={isShareMode}
+      isSelected={selectedBeans.includes(bean.id)}
+      onToggleSelect={onToggleSelect}
+      settings={settings}
+    />
+  );
 
   if (
     onClearFilters &&
@@ -375,48 +402,50 @@ const InventoryView: React.FC<InventoryViewProps> = ({
         )
       ) : (
         <div className="pb-64">
-          <Virtuoso
-            data={virtuosoData}
-            customScrollParent={scrollParentRef}
-            components={INVENTORY_VIRTUOSO_COMPONENTS}
-            computeItemKey={getInventoryVirtuosoItemKey}
-            increaseViewportBy={INVENTORY_VIRTUOSO_OVERSCAN}
-            itemContent={(_index, item) => {
-              if (item.type === 'divider') {
-                return (
-                  <div className="relative -mx-6 flex items-center justify-center">
-                    <div className="absolute inset-0 flex items-center">
-                      <div className="w-full border-t border-neutral-200/50 dark:border-neutral-800/50"></div>
-                    </div>
-                    <div className="relative bg-neutral-50 px-4 text-xs font-medium text-neutral-400 dark:bg-neutral-900 dark:text-neutral-700">
-                      用完的咖啡豆
-                    </div>
-                  </div>
-                );
-              }
-
-              return (
-                <BeanListItem
-                  bean={item.bean}
-                  isLast={false}
-                  onRemainingClick={handleRemainingClick}
-                  onDetailClick={handleDetailClick}
-                  searchQuery={isSearching ? searchQuery : ''}
-                  imageSourceHint={
-                    beanFrontImageIds.has(item.bean.id)
-                      ? 'coffeeBeanFront'
-                      : undefined
+          <SortableInventory
+            disabled={!!editingRemaining}
+            beans={filteredBeans}
+            onReorder={reorderEnabled ? onReorder : undefined}
+          >
+            {reorderEnabled && filteredBeans.length > 0 && (
+              <div className="mx-6 flex flex-col gap-y-3.5 pt-5">
+                {filteredBeans.map(bean => (
+                  <SortableBeanRow key={bean.id} bean={bean}>
+                    {renderBean(bean)}
+                  </SortableBeanRow>
+                ))}
+              </div>
+            )}
+            {virtuosoData.length > 0 && (
+              <Virtuoso
+                data={virtuosoData}
+                customScrollParent={scrollParentRef}
+                components={
+                  reorderEnabled && filteredBeans.length > 0
+                    ? INVENTORY_EMPTY_VIRTUOSO_COMPONENTS
+                    : INVENTORY_VIRTUOSO_COMPONENTS
+                }
+                computeItemKey={getInventoryVirtuosoItemKey}
+                increaseViewportBy={INVENTORY_VIRTUOSO_OVERSCAN}
+                itemContent={(_index, item) => {
+                  if (item.type === 'divider') {
+                    return (
+                      <div className="relative -mx-6 flex items-center justify-center">
+                        <div className="absolute inset-0 flex items-center">
+                          <div className="w-full border-t border-neutral-200/50 dark:border-neutral-800/50"></div>
+                        </div>
+                        <div className="relative bg-neutral-50 px-4 text-xs font-medium text-neutral-400 dark:bg-neutral-900 dark:text-neutral-700">
+                          用完的咖啡豆
+                        </div>
+                      </div>
+                    );
                   }
-                  isNotesExpanded={expandedNotes[item.bean.id]}
-                  onNotesExpandToggle={onNotesExpandToggle}
-                  isShareMode={isShareMode}
-                  isSelected={selectedBeans.includes(item.bean.id)}
-                  onToggleSelect={onToggleSelect}
-                  settings={settings}
-                />
-              );
-            }}
-          />
+
+                  return renderBean(item.bean);
+                }}
+              />
+            )}
+          </SortableInventory>
         </div>
       )}
 

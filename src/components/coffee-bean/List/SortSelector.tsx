@@ -34,6 +34,7 @@ CustomSelectItem.displayName = SelectPrimitive.Item.displayName;
 
 // 排序类型定义
 export const SORT_OPTIONS = {
+  CUSTOM: 'custom',
   REMAINING_DAYS_ASC: 'remaining_days_asc', // 赏味期剩余天数从少到多（升序）
   REMAINING_DAYS_DESC: 'remaining_days_desc', // 赏味期剩余天数从多到少（降序）
   NAME_ASC: 'name_asc', // 名称按字母顺序（A→Z）
@@ -74,6 +75,8 @@ export const sortBeans = (
 ): CoffeeBean[] => {
   const sorted = [...beansToSort];
   switch (option) {
+    case SORT_OPTIONS.CUSTOM:
+      return sorted;
     case SORT_OPTIONS.LAST_MODIFIED_DESC:
       // 最近变动排序（降序，最新的排在前面）
       return sorted.sort((a, b) => {
@@ -226,6 +229,7 @@ export const convertToRankingSortOption = (
 
 // 排序选项的显示名称
 const SORT_LABELS: Record<SortOption, string> = {
+  [SORT_OPTIONS.CUSTOM]: '自定义',
   [SORT_OPTIONS.REMAINING_DAYS_ASC]: '赏味期',
   [SORT_OPTIONS.REMAINING_DAYS_DESC]: '赏味期',
   [SORT_OPTIONS.NAME_ASC]: '名称',
@@ -301,6 +305,7 @@ const SORT_ICONS = {
 
 // 排序方式定义
 export const SORT_TYPES = {
+  CUSTOM: 'custom',
   REMAINING_DAYS: 'remaining_days', // 赏味期
   NAME: 'name', // 名称
   RATING: 'rating', // 评分
@@ -323,6 +328,7 @@ export type SortOrder = (typeof SORT_ORDERS)[keyof typeof SORT_ORDERS];
 
 // 排序方式的显示名称
 export const SORT_TYPE_LABELS: Record<SortType, string> = {
+  [SORT_TYPES.CUSTOM]: '自定义',
   [SORT_TYPES.REMAINING_DAYS]: '赏味期',
   [SORT_TYPES.NAME]: '名称',
   [SORT_TYPES.RATING]: '评分',
@@ -381,6 +387,8 @@ export const getSortTypeAndOrder = (
   option: SortOption
 ): { type: SortType; order: SortOrder } => {
   switch (option) {
+    case SORT_OPTIONS.CUSTOM:
+      return { type: SORT_TYPES.CUSTOM, order: SORT_ORDERS.ASC };
     case SORT_OPTIONS.REMAINING_DAYS_ASC:
       return { type: SORT_TYPES.REMAINING_DAYS, order: SORT_ORDERS.ASC };
     case SORT_OPTIONS.REMAINING_DAYS_DESC:
@@ -419,6 +427,8 @@ export const getSortTypeAndOrder = (
 // 将类型和顺序转换为排序选项
 export const getSortOption = (type: SortType, order: SortOrder): SortOption => {
   switch (type) {
+    case SORT_TYPES.CUSTOM:
+      return SORT_OPTIONS.CUSTOM;
     case SORT_TYPES.REMAINING_DAYS:
       return order === SORT_ORDERS.ASC
         ? SORT_OPTIONS.REMAINING_DAYS_ASC
@@ -598,7 +608,7 @@ const SortSelector: React.FC<SortSelectorProps> = ({
 
   // 根据排序类型判断是否显示排序顺序选项
   const shouldShowSortOrder = (type: SortType): boolean => {
-    return type !== SORT_TYPES.ORIGINAL;
+    return type !== SORT_TYPES.ORIGINAL && type !== SORT_TYPES.CUSTOM;
   };
 
   return (
