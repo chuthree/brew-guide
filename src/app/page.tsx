@@ -3856,7 +3856,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
       >
         <PWAInstallBanner />
         <motion.div
-          className="flex h-full flex-col md:[container-type:inline-size] md:flex-row"
+          className="flex h-full flex-col md:@container md:flex-row"
           style={
             {
               '--detail-panel-progress': detailPanelProgress,

@@ -23,8 +23,7 @@
       "@/*": ["./src/*"],
       "@public/*": ["./public/*"],
       "@images/*": ["./public/images/*"]
-    },
-    "baseUrl": "."
+    }
   },
   "include": [
     "next-env.d.ts",
@@ -33,5 +32,9 @@
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts"
   ],
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules",
+    "docs/agents/*.test.ts",
+    "scripts/agent-full-tasting.test.ts"
+  ]
 }

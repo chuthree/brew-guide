@@ -1730,7 +1730,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
                 notes: e.target.value,
               });
             }}
-            className="min-h-[120px] w-full resize-none overflow-hidden border-none bg-transparent text-sm font-medium text-neutral-800 placeholder:text-neutral-300 focus:outline-none dark:text-neutral-200 dark:placeholder:text-neutral-600"
+            className="min-h-30 w-full resize-none overflow-hidden border-none bg-transparent text-sm font-medium text-neutral-800 placeholder:text-neutral-300 focus:outline-none dark:text-neutral-200 dark:placeholder:text-neutral-600"
             placeholder="记录一下这杯的感受..."
           />
         </div>

@@ -608,7 +608,7 @@ export default function RoastingDrawer({
                     }
                     className="scrollbar-hide h-6 w-full min-w-0 overflow-x-auto overflow-y-hidden"
                   >
-                    <div className="flex h-6 w-max min-w-full items-center justify-end gap-1 [&>*]:shrink-0">
+                    <div className="flex h-6 w-max min-w-full items-center justify-end gap-1 *:shrink-0">
                       {flavors.map((flavor, index) => (
                         <span
                           key={flavor}
