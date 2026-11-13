@@ -11,6 +11,8 @@ import {
 import {
   recordCrashCheckpoint,
   recordDataIntegrityReport,
+  getCrashDiagnosticReport,
+  acknowledgeCrashDiagnosticReport,
 } from '@/lib/app/crashDiagnostics';
 
 const CORE_DATA_SNAPSHOT_KEY = 'brew-guide:data-integrity:core-snapshot';
@@ -134,7 +136,7 @@ export const shouldReportUnexpectedCoreDataLoss = ({
   if (isExpectedMutationActive(expectedMutation, nowMs)) return false;
 
   return (
-    getCoreRecordCount(previous) > 0 &&
+    previous.coffeeBeans + previous.brewingNotes > 0 &&
     getCoreRecordCount(current) === 0 &&
     hasSettingsData(current)
   );
@@ -275,6 +277,14 @@ export async function inspectCoreDataIntegrity(
       '检测到本地核心数据表异常变为空，但设置数据仍然存在。请先导出抢救数据和诊断信息。',
       reportMeta
     );
+  } else if (
+    current.coffeeBeans + current.brewingNotes > 0 ||
+    isExpectedMutationActive(expectedMutation, nowMs)
+  ) {
+    const report = await getCrashDiagnosticReport();
+    if (report?.source === 'data-integrity' && !report.acknowledgedAt) {
+      await acknowledgeCrashDiagnosticReport(report.session.sessionId);
+    }
   }
 
   await writeStorageValue(CORE_DATA_SNAPSHOT_KEY, current);

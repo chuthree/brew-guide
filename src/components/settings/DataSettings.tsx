@@ -13,8 +13,6 @@ import {
 import hapticsUtils from '@/lib/ui/haptics';
 import SettingPage from './atomic/SettingPage';
 import SettingSelect from './atomic/SettingSelect';
-import SettingNotice from './atomic/SettingNotice';
-import { getBooleanState, saveBooleanState } from '@/lib/core/statePersistence';
 import {
   SettingSection,
   SettingRow,
@@ -115,12 +113,6 @@ const DataSettings: React.FC<DataSettingsProps> = ({
 
   // 持久化存储状态
   const [isPersisted, setIsPersisted] = useState<boolean | null>(null);
-  const storageNoticeId = isPersistentStorageSupported()
-    ? 'storage-browser-mode'
-    : 'storage-unsupported';
-  const [isStorageNoticeDismissed, setIsStorageNoticeDismissed] = useState(() =>
-    getBooleanState('setting-notices', storageNoticeId)
-  );
   const [isRequestingPersist, setIsRequestingPersist] = useState(false);
   const [usesBrowserStorage] = useState(
     () => resolveStorageBackend(detectAppRuntime()) === 'dexie'
@@ -611,7 +603,7 @@ const DataSettings: React.FC<DataSettingsProps> = ({
     <>
       <SettingSection
         title={syncType === 'supabase' ? '手动备份' : '云同步'}
-        className={syncType === 'supabase' || showStorageNotice ? '' : '-mt-4'}
+        className={syncType === 'supabase' ? '' : '-mt-4'}
       >
         {syncType === 'supabase' ? backupServiceRow : cloudServiceRow}
         {configuration}
@@ -621,37 +613,12 @@ const DataSettings: React.FC<DataSettingsProps> = ({
     </>
   );
 
-  const showStorageNotice =
-    usesBrowserStorage &&
-    isPersisted === false &&
-    !isStorageNoticeDismissed &&
-    (!isPersistentStorageSupported() || !isPWA);
-
   return (
     <SettingPage title="数据与备份" isVisible={isVisible} onClose={handleClose}>
-      {showStorageNotice && (
-        <SettingNotice
-          id={storageNoticeId}
-          className="-mt-4"
-          level="important"
-          message={
-            !isPersistentStorageSupported()
-              ? '当前环境不支持持久化存储，请使用支持此功能的新版浏览器。'
-              : '当前浏览器模式未提供持久化存储，请添加到主屏幕后打开应用。'
-          }
-          onClose={() => {
-            saveBooleanState('setting-notices', storageNoticeId, true);
-            setIsStorageNoticeDismissed(true);
-          }}
-        />
-      )}
       {syncType === 's3' || syncType === 'webdav' ? (
         renderManualSyncSection()
       ) : (
-        <SettingSection
-          title="云同步"
-          className={showStorageNotice ? undefined : '-mt-4'}
-        >
+        <SettingSection title="云同步" className="-mt-4">
           {cloudServiceRow}
           {syncType === 'supabase' && (
             <SupabaseSyncSection
@@ -689,7 +656,14 @@ const DataSettings: React.FC<DataSettingsProps> = ({
       {backupReminderSettings && (
         <SettingSection
           title="备份提醒"
-          footer={backupReminderSettings.enabled ? nextReminderText : undefined}
+          footer={[
+            backupReminderSettings.enabled ? nextReminderText : '',
+            usesBrowserStorage && isPersisted === false
+              ? '浏览器可能自动清理本地数据，建议定期导出备份。'
+              : '',
+          ]
+            .filter(Boolean)
+            .join(' ')}
         >
           <SettingRow label="备份提醒" isLast={!backupReminderSettings.enabled}>
             <SettingToggle

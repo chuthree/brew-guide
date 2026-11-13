@@ -79,6 +79,16 @@ describe('shouldReportUnexpectedCoreDataLoss', () => {
         expectedMutation: null,
       })
     ).toBe(false);
+    expect(
+      shouldReportUnexpectedCoreDataLoss({
+        previous: snapshot({
+          coffeeBeanImages: 1,
+          brewingNoteImageThumbnails: 1,
+        }),
+        current: snapshot(),
+        expectedMutation: null,
+      })
+    ).toBe(false);
   });
 
   it('does not report when the empty state came from a recent explicit action', () => {

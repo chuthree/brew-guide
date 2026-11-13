@@ -7,12 +7,6 @@ const ACTIVE_OPERATION_KEY = 'brew-guide:crash-diagnostics:active-operation';
 export const CRASH_DIAGNOSTIC_REPORT_UPDATED_EVENT =
   'brewGuide:crash-diagnostics-report-updated';
 const MAX_CHECKPOINTS = 24;
-const NON_FATAL_BROWSER_ERROR_PHASES = new Set([
-  'window-error',
-  'unhandled-rejection',
-]);
-const IGNORED_BROWSER_ERROR_PATTERNS: RegExp[] = [];
-const IGNORE_INFERRED_BOOT_INTERRUPTION_DIAGNOSTICS = true;
 
 type JsonValue =
   | string
@@ -71,6 +65,7 @@ export interface CrashDiagnosticReport {
   inferredReason: string;
   session: CrashDiagnosticSession;
   detectedAt: string;
+  acknowledgedAt?: string;
 }
 
 let activeSession: CrashDiagnosticSession | null = null;
@@ -240,32 +235,12 @@ const queuePersist = (session: CrashDiagnosticSession | null) => {
     });
 };
 
-const isNonFatalBrowserError = (error: CrashErrorRecord | undefined): boolean =>
-  Boolean(error && NON_FATAL_BROWSER_ERROR_PHASES.has(error.phase));
-
-const isIgnoredBrowserError = (error: CrashErrorRecord | undefined): boolean =>
-  Boolean(
-    error &&
-    isNonFatalBrowserError(error) &&
-    IGNORED_BROWSER_ERROR_PATTERNS.some(pattern => pattern.test(error.message))
-  );
-
-const isTemporarilyIgnoredInferredBootInterruption = (
-  session: CrashDiagnosticSession
-): boolean =>
-  IGNORE_INFERRED_BOOT_INTERRUPTION_DIAGNOSTICS &&
-  !session.nativeCrash &&
-  !session.fatalError &&
-  session.startupState === 'booting';
-
 const isUnexpectedPreviousSession = (
   session: CrashDiagnosticSession | null
 ): boolean => {
   if (!session) return false;
 
   if (session.nativeCrash) return true;
-  if (isIgnoredBrowserError(session.fatalError)) return false;
-  if (isTemporarilyIgnoredInferredBootInterruption(session)) return false;
 
   return session.startupState !== 'ready';
 };
@@ -325,22 +300,9 @@ const buildSessionWithOperation = (
   };
 };
 
-export const shouldShowCrashDiagnosticReport = (
+export const shouldShowDataIntegrityNotice = (
   report: CrashDiagnosticReport | null
-): boolean => {
-  if (!report) return false;
-
-  const { session } = report;
-
-  if (session.nativeCrash) return true;
-  if (isIgnoredBrowserError(session.fatalError)) return false;
-  if (isTemporarilyIgnoredInferredBootInterruption(session)) return false;
-
-  return !(
-    session.startupState === 'ready' &&
-    isNonFatalBrowserError(session.fatalError)
-  );
-};
+): boolean => report?.source === 'data-integrity' && !report.acknowledgedAt;
 
 const buildInferredReport = (
   session: CrashDiagnosticSession
@@ -403,15 +365,7 @@ export async function installCrashDiagnostics(): Promise<void> {
         readStorageValue<CrashDiagnosticReport>(LAST_REPORT_KEY),
         readStorageValue<CrashDiagnosticOperation>(ACTIVE_OPERATION_KEY),
       ]);
-    const existingReport = shouldShowCrashDiagnosticReport(storedReport)
-      ? storedReport
-      : null;
-
-    if (storedReport && !existingReport) {
-      await removeStorageValue(LAST_REPORT_KEY);
-    }
-
-    if (!existingReport && interruptedOperation) {
+    if (!storedReport && interruptedOperation) {
       await writeStorageValue(
         LAST_REPORT_KEY,
         buildInferredReport(
@@ -420,7 +374,7 @@ export async function installCrashDiagnostics(): Promise<void> {
       );
       notifyCrashDiagnosticReportUpdated();
     } else if (
-      !existingReport &&
+      !storedReport &&
       previousSession &&
       isUnexpectedPreviousSession(previousSession)
     ) {
@@ -654,18 +608,18 @@ export function recordObservedBrowserError(
 }
 
 export async function getCrashDiagnosticReport(): Promise<CrashDiagnosticReport | null> {
-  const report = await readStorageValue<CrashDiagnosticReport>(LAST_REPORT_KEY);
-
-  if (!shouldShowCrashDiagnosticReport(report)) {
-    await removeStorageValue(LAST_REPORT_KEY);
-    return null;
-  }
-
-  return report;
+  return readStorageValue<CrashDiagnosticReport>(LAST_REPORT_KEY);
 }
 
-export async function dismissCrashDiagnosticReport(): Promise<void> {
-  await removeStorageValue(LAST_REPORT_KEY);
+export async function acknowledgeCrashDiagnosticReport(
+  sessionId: string
+): Promise<void> {
+  const report = await getCrashDiagnosticReport();
+  if (!report || report.session.sessionId !== sessionId) return;
+  await writeStorageValue(LAST_REPORT_KEY, {
+    ...report,
+    acknowledgedAt: nowIso(),
+  });
   notifyCrashDiagnosticReportUpdated();
 }
 
@@ -700,85 +654,3 @@ export async function recordDataIntegrityReport(
   } satisfies CrashDiagnosticReport);
   notifyCrashDiagnosticReportUpdated();
 }
-
-export const formatCrashDiagnosticReport = (
-  report: CrashDiagnosticReport
-): string => {
-  const { session } = report;
-  const header = [
-    `检测时间: ${report.detectedAt}`,
-    `来源: ${report.source}`,
-    `推断原因: ${report.inferredReason}`,
-    `会话 ID: ${session.sessionId}`,
-    `启动状态: ${session.startupState}`,
-    `开始时间: ${session.startedAt}`,
-    `最后更新时间: ${session.updatedAt}`,
-  ];
-
-  const lastCheckpoint = session.lastCheckpoint
-    ? [
-        '',
-        '最后检查点:',
-        `${session.lastCheckpoint.name} @ ${session.lastCheckpoint.at}`,
-        session.lastCheckpoint.meta
-          ? safelyStringify(session.lastCheckpoint.meta)
-          : '',
-      ]
-    : [];
-
-  const activeOperation = session.activeOperation
-    ? [
-        '',
-        '中断操作:',
-        `${session.activeOperation.name} @ ${session.activeOperation.startedAt}`,
-        `更新时间: ${session.activeOperation.updatedAt}`,
-        session.activeOperation.meta
-          ? safelyStringify(session.activeOperation.meta)
-          : '',
-        session.activeOperation.lastStep
-          ? `最后步骤: ${session.activeOperation.lastStep.name} @ ${session.activeOperation.lastStep.at}`
-          : '',
-        session.activeOperation.lastStep?.meta
-          ? safelyStringify(session.activeOperation.lastStep.meta)
-          : '',
-      ]
-    : [];
-
-  const fatalError = session.fatalError
-    ? [
-        '',
-        '致命错误:',
-        `${session.fatalError.name}: ${session.fatalError.message}`,
-        `Phase: ${session.fatalError.phase}`,
-        session.fatalError.stack || '',
-      ]
-    : [];
-
-  const nativeCrash = session.nativeCrash
-    ? ['', '原生崩溃记录:', safelyStringify(session.nativeCrash)]
-    : [];
-
-  const checkpoints = session.checkpoints.length
-    ? [
-        '',
-        '最近检查点:',
-        ...session.checkpoints.map(
-          checkpoint =>
-            `${checkpoint.at} ${checkpoint.name}${
-              checkpoint.meta ? ` ${safelyStringify(checkpoint.meta)}` : ''
-            }`
-        ),
-      ]
-    : [];
-
-  return [
-    ...header,
-    ...activeOperation,
-    ...lastCheckpoint,
-    ...fatalError,
-    ...nativeCrash,
-    ...checkpoints,
-  ]
-    .filter(Boolean)
-    .join('\n');
-};

@@ -30,7 +30,6 @@ export { default as SettingPillInput } from './SettingPillInput';
 
 // 辅助组件
 export { default as SettingDescription } from './SettingDescription';
-export { default as SettingNotice } from './SettingNotice';
 
 // 入口列表组件（用于主设置页）
 export { default as SettingGroup } from '../SettingItem';

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  shouldShowCrashDiagnosticReport,
+  shouldShowDataIntegrityNotice,
   type CrashDiagnosticReport,
   type CrashDiagnosticSession,
 } from './crashDiagnostics';
@@ -26,8 +26,8 @@ const createReport = (
   session: createSession(sessionOverrides),
 });
 
-describe('shouldShowCrashDiagnosticReport', () => {
-  it('temporarily ignores inferred startup interruptions that never reached ready', () => {
+describe('shouldShowDataIntegrityNotice', () => {
+  it('does not interrupt the user for a previous startup interruption', () => {
     const report = createReport({
       startupState: 'booting',
       lastCheckpoint: {
@@ -50,10 +50,10 @@ describe('shouldShowCrashDiagnosticReport', () => {
       ],
     });
 
-    expect(shouldShowCrashDiagnosticReport(report)).toBe(false);
+    expect(shouldShowDataIntegrityNotice(report)).toBe(false);
   });
 
-  it('continues to show native crash diagnostics', () => {
+  it('does not interrupt the user for a previous native crash', () => {
     const report = createReport({
       startupState: 'failed',
       nativeCrash: {
@@ -63,12 +63,12 @@ describe('shouldShowCrashDiagnosticReport', () => {
       },
     });
 
-    expect(shouldShowCrashDiagnosticReport(report)).toBe(true);
+    expect(shouldShowDataIntegrityNotice(report)).toBe(false);
   });
 
   it('shows data integrity reports', () => {
     expect(
-      shouldShowCrashDiagnosticReport({
+      shouldShowDataIntegrityNotice({
         ...createReport({
           startupState: 'failed',
           lastCheckpoint: {
@@ -79,5 +79,12 @@ describe('shouldShowCrashDiagnosticReport', () => {
         source: 'data-integrity',
       })
     ).toBe(true);
+    expect(
+      shouldShowDataIntegrityNotice({
+        ...createReport(),
+        source: 'data-integrity',
+        acknowledgedAt: '2026-05-24T23:05:00.000Z',
+      })
+    ).toBe(false);
   });
 });
