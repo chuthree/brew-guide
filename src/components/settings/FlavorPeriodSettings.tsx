@@ -200,7 +200,7 @@ const FlavorPeriodSettings: React.FC<FlavorPeriodSettingsProps> = ({
     placeholderStart: string,
     placeholderEnd: string
   ) => (
-    <div className="flex min-w-0 flex-wrap items-center justify-end gap-3">
+    <div className="ms-auto flex min-w-0 flex-wrap items-center justify-end gap-3">
       <div className="flex items-center space-x-1">
         <span className="text-sm text-neutral-500 dark:text-neutral-400">
           养豆
@@ -276,7 +276,7 @@ const FlavorPeriodSettings: React.FC<FlavorPeriodSettingsProps> = ({
             className="-mt-4"
             footer="添加咖啡豆时，会根据烘焙度自动设定赏味期。"
           >
-            <SettingRow label="浅烘">
+            <SettingRow label="浅烘" expandControl>
               {renderFlavorInputs(
                 settings.customFlavorPeriod?.light?.startDay || 0,
                 settings.customFlavorPeriod?.light?.endDay || 0,
@@ -286,7 +286,7 @@ const FlavorPeriodSettings: React.FC<FlavorPeriodSettingsProps> = ({
                 '60'
               )}
             </SettingRow>
-            <SettingRow label="中烘">
+            <SettingRow label="中烘" expandControl>
               {renderFlavorInputs(
                 settings.customFlavorPeriod?.medium?.startDay || 0,
                 settings.customFlavorPeriod?.medium?.endDay || 0,
@@ -296,7 +296,7 @@ const FlavorPeriodSettings: React.FC<FlavorPeriodSettingsProps> = ({
                 '60'
               )}
             </SettingRow>
-            <SettingRow label="深烘" isLast>
+            <SettingRow label="深烘" expandControl isLast>
               {renderFlavorInputs(
                 settings.customFlavorPeriod?.dark?.startDay || 0,
                 settings.customFlavorPeriod?.dark?.endDay || 0,
