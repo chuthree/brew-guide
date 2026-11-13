@@ -900,12 +900,12 @@ const ViewSwitcher: React.FC<ViewSwitcherProps> = ({
     }
   };
   const multiCategories: MultiFilterCategory[] = [
-    'type',
-    'roaster',
-    ...(selectedBeanState === 'roasted' ? ['flavorPeriod' as const] : []),
     ...(selectedBeanState === 'roasted' && hasBeanGroups
       ? ['group' as const]
       : []),
+    'type',
+    'roaster',
+    ...(selectedBeanState === 'roasted' ? ['flavorPeriod' as const] : []),
     ...(enabledBeanFieldFilterModes ??
       (['origin', 'processingMethod', 'variety'] as BeanFilterMode[])),
   ];
