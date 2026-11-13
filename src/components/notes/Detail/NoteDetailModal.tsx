@@ -814,7 +814,7 @@ const NoteDetailModal: React.FC<NoteDetailModalProps> = ({
         style={isLargeScreen ? undefined : getChildPageStyle(isVisible)}
       >
         {/* 顶部按钮栏 */}
-        <div className="pt-safe-top sticky top-0 flex items-center gap-3 bg-neutral-50 p-4 dark:bg-neutral-900">
+        <div className="pt-safe-top sticky top-0 z-20 flex items-center gap-3 bg-neutral-50 p-4 dark:bg-neutral-900">
           {/* 左侧关闭按钮 */}
           <button
             type="button"
