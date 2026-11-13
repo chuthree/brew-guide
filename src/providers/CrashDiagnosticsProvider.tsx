@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect } from 'react';
-import CrashRecoveryNotice from '@/components/common/feedback/CrashRecoveryNotice';
 import {
   installCrashDiagnostics,
   recordCrashCheckpoint,
@@ -13,5 +12,5 @@ export default function CrashDiagnosticsProvider() {
     recordCrashCheckpoint('client:provider-mounted');
   }, []);
 
-  return <CrashRecoveryNotice />;
+  return null;
 }

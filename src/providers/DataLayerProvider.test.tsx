@@ -2,7 +2,6 @@
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { afterEach, expect, it, vi } from 'vitest';
-import { createStore } from 'zustand/vanilla';
 
 const mocks = vi.hoisted(() => ({
   initialize: vi.fn(async () => {
@@ -30,11 +29,20 @@ vi.mock('@/lib/app/runtime', () => ({
 vi.mock('@/lib/data/runtime', () => ({
   resolveStorageBackend: () => 'native-sqlite',
 }));
-vi.mock('@/lib/data/nativeMigrationGate', () => ({
-  nativeMigrationGate: createStore(() => ({ phase: 'idle' })),
-}));
 vi.mock('@/lib/utils/jsonExport', () => ({ exportJsonFile: mocks.exportFile }));
 vi.mock('next/dynamic', () => ({ default: () => () => null }));
+vi.mock('@/components/common/ui/ActionDrawer', () => ({
+  default: Object.assign(
+    ({ isOpen, children }: { isOpen: boolean; children: React.ReactNode }) =>
+      isOpen ? children : null,
+    {
+      Content: ({ children }: { children: React.ReactNode }) => children,
+      Actions: ({ children }: { children: React.ReactNode }) => children,
+      PrimaryButton: 'button',
+      SecondaryButton: 'button',
+    }
+  ),
+}));
 import { DataLayerProvider } from './DataLayerProvider';
 
 afterEach(() => {
@@ -54,11 +62,16 @@ it('exports diagnostics when startup fails without mounting editable data screen
         </DataLayerProvider>
       );
     });
-    expect(container.textContent).toContain('暂时无法加载数据');
+    expect(container.textContent).toContain('无法读取本地数据');
     expect(container.textContent).not.toContain('editable screen');
     expect(mocks.diagnostics.mock.invocationCallOrder[0]).toBeLessThan(
       mocks.initialize.mock.invocationCallOrder[0]
     );
+    await act(async () => {
+      Array.from(container.querySelectorAll('button'))
+        .find(element => element.textContent === '诊断信息')!
+        .click();
+    });
     const button = Array.from(container.querySelectorAll('button')).find(
       element => element.textContent === '导出诊断'
     )!;

@@ -1,9 +1,13 @@
 import { getSettingsStore } from '@/lib/stores/settingsStore';
 import { withDataMutation } from '@/lib/data/mutationCoordinator';
 import { callStoreActionInMutation } from '@/lib/data/storeMutationBoundary';
+import type { AppSettings } from '@/lib/data/models';
 
-export function readCustomPresets(key: string): string[] {
-  const saved = getSettingsStore().settings.customPresets?.[key];
+export function readCustomPresets(
+  key: string,
+  settings: Pick<AppSettings, 'customPresets'> = getSettingsStore().settings
+): string[] {
+  const saved = settings.customPresets?.[key];
   let values: unknown = saved;
   if (saved === undefined) {
     const legacy =

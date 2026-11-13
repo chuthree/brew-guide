@@ -13,29 +13,15 @@ function keepDrawerOpen() {
   return;
 }
 
-function retryUpgrade() {
-  window.location.reload();
-}
-
-export default function NativeMigrationDrawer({
-  onExportDiagnostics,
-  exportingDiagnostics,
-  diagnosticStatus,
-}: {
-  onExportDiagnostics: () => void;
-  exportingDiagnostics: boolean;
-  diagnosticStatus: string;
-}) {
+export default function NativeMigrationDrawer() {
   const { phase, error } = useStore(nativeMigrationGate);
   const busy = ['saving', 'migrating', 'cleaning'].includes(phase);
   const message = error
-    ? phase === 'failed'
-      ? '升级尚未完成，请再试一次。'
-      : phase === 'ready'
-        ? '暂时无法开始升级，请再试一次。'
-        : error.startsWith('已取消备份')
-          ? '已取消备份，请先保存备份再升级。'
-          : '备份没有成功，请再试一次。'
+    ? phase === 'ready'
+      ? '暂时无法开始升级，请再试一次。'
+      : error.startsWith('已取消备份')
+        ? '已取消备份，请先保存备份再升级。'
+        : '备份没有成功，请再试一次。'
     : phase === 'ready'
       ? '备份已保存。确认后开始升级，请暂时不要关闭应用。'
       : phase === 'saving'
@@ -46,7 +32,7 @@ export default function NativeMigrationDrawer({
 
   return (
     <ActionDrawer
-      isOpen={phase !== 'idle'}
+      isOpen={phase !== 'idle' && phase !== 'failed'}
       onClose={keepDrawerOpen}
       dismissible={false}
       disableHistory
@@ -60,28 +46,19 @@ export default function NativeMigrationDrawer({
         >
           {message}
         </p>
-        {diagnosticStatus && <p role="status">{diagnosticStatus}</p>}
       </ActionDrawer.Content>
       <ActionDrawer.Actions>
         <ActionDrawer.SecondaryButton
-          onClick={
-            phase === 'failed' ? onExportDiagnostics : saveNativeMigrationBackup
-          }
-          disabled={busy || exportingDiagnostics}
+          onClick={saveNativeMigrationBackup}
+          disabled={busy}
         >
-          {phase === 'failed'
-            ? exportingDiagnostics
-              ? '正在导出…'
-              : '导出诊断'
-            : phase === 'ready'
-              ? '再次备份'
-              : '备份数据'}
+          {phase === 'ready' ? '再次备份' : '备份数据'}
         </ActionDrawer.SecondaryButton>
         <ActionDrawer.PrimaryButton
-          onClick={phase === 'failed' ? retryUpgrade : confirmNativeMigration}
-          disabled={phase !== 'ready' && phase !== 'failed'}
+          onClick={confirmNativeMigration}
+          disabled={phase !== 'ready'}
         >
-          {phase === 'failed' ? '重试升级' : '确认升级'}
+          确认升级
         </ActionDrawer.PrimaryButton>
       </ActionDrawer.Actions>
     </ActionDrawer>

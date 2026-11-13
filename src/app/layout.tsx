@@ -11,6 +11,7 @@ import KeyboardManager from '@/components/layout/KeyboardManager';
 import { Suspense } from 'react';
 import CapacitorInit from '@/providers/CapacitorProvider';
 import CrashDiagnosticsProvider from '@/providers/CrashDiagnosticsProvider';
+import CrashRecoveryNotice from '@/components/common/feedback/CrashRecoveryNotice';
 import StorageInit from '@/providers/StorageProvider';
 import ModalHistoryInit from '@/providers/ModalHistoryProvider';
 import { DataLayerProvider } from '@/providers/DataLayerProvider';
@@ -269,6 +270,7 @@ export default function RootLayout({
         >
           <CrashDiagnosticsProvider />
           <DataLayerProvider>
+            <CrashRecoveryNotice />
             <TauriDragRegion />
             <div className="app-viewport overflow-hidden bg-neutral-50 dark:bg-neutral-900">
               <Suspense>

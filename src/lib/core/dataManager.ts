@@ -33,7 +33,6 @@ import {
 } from '@/lib/data/repositories';
 import { resolveStorageBackend } from '@/lib/data/runtime';
 import {
-  getRoasterConfigsSync,
   getSettingsStore,
   normalizeImportedSettings,
   useSettingsStore,
@@ -82,6 +81,8 @@ interface ExportAllDataOptions {
   strict?: boolean;
   /** Upgrade backup: use frozen core data before repositories are bound. */
   snapshot?: Record<string, unknown>;
+  /** Recovery exports may run before the settings store has loaded. */
+  readPersistedSettings?: boolean;
 }
 
 type LegacyCoffeeBeanRecord = _CoffeeBean & {
@@ -200,15 +201,17 @@ export const DataManager = {
 
       // 获取数据
       const storage = await getStorage();
+      const settings: Partial<_SettingsOptions> = options.readPersistedSettings
+        ? ((await appSettingsRepository.get()) ?? {})
+        : getSettingsStore().settings;
       for (const key of APP_DATA_KEYS) {
         if (options.excludeDeviceSettings && key === 'backupReminderSettings')
           continue;
         // 特殊处理 brewGuideSettings - 从 settingsStore 获取
         if (key === 'brewGuideSettings') {
-          const settingsFromStore = getSettingsStore().settings;
           exportData.data[key] = options.excludeDeviceSettings
-            ? omitDeviceSettings(settingsFromStore)
-            : omitSyncConnectionSettings(settingsFromStore);
+            ? omitDeviceSettings(settings)
+            : omitSyncConnectionSettings(settings);
           continue;
         }
 
@@ -336,7 +339,7 @@ export const DataManager = {
           // 处理每个自定义预设类型
           for (const key of CUSTOM_PRESETS_KEYS) {
             (exportData.data.customPresets as Record<string, string[]>)[key] =
-              readCustomPresets(key);
+              readCustomPresets(key, settings);
           }
         }
       } catch (error) {
@@ -348,8 +351,8 @@ export const DataManager = {
       // 注意：roasterConfigs 已包含在 brewGuideSettings 中，无需单独导出
       // 为了向后兼容，仍然单独导出一份（使用新的 key 名称）
       try {
-        const roasterConfigs = getRoasterConfigsSync();
-        if (roasterConfigs.length > 0) {
+        const roasterConfigs = settings.roasterConfigs;
+        if (roasterConfigs?.length) {
           exportData.data['roasterConfigs'] = roasterConfigs;
         }
       } catch (error) {
