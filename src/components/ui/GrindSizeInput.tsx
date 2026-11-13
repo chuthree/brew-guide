@@ -11,7 +11,6 @@ import React, {
 } from 'react';
 import { Link2, Unlink, Undo2 } from 'lucide-react';
 import { useGrinderStore, type Grinder } from '@/lib/stores/grinderStore';
-import { sortGrinders } from '@/lib/grinder/sortGrinders';
 import {
   useFloating,
   autoUpdate,
@@ -263,7 +262,7 @@ const GrindSizeInput = forwardRef<GrindSizeInputRef, GrindSizeInputProps>(
       }
 
       // 2. 其他磨豆机
-      sortGrinders(grinders).forEach(g => {
+      grinders.forEach(g => {
         if (g.currentGrindSize && g.id !== selectedGrinderId) {
           options.push({
             value: formatGrinderOption(g),
