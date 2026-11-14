@@ -107,11 +107,8 @@ const NoteItemStandard: React.FC<NoteItemProps> = ({
     }
 
     if (beanName) return beanName;
-    if (equipmentName) return equipmentName;
-
-    const notePreview = note.notes?.trim();
-    return notePreview || '未命名记录';
-  }, [beanName, equipmentName, note.method, note.methodName, note.notes]);
+    return equipmentName;
+  }, [beanName, equipmentName, note]);
 
   const paramTexts = React.useMemo(() => {
     if (!normalizedParams) {
@@ -168,52 +165,54 @@ const NoteItemStandard: React.FC<NoteItemProps> = ({
 
   return (
     <div
-      className={`group space-y-3 px-6 py-5 ${!isLast ? 'border-b border-neutral-200/50 dark:border-neutral-800/50' : ''} ${!isShareMode ? 'cursor-pointer' : 'cursor-pointer'} note-item`}
+      className={`group flex cursor-pointer gap-3 px-6 py-5 ${!isLast ? 'border-b border-neutral-200/50 dark:border-neutral-800/50' : ''} note-item`}
       onClick={handleNoteClick}
       data-note-id={note.id}
     >
-      <div className="flex flex-col space-y-3">
+      <div className="flex min-w-0 flex-1 flex-col gap-3">
         {/* 图片和基本信息区域 */}
-        <div className="flex gap-4">
-          {/* 笔记图片 - 只在有图片时显示 */}
-          {noteImage && (
-            <div
-              className="relative h-14 w-14 shrink-0 cursor-pointer overflow-hidden rounded border border-neutral-200/50 bg-neutral-100 dark:border-neutral-800/50 dark:bg-neutral-800/20"
-              onClick={handleNoteImageClick}
-            >
-              {imageError ? (
-                <div className="absolute inset-0 flex items-center justify-center text-xs text-neutral-500 dark:text-neutral-400">
-                  加载失败
-                </div>
-              ) : (
-                <Image
-                  src={noteImage}
-                  alt={beanName || '笔记图片'}
-                  height={48}
-                  width={48}
-                  unoptimized
-                  style={{ width: '100%', height: '100%' }}
-                  className="object-cover"
-                  sizes="48px"
-                  priority={false}
-                  loading="lazy"
-                  onError={() => setImageError(true)}
-                />
-              )}
-            </div>
-          )}
+        {(noteImage || titleText || paramTexts.length > 0) && (
+          <div className="flex gap-4">
+            {/* 笔记图片 - 只在有图片时显示 */}
+            {noteImage && (
+              <div
+                className="relative h-14 w-14 shrink-0 cursor-pointer overflow-hidden rounded border border-neutral-200/50 bg-neutral-100 dark:border-neutral-800/50 dark:bg-neutral-800/20"
+                onClick={handleNoteImageClick}
+              >
+                {imageError ? (
+                  <div className="absolute inset-0 flex items-center justify-center text-xs text-neutral-500 dark:text-neutral-400">
+                    加载失败
+                  </div>
+                ) : (
+                  <Image
+                    src={noteImage}
+                    alt={beanName || '笔记图片'}
+                    height={48}
+                    width={48}
+                    unoptimized
+                    style={{ width: '100%', height: '100%' }}
+                    className="object-cover"
+                    sizes="48px"
+                    priority={false}
+                    loading="lazy"
+                    onError={() => setImageError(true)}
+                  />
+                )}
+              </div>
+            )}
 
-          {/* 名称和标签区域 */}
-          <div className="min-w-0 flex-1">
-            <div className="flex items-start justify-between">
-              <div className="min-w-0 flex-1 overflow-visible">
-                <div className="text-xs font-medium wrap-break-word text-neutral-800 dark:text-neutral-100">
-                  <HighlightText text={titleText} highlight={searchQuery} />
-                </div>
+            {/* 名称和标签区域 */}
+            {(titleText || paramTexts.length > 0) && (
+              <div className="min-w-0 flex-1 space-y-1.5">
+                {titleText && (
+                  <div className="text-xs font-medium wrap-break-word text-neutral-800 dark:text-neutral-100">
+                    <HighlightText text={titleText} highlight={searchQuery} />
+                  </div>
+                )}
 
                 {/* 参数信息 - 只要有参数就显示，不依赖于是否有方案 */}
                 {paramTexts.length > 0 && (
-                  <div className="mt-1.5 space-x-1 text-xs leading-relaxed font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
+                  <div className="space-x-1 text-xs leading-relaxed font-medium tracking-wide text-neutral-600 dark:text-neutral-400">
                     {/* 如果有方案且有咖啡豆名称，显示器具名称 */}
                     {beanName &&
                       equipmentName &&
@@ -235,23 +234,9 @@ const NoteItemStandard: React.FC<NoteItemProps> = ({
                   </div>
                 )}
               </div>
-              {isShareMode && (
-                <div className="relative ml-1 h-[16.5px] shrink-0">
-                  <input
-                    type="checkbox"
-                    checked={isSelected}
-                    onChange={e => {
-                      e.stopPropagation();
-                      if (onToggleSelect) onToggleSelect(note.id);
-                    }}
-                    onClick={e => e.stopPropagation()}
-                    className="relative h-4 w-4 appearance-none rounded-sm border border-neutral-300 text-xs checked:bg-neutral-800 checked:after:absolute checked:after:top-1/2 checked:after:left-1/2 checked:after:-translate-x-1/2 checked:after:-translate-y-1/2 checked:after:text-white checked:after:content-['✓'] dark:border-neutral-700 dark:checked:bg-neutral-200 dark:checked:after:text-black"
-                  />
-                </div>
-              )}
-            </div>
+            )}
           </div>
-        </div>
+        )}
 
         {/* 风味评分 - 只有当存在有效评分(大于0)时才显示 */}
         {hasTasteRatings ? (
@@ -314,6 +299,19 @@ const NoteItemStandard: React.FC<NoteItemProps> = ({
           </div>
         )}
       </div>
+      {isShareMode && (
+        <input
+          type="checkbox"
+          aria-label="选择笔记"
+          checked={isSelected}
+          onChange={e => {
+            e.stopPropagation();
+            if (onToggleSelect) onToggleSelect(note.id);
+          }}
+          onClick={e => e.stopPropagation()}
+          className="relative h-4 w-4 shrink-0 appearance-none self-start rounded-sm border border-neutral-300 text-xs checked:bg-neutral-800 checked:after:absolute checked:after:top-1/2 checked:after:left-1/2 checked:after:-translate-x-1/2 checked:after:-translate-y-1/2 checked:after:text-white checked:after:content-['✓'] dark:border-neutral-700 dark:checked:bg-neutral-200 dark:checked:after:text-black"
+        />
+      )}
     </div>
   );
 };
