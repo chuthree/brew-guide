@@ -160,7 +160,7 @@ Object.assign(safePreferenceSchema, {
   showEstateField: bool,
   immersiveAdd: bool,
   experimentalBeanSharePackageEnabled: bool,
-  experimentalBeanCustomSortEnabled: bool,
+  beanCustomSortEnabled: bool,
   showMenuBarIcon: bool,
   showCoffeeBeanSelectionStep: bool,
   showBrewingVisualizer: bool,

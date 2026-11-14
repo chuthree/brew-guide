@@ -196,7 +196,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
       saveViewModePreference(view);
     });
   const customSortEnabled = useSettingsStore(
-    state => state.settings.experimentalBeanCustomSortEnabled === true
+    state => state.settings.beanCustomSortEnabled === true
   );
   const coffeeBeanOrder = useSettingsStore(
     state => state.settings.coffeeBeanOrder
@@ -477,7 +477,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
     overId: string
   ) => {
     const store = useSettingsStore.getState();
-    if (!store.settings.experimentalBeanCustomSortEnabled) return;
+    if (!store.settings.beanCustomSortEnabled) return;
     const fullOrder = orderBeans(
       useCoffeeBeanStore.getState().beans.filter(bean => !isBeanEmpty(bean)),
       store.settings.coffeeBeanOrder

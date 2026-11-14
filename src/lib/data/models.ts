@@ -289,7 +289,7 @@ export interface AppSettings {
   experimentalBeanRecognitionModel?: string;
   experimentalBeanRecognitionPrompt?: string;
   experimentalBeanSharePackageEnabled?: boolean;
-  experimentalBeanCustomSortEnabled?: boolean;
+  beanCustomSortEnabled?: boolean;
   coffeeBeanOrder?: string[];
   syncNewNoteDateWithSelectedDate?: boolean;
   syncQuickDecrementDateWithSelectedDate?: boolean;

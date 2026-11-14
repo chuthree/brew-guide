@@ -143,7 +143,7 @@ export const defaultSettings: AppSettings = {
   experimentalBeanRecognitionModel: '',
   experimentalBeanRecognitionPrompt: '',
   experimentalBeanSharePackageEnabled: false,
-  experimentalBeanCustomSortEnabled: false,
+  beanCustomSortEnabled: false,
   coffeeBeanOrder: [],
   syncNewNoteDateWithSelectedDate: false,
   syncQuickDecrementDateWithSelectedDate: false,

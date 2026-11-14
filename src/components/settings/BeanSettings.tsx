@@ -255,6 +255,19 @@ const BeanSettings: React.FC<BeanSettingsProps> = ({ onClose }) => {
         )}
       </SettingSection>
 
+      <SettingSection
+        title="排序"
+        footer="开启后，可在列表的排序选项中选择「手动」，长按咖啡豆并拖动调整顺序。"
+      >
+        <SettingRow label="手动排序" isLast>
+          <SettingToggle
+            checked={settings.beanCustomSortEnabled === true}
+            onChange={checked => handleChange('beanCustomSortEnabled', checked)}
+            ariaLabel="手动排序"
+          />
+        </SettingRow>
+      </SettingSection>
+
       <SettingSection title="详情页">
         <SettingRow label="标签打印">
           <SettingToggle

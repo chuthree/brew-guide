@@ -176,7 +176,7 @@ const SortSection: React.FC<SortSectionProps> = ({
   const { type: currentType, order: currentOrder } =
     getSortTypeAndOrder(sortOption);
   const customSortEnabled = useSettingsStore(
-    state => state.settings.experimentalBeanCustomSortEnabled === true
+    state => state.settings.beanCustomSortEnabled === true
   );
 
   return (
@@ -209,7 +209,7 @@ const SortSection: React.FC<SortSectionProps> = ({
               isActive={currentType === 'custom'}
               onClick={() => onSortChange('custom')}
             >
-              自定义
+              手动
             </FilterButton>
           )}
         </div>

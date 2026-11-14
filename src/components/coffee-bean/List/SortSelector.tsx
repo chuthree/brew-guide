@@ -229,7 +229,7 @@ export const convertToRankingSortOption = (
 
 // 排序选项的显示名称
 const SORT_LABELS: Record<SortOption, string> = {
-  [SORT_OPTIONS.CUSTOM]: '自定义',
+  [SORT_OPTIONS.CUSTOM]: '手动',
   [SORT_OPTIONS.REMAINING_DAYS_ASC]: '赏味期',
   [SORT_OPTIONS.REMAINING_DAYS_DESC]: '赏味期',
   [SORT_OPTIONS.NAME_ASC]: '名称',
@@ -328,7 +328,7 @@ export type SortOrder = (typeof SORT_ORDERS)[keyof typeof SORT_ORDERS];
 
 // 排序方式的显示名称
 export const SORT_TYPE_LABELS: Record<SortType, string> = {
-  [SORT_TYPES.CUSTOM]: '自定义',
+  [SORT_TYPES.CUSTOM]: '手动',
   [SORT_TYPES.REMAINING_DAYS]: '赏味期',
   [SORT_TYPES.NAME]: '名称',
   [SORT_TYPES.RATING]: '评分',
