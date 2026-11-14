@@ -442,7 +442,7 @@ const NoteItem: React.FC<NoteItemProps> = ({
   return (
     <>
       <div
-        className={`group px-6 ${isFirst ? 'pt-5' : 'pt-3.5'} pb-3.5 ${!isLast ? 'border-b border-neutral-200/50 dark:border-neutral-800/50' : ''} ${!isShareMode ? 'cursor-pointer' : 'cursor-pointer'} note-item`}
+        className={`group cursor-pointer px-6 ${isFirst ? 'pt-5' : 'pt-3.5'} pb-3.5 ${!isLast ? 'border-b border-neutral-200/50 dark:border-neutral-800/50' : ''} note-item`}
         onClick={handleNoteClick}
         data-note-id={note.id}
       >
@@ -496,24 +496,9 @@ const NoteItem: React.FC<NoteItemProps> = ({
           {/* 内容区域 - 垂直排列，使用统一的间距系统 */}
           <div className="min-w-0 flex-1 space-y-1.5">
             {/* 咖啡豆名称 */}
-            {(beanName || isShareMode) && (
-              <div className="flex items-start justify-between gap-3">
-                {beanName && (
-                  <div className="min-w-0 flex-1 truncate text-xs leading-tight font-medium text-neutral-800 dark:text-neutral-100">
-                    <HighlightText text={beanName} highlight={searchQuery} />
-                  </div>
-                )}
-                {isShareMode && (
-                  <div className="relative h-[16.5px]">
-                    <input
-                      type="checkbox"
-                      checked={isSelected}
-                      onChange={handleShareCheckboxChange}
-                      onClick={handleShareCheckboxClick}
-                      className="relative h-4 w-4 appearance-none rounded-sm border border-neutral-300 text-xs checked:bg-neutral-800 checked:after:absolute checked:after:top-1/2 checked:after:left-1/2 checked:after:-translate-x-1/2 checked:after:-translate-y-1/2 checked:after:text-white checked:after:content-['✓'] dark:border-neutral-700 dark:checked:bg-neutral-200 dark:checked:after:text-black"
-                    />
-                  </div>
-                )}
+            {beanName && (
+              <div className="truncate text-xs leading-tight font-medium text-neutral-800 dark:text-neutral-100">
+                <HighlightText text={beanName} highlight={searchQuery} />
               </div>
             )}
 
@@ -569,6 +554,16 @@ const NoteItem: React.FC<NoteItemProps> = ({
               </div>
             )}
           </div>
+          {isShareMode && (
+            <input
+              type="checkbox"
+              aria-label="选择笔记"
+              checked={isSelected}
+              onChange={handleShareCheckboxChange}
+              onClick={handleShareCheckboxClick}
+              className="relative h-4 w-4 shrink-0 self-start appearance-none rounded-sm border border-neutral-300 text-xs checked:bg-neutral-800 checked:after:absolute checked:after:top-1/2 checked:after:left-1/2 checked:after:-translate-x-1/2 checked:after:-translate-y-1/2 checked:after:text-white checked:after:content-['✓'] dark:border-neutral-700 dark:checked:bg-neutral-200 dark:checked:after:text-black"
+            />
+          )}
         </div>
       </div>
 
