@@ -275,13 +275,13 @@ const ActionMenu: React.FC<ActionMenuProps> = ({
           <motion.button
             ref={triggerRef}
             onClick={handleTriggerClick}
-            className="absolute top-0 right-0 flex h-8 w-8 items-center justify-center"
+            className="absolute top-0 left-0 flex h-8 w-8 items-center justify-center"
             initial={false}
             animate={{
               opacity: open ? 0 : 1,
             }}
             transition={{
-              duration: open ? 0.1 : 0.14,
+              duration: open ? 0.1 : 0.18,
               ease: MORPH_EASE,
             }}
             style={{
