@@ -77,12 +77,3 @@ export const initCapacitor = async (): Promise<void> => {
     console.error('Capacitor initialization error:', e);
   }
 };
-
-const capacitorUtils = {
-  isNative,
-  isBundledNativeApp,
-  getPlatform,
-  initCapacitor,
-};
-
-export default capacitorUtils;

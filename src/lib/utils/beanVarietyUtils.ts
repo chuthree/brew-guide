@@ -52,41 +52,6 @@ export const getBeanVarieties = (bean: CoffeeBean): string[] => {
   return Array.from(new Set(varieties));
 };
 
-/**
- * 获取咖啡豆的主要品种（第一个品种）
- * @param bean 咖啡豆对象
- * @returns 主要品种名称，如果没有则返回null
- */
-const _getBeanPrimaryVariety = (bean: ExtendedCoffeeBean): string | null => {
-  const varieties = getBeanVarieties(bean);
-  return varieties.length > 0 ? varieties[0] : null;
-};
-
-/**
- * 检查咖啡豆是否包含指定品种
- * @param bean 咖啡豆对象
- * @param variety 要检查的品种名称
- * @returns 是否包含该品种
- */
-export const beanHasVariety = (
-  bean: ExtendedCoffeeBean,
-  variety: string
-): boolean => {
-  const varieties = getBeanVarieties(bean);
-  return varieties.includes(variety);
-};
-
-/**
- * 获取咖啡豆的品种显示文本
- * 如果有多个品种，用"、"连接；如果没有品种，返回null
- * @param bean 咖啡豆对象
- * @returns 品种显示文本或null
- */
-const _getBeanVarietyDisplay = (bean: ExtendedCoffeeBean): string | null => {
-  const varieties = getBeanVarieties(bean);
-  return varieties.length > 0 ? varieties.join('、') : null;
-};
-
 const getBeanComponentFieldValues = (
   bean: CoffeeBean,
   fieldId: BeanFieldId
@@ -140,38 +105,6 @@ export const extractUniqueVarieties = (
 };
 
 /**
- * 从咖啡豆数组中提取所有唯一的产地
- * @param beans 咖啡豆数组
- * @returns 按数量排序的唯一产地数组（数量多的在前）
- */
-export const extractUniqueOrigins = (beans: CoffeeBean[]): string[] => {
-  const originCount = new Map<string, number>();
-
-  // 统计每个产地的咖啡豆数量
-  beans.forEach(bean => {
-    const origins = getBeanOrigins(bean);
-    origins.forEach(origin => {
-      originCount.set(origin, (originCount.get(origin) || 0) + 1);
-    });
-  });
-
-  // 按数量排序，数量多的在前
-  const origins = Array.from(originCount.entries())
-    .sort((a, b) => {
-      // 按数量降序排列
-      if (a[1] !== b[1]) {
-        return b[1] - a[1];
-      }
-
-      // 数量相同时按名称字母顺序排列
-      return a[0].localeCompare(b[0], 'zh-CN');
-    })
-    .map(entry => entry[0]);
-
-  return origins;
-};
-
-/**
  * 从咖啡豆数组中提取所有唯一的处理法
  * @param beans 咖啡豆数组
  * @returns 按数量排序的唯一处理法数组（数量多的在前）
@@ -201,31 +134,6 @@ export const extractUniqueProcesses = (beans: CoffeeBean[]): string[] => {
     .map(entry => entry[0]);
 
   return processes;
-};
-
-/**
- * 检查咖啡豆是否包含指定产地
- * @param bean 咖啡豆对象
- * @param origin 要检查的产地名称
- * @returns 是否包含该产地
- */
-export const beanHasOrigin = (bean: CoffeeBean, origin: string): boolean => {
-  const origins = getBeanOrigins(bean);
-  return origins.includes(origin);
-};
-
-/**
- * 检查咖啡豆是否包含指定处理法
- * @param bean 咖啡豆对象
- * @param process 要检查的处理法名称
- * @returns 是否包含该处理法
- */
-export const beanHasProcess = (
-  bean: ExtendedCoffeeBean,
-  process: string
-): boolean => {
-  const processes = getBeanProcesses(bean);
-  return processes.includes(process);
 };
 
 /**
@@ -531,47 +439,6 @@ export const getBeanFlavorPeriodStatus = (
 };
 
 /**
- * 检查咖啡豆是否属于指定的赏味期状态
- * @param bean 咖啡豆对象
- * @param status 要检查的赏味期状态
- * @returns 是否属于该状态
- */
-export const beanHasFlavorPeriodStatus = (
-  bean: ExtendedCoffeeBean,
-  status: FlavorPeriodStatus
-): boolean => {
-  return getBeanFlavorPeriodStatus(bean) === status;
-};
-
-/**
- * 从咖啡豆数组中提取所有存在的赏味期状态
- * @param beans 咖啡豆数组
- * @returns 存在的赏味期状态数组
- */
-export const extractAvailableFlavorPeriodStatuses = (
-  beans: ExtendedCoffeeBean[]
-): FlavorPeriodStatus[] => {
-  const statusesSet = new Set<FlavorPeriodStatus>();
-
-  beans.forEach(bean => {
-    const status = getBeanFlavorPeriodStatus(bean);
-    statusesSet.add(status);
-  });
-
-  // 按优先级排序：冷冻 > 赏味期 > 养豆期 > 衰退期 > 未知 > 在途
-  const priorityOrder = [
-    FlavorPeriodStatus.FROZEN,
-    FlavorPeriodStatus.OPTIMAL,
-    FlavorPeriodStatus.AGING,
-    FlavorPeriodStatus.DECLINE,
-    FlavorPeriodStatus.UNKNOWN,
-    FlavorPeriodStatus.IN_TRANSIT,
-  ];
-
-  return priorityOrder.filter(status => statusesSet.has(status));
-};
-
-/**
  * 烘焙商相关设置接口
  */
 export interface RoasterSettings {
@@ -690,21 +557,6 @@ export const extractUniqueRoasters = (
     .map(entry => entry[0]);
 
   return roasters;
-};
-
-/**
- * 检查咖啡豆是否属于指定的烘焙商
- * @param bean 咖啡豆对象
- * @param roaster 要检查的烘焙商名称
- * @param _settings 烘焙商相关设置（保留参数以保持API兼容性）
- * @returns 是否属于该烘焙商
- */
-export const beanHasRoaster = (
-  bean: ExtendedCoffeeBean,
-  roaster: string,
-  settings?: RoasterSettings
-): boolean => {
-  return getRoasterName(bean, settings) === roaster;
 };
 
 /**

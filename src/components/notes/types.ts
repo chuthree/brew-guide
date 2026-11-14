@@ -109,10 +109,3 @@ export interface FilterTabsProps {
 export interface AddNoteButtonProps {
   onAddNote: (draft?: Partial<BrewingNoteData>) => void;
 }
-
-// 消息提示组件属性
-export interface ToastProps {
-  visible: boolean;
-  message: string;
-  type: 'success' | 'error' | 'info';
-}

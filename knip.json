@@ -1,14 +1,21 @@
 {
   "$schema": "https://unpkg.com/knip@5/schema.json",
-  "entry": ["node-functions/**/*.js", "edge-functions/**/*.js"],
+  "entry": [
+    "node-functions/**/*.js",
+    "edge-functions/**/*.js",
+    "scripts/**/*.test.mjs",
+    "scripts/provider/verify-release-runtime.mjs",
+    "src/lib/provider/headless/*.ts"
+  ],
   "ignoreExportsUsedInFile": true,
   "ignore": [
     "eslint.config.mjs",
     "android/app/src/main/assets/**",
+    "android/**/build/**",
     "ios/App/App/public/**",
     "src-tauri/target/**"
   ],
-  "ignoreDependencies": ["@svgr/webpack", "eslint-config-next"],
+  "ignoreDependencies": ["@svgr/webpack", "@babel/preset-env", "core-js"],
   "next": {
     "entry": [
       "src/app/**/page.tsx",

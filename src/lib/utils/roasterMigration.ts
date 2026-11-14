@@ -70,21 +70,6 @@ async function migrateRoasterFieldInMutation(): Promise<void> {
   }
 }
 
-/**
- * 重置迁移状态（已废弃）
- *
- * 由于采用按需迁移策略，此函数不再需要。
- * 保留此函数以保持 API 兼容性。
- *
- * @deprecated 按需迁移策略不再需要重置状态
- */
-export async function resetRoasterMigration(): Promise<void> {
-  // 按需迁移策略不再需要重置状态
-  console.warn(
-    '[RoasterMigration] resetRoasterMigration 已废弃，按需迁移策略不再需要重置状态'
-  );
-}
-
 export const { migrateRoasterField } = coordinateStoreActions(
   { migrateRoasterField: migrateRoasterFieldInMutation },
   ['migrateRoasterField']

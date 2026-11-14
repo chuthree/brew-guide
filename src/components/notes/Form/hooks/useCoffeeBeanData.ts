@@ -66,10 +66,3 @@ export const useCoffeeBeanData = () => {
     isCacheValid: initialized,
   };
 };
-
-/**
- * 清除全局缓存（已废弃，保留兼容性）
- */
-export const clearGlobalBeanCache = () => {
-  // Store 自动管理，无需手动清除
-};

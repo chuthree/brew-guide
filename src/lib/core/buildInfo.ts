@@ -28,7 +28,3 @@ export const BUILD_INFO = {
 export function getVersionLabel(): string {
   return `v${BUILD_INFO.appVersion}`;
 }
-
-export function getWebBuildDetail(): string {
-  return `main@${BUILD_INFO.gitShaShort} · 构建于 ${BUILD_INFO.buildTimeLabel}`;
-}

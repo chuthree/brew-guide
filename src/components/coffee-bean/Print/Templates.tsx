@@ -208,13 +208,3 @@ export const DetailedTemplate: React.FC<TemplateProps> = ({
     </div>
   );
 };
-
-// ============================================
-// 模板选择器
-// ============================================
-
-export const getTemplateComponent = (
-  templateId: string
-): React.FC<TemplateProps> => {
-  return templateId === 'minimal' ? MinimalTemplate : DetailedTemplate;
-};

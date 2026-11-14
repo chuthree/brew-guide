@@ -6,5 +6,4 @@
 
 export { SyncButtons } from './SyncButtons';
 export { SyncHeaderButton } from './SyncHeaderButton';
-export { SyncDownloadConfirmDrawer } from './SyncDownloadConfirmDrawer';
 export { BackupHistoryDrawer } from './BackupHistoryDrawer';

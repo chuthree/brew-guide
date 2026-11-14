@@ -1068,8 +1068,6 @@ export class InitialSyncManager {
           0,
           ...r.methods.map(m => m.timestamp || 0)
         );
-        // DEBUG: 打印本地记录的时间戳详情
-        // console.log(`[Debug] Local Method ${r.equipmentId}: maxTimestamp=${maxTimestamp}`);
         return {
           id: r.equipmentId,
           equipmentId: r.equipmentId,
@@ -1130,12 +1128,6 @@ export class InitialSyncManager {
           ...m,
           timestamp: Math.max(m.timestamp || 0, updatedAtTime),
         }));
-
-        // DEBUG: 检查远程记录的时间戳差异
-        // const maxMethodTime = Math.max(0, ...patchedMethods.map(m => m.timestamp || 0));
-        // if (updatedAtTime > maxMethodTime) {
-        //   console.log(`[Debug] Remote Method ${r.id}: updatedAt(${updatedAtTime}) > maxMethodTime(${maxMethodTime})`);
-        // }
 
         return {
           id: r.id,

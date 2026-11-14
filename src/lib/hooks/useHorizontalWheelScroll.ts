@@ -1,7 +1,3 @@
-'use client';
-
-import { useEffect, type RefObject } from 'react';
-
 const DOM_DELTA_PIXEL = 0;
 const DOM_DELTA_LINE = 1;
 const DOM_DELTA_PAGE = 2;
@@ -69,34 +65,4 @@ export function getNextHorizontalScrollLeft({
     nextScrollLeft,
     shouldConsume: nextScrollLeft !== scrollLeft,
   };
-}
-
-export function useHorizontalWheelScroll<TElement extends HTMLElement>(
-  containerRef: RefObject<TElement | null>
-): void {
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    const handleWheel = (event: WheelEvent) => {
-      const delta = getHorizontalWheelDelta(event, container.clientWidth);
-      const { nextScrollLeft, shouldConsume } = getNextHorizontalScrollLeft({
-        scrollLeft: container.scrollLeft,
-        scrollWidth: container.scrollWidth,
-        clientWidth: container.clientWidth,
-        delta,
-      });
-
-      if (!shouldConsume) return;
-
-      event.preventDefault();
-      container.scrollLeft = nextScrollLeft;
-    };
-
-    container.addEventListener('wheel', handleWheel, { passive: false });
-
-    return () => {
-      container.removeEventListener('wheel', handleWheel);
-    };
-  }, [containerRef]);
 }

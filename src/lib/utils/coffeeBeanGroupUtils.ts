@@ -30,20 +30,3 @@ export const normalizeCoffeeBeanGroups = (
     };
   });
 };
-
-export const getAvailableCoffeeBeanGroups = (
-  groups: CoffeeBeanGroup[] | undefined,
-  beans: CoffeeBean[]
-): CoffeeBeanGroup[] => {
-  if (!beans.length) return [];
-
-  const beanIds = new Set(beans.map(bean => bean.id));
-  return getSortedCoffeeBeanGroups(groups).filter(group =>
-    (group.beanIds || []).some(beanId => beanIds.has(beanId))
-  );
-};
-
-export const beanBelongsToGroup = (
-  bean: CoffeeBean,
-  group: CoffeeBeanGroup | undefined
-): boolean => Boolean(group?.beanIds?.includes(bean.id));

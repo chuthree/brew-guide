@@ -10,13 +10,7 @@ import {
   calculateTotalCoffeeConsumption as calculateConsumption,
   formatConsumption as formatConsumptionUtil,
 } from '../utils';
-import {
-  noteEquipmentFilterKey,
-  resolveNoteEquipmentName,
-} from '@/lib/notes/noteDisplay';
-import { getEquipmentIdByName } from '@/lib/utils/equipmentUtils';
-import { getBrewingNotes } from '@/lib/notes/relatedNotes';
-import { DATE_GROUPING_MODES, getDateKey } from '@/lib/utils/dateUtils';
+import { DATE_GROUPING_MODES } from '@/lib/utils/dateUtils';
 
 // 模块名称
 const MODULE_NAME = 'brewing-notes';
@@ -117,119 +111,6 @@ export const saveDateGroupingModePreference = (
   value: DateGroupingMode
 ): void => {
   saveStringState(MODULE_NAME, 'dateGroupingMode', value);
-};
-
-// 初始化全局缓存数据
-export const initializeGlobalCache = async (): Promise<void> => {
-  if (globalCache.isLoading) return;
-
-  try {
-    globalCache.isLoading = true;
-
-    // 初始化首选项
-    globalCache.selectedEquipment = getSelectedEquipmentPreference();
-    globalCache.selectedDate = getSelectedDatePreference();
-    globalCache.filterMode = getFilterModePreference();
-    globalCache.sortOption = getSortOptionPreference();
-    globalCache.dateGroupingMode = getDateGroupingModePreference();
-
-    // 从 IndexedDB 加载，避免把带图片的笔记整包序列化成 JSON
-    const parsedNotes = await getBrewingNotes();
-    globalCache.notes = parsedNotes;
-
-    // 计算总消耗量
-    const totalConsumption = calculateConsumption(parsedNotes);
-    globalCache.totalConsumption = totalConsumption;
-
-    const { loadCustomEquipments } =
-      await import('@/lib/stores/customEquipmentStore');
-    const customEquipments = await loadCustomEquipments();
-    const equipmentKey = (note: BrewingNote) =>
-      noteEquipmentFilterKey(note, value =>
-        getEquipmentIdByName(value, customEquipments)
-      );
-
-    // 并行加载设备数据和收集ID
-    const [namesMap, equipmentIds, datesList] = await Promise.all([
-      // 获取设备名称映射
-      (async () => {
-        const map: Record<string, string> = {};
-        const { equipmentList } = await import('@/lib/core/config');
-
-        // 处理标准设备和自定义设备
-        equipmentList.forEach(equipment => {
-          map[equipment.id] = equipment.name;
-        });
-
-        customEquipments.forEach(equipment => {
-          map[equipment.id] = equipment.name;
-        });
-
-        for (const note of parsedNotes) {
-          const key = equipmentKey(note);
-          if (key && (!map[key] || note.equipmentId === null))
-            map[key] = resolveNoteEquipmentName(note, map);
-        }
-        return map;
-      })(),
-
-      // 收集设备ID
-      (async () => {
-        return Array.from(
-          new Set(parsedNotes.map(equipmentKey).filter(Boolean))
-        );
-      })(),
-
-      // 按当前粒度收集日期列表
-      (async () => {
-        const dateSet = new Set<string>();
-        parsedNotes.forEach(note => {
-          if (note.timestamp) {
-            const key = getDateKey(
-              new Date(note.timestamp),
-              globalCache.dateGroupingMode
-            );
-            if (key) dateSet.add(key);
-          }
-        });
-        // 按日期降序排序（最新的在前）
-        return Array.from(dateSet).sort((a, b) => b.localeCompare(a));
-      })(),
-    ]);
-
-    // 更新全局缓存
-    globalCache.equipmentNames = namesMap;
-    globalCache.availableEquipments = equipmentIds;
-    globalCache.availableDates = datesList;
-
-    // 应用过滤器设置过滤后的笔记
-    let filteredNotes = parsedNotes;
-    if (
-      globalCache.filterMode === 'equipment' &&
-      globalCache.selectedEquipment
-    ) {
-      filteredNotes = parsedNotes.filter(
-        note => equipmentKey(note) === globalCache.selectedEquipment
-      );
-    } else if (globalCache.filterMode === 'date' && globalCache.selectedDate) {
-      filteredNotes = parsedNotes.filter(note => {
-        if (!note.timestamp) return false;
-        const noteDate = getDateKey(
-          new Date(note.timestamp),
-          globalCache.dateGroupingMode
-        );
-        return noteDate === globalCache.selectedDate;
-      });
-    }
-    globalCache.filteredNotes = filteredNotes;
-
-    globalCache.initialized = true;
-  } catch (error) {
-    console.error('初始化全局缓存失败:', error);
-    globalCache.initialized = false;
-  } finally {
-    globalCache.isLoading = false;
-  }
 };
 
 // 初始化全局缓存的状态

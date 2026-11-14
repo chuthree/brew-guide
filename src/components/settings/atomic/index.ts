@@ -28,8 +28,5 @@ export { default as SettingCardSelector } from './SettingCardSelector';
 export { default as SettingSlider } from './SettingSlider';
 export { default as SettingPillInput } from './SettingPillInput';
 
-// 辅助组件
-export { default as SettingDescription } from './SettingDescription';
-
 // 入口列表组件（用于主设置页）
 export { default as SettingGroup } from '../SettingItem';

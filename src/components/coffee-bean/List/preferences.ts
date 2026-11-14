@@ -433,12 +433,8 @@ export const saveDisplayModeByStatePreference = (
 // 向后兼容：isImageFlowMode 函数
 export const getImageFlowModePreference = () =>
   getDisplayModePreference() === 'imageFlow';
-export const saveImageFlowModePreference = (v: boolean) =>
-  saveDisplayModePreference(v ? 'imageFlow' : 'list');
 export const getImageFlowModeByStatePreference = (s: BeanState) =>
   getDisplayModeByStatePreference(s) === 'imageFlow';
-export const saveImageFlowModeByStatePreference = (s: BeanState, v: boolean) =>
-  saveDisplayModeByStatePreference(s, v ? 'imageFlow' : 'list');
 
 // 统计视图
 export const getDateGroupingModePreference = (): DateGroupingMode => {
