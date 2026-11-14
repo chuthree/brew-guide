@@ -2,8 +2,6 @@
 
 import { exportJsonFile, type JsonExportResult } from '@/lib/utils/jsonExport';
 
-export type DataExportMode = JsonExportResult['mode'];
-
 export type DataExportResult = JsonExportResult;
 
 export interface DataExportOptions {

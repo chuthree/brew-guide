@@ -32,7 +32,6 @@ import BottomActionBar from '@/components/layout/BottomActionBar';
 import { showToast } from '@/components/common/feedback/LightToast';
 
 import {
-  globalCache,
   saveSelectedEquipmentPreference,
   saveSelectedDatePreference,
   saveFilterModePreference,
@@ -560,9 +559,6 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
     ? searchAllFilteredNotes
     : currentScopeSearchFilteredNotes;
 
-  // 计算总咖啡消耗量
-  const totalCoffeeConsumption = useRef(0);
-
   // 🔥 组件挂载时加载笔记数据和器具数据（不依赖 isOpen）
   useEffect(() => {
     void loadNotes();
@@ -570,11 +566,6 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
       void loadEquipments();
     }
   }, [customEquipmentInitialized, loadEquipments, loadNotes]);
-
-  // 计算总消耗量
-  useEffect(() => {
-    totalCoffeeConsumption.current = calculateTotalCoffeeConsumption(notes);
-  }, [notes]);
 
   // 显示消息提示 - 使用 LightToast
   const showToastMessage = (
@@ -741,8 +732,6 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
     setSelectedDate(null);
     saveSelectedEquipmentPreference(null);
     saveSelectedDatePreference(null);
-    globalCache.selectedEquipment = null;
-    globalCache.selectedDate = null;
   };
 
   // 处理设备选择变化
@@ -773,8 +762,6 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
       saveDateGroupingModePreference(mode);
       setSelectedDate(null);
       saveSelectedDatePreference(null);
-      globalCache.dateGroupingMode = mode;
-      globalCache.selectedDate = null;
     },
     [setDateGroupingMode, setIsSearchAllScope, setSelectedDate]
   );

@@ -361,45 +361,6 @@ export const CapacitySyncManager = {
   },
 };
 
-export function buildInitialBrewBeanInventory(
-  coffeeParam: string | undefined
-): Pick<CoffeeBean, 'capacity' | 'remaining'> {
-  const coffeeAmount = CapacitySyncManager.extractCoffeeAmount(
-    coffeeParam || ''
-  );
-
-  return {
-    capacity:
-      coffeeAmount > 0
-        ? CapacitySyncManager.formatCoffeeParam(coffeeAmount)
-        : '',
-    remaining: '0',
-  };
-}
-
-async function createBeanFromBrewUsageInMutation(
-  name: string,
-  coffeeParam: string | undefined
-): Promise<CoffeeBean> {
-  return callStoreActionInMutation(getCoffeeBeanStore().addBean, {
-    name,
-    ...buildInitialBrewBeanInventory(coffeeParam),
-  });
-}
-
-async function initializeBeanFromBrewUsageInMutation(
-  id: string,
-  coffeeParam: string | undefined
-): Promise<CoffeeBean | null> {
-  if (!id) return null;
-
-  return callStoreActionInMutation(
-    getCoffeeBeanStore().updateBean,
-    id,
-    buildInitialBrewBeanInventory(coffeeParam)
-  );
-}
-
 /**
  * 更新咖啡豆剩余量（减少）
  * @param id 咖啡豆ID
@@ -501,26 +462,6 @@ async function increaseBeanRemainingInMutation(
 }
 
 /**
- * 获取所有已评分的咖啡豆
- */
-export async function getRatedBeans(): Promise<CoffeeBean[]> {
-  const store = getCoffeeBeanStore();
-  const beans =
-    store.beans.length > 0 ? store.beans : await coffeeBeanRepository.list();
-  return beans.filter(bean => bean.overallRating && bean.overallRating > 0);
-}
-
-/**
- * 获取特定类型的已评分咖啡豆
- */
-export async function getRatedBeansByType(
-  type: 'espresso' | 'filter' | 'omni'
-): Promise<CoffeeBean[]> {
-  const ratedBeans = await getRatedBeans();
-  return ratedBeans.filter(bean => bean.beanType === type);
-}
-
-/**
  * 根据名称/显示名称获取咖啡豆
  */
 export async function getBeanByName(
@@ -541,22 +482,11 @@ export async function getBeanByName(
   );
 }
 
-export const {
-  createBeanFromBrewUsage,
-  initializeBeanFromBrewUsage,
-  updateBeanRemaining,
-  increaseBeanRemaining,
-} = coordinateStoreActions(
-  {
-    createBeanFromBrewUsage: createBeanFromBrewUsageInMutation,
-    initializeBeanFromBrewUsage: initializeBeanFromBrewUsageInMutation,
-    updateBeanRemaining: updateBeanRemainingInMutation,
-    increaseBeanRemaining: increaseBeanRemainingInMutation,
-  },
-  [
-    'createBeanFromBrewUsage',
-    'initializeBeanFromBrewUsage',
-    'updateBeanRemaining',
-    'increaseBeanRemaining',
-  ]
-);
+export const { updateBeanRemaining, increaseBeanRemaining } =
+  coordinateStoreActions(
+    {
+      updateBeanRemaining: updateBeanRemainingInMutation,
+      increaseBeanRemaining: increaseBeanRemainingInMutation,
+    },
+    ['updateBeanRemaining', 'increaseBeanRemaining']
+  );

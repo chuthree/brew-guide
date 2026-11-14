@@ -15,8 +15,6 @@ import {
 } from './serialization';
 import { validateExternalImageUrl } from '../images/persistentImageSource';
 
-export type ImageSourceKind = 'file' | 'external';
-
 export type FileImageSource = {
   sourceKind: 'file';
   variant: SQLiteImageVariant;

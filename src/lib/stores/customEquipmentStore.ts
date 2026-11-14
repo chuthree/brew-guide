@@ -349,50 +349,15 @@ async function deleteCustomEquipmentInMutation(id: string): Promise<void> {
   await callStoreActionInMutation(store.deleteEquipment, id);
 }
 
-/**
- * 便捷函数：添加器具及其方案
- */
-async function addEquipmentWithMethodsInMutation(
-  equipment: Omit<CustomEquipment, 'id' | 'isCustom'>,
-  methods?: Method[]
-): Promise<CustomEquipment> {
-  const store = getCustomEquipmentStore();
-  const newEquipment = await callStoreActionInMutation(
-    store.addEquipment,
-    equipment
-  );
-
-  if (methods && methods.length > 0) {
-    // 动态导入以避免循环依赖
-    const { useCustomMethodStore } =
-      await import('@/lib/stores/customMethodStore');
-    const methodStore = useCustomMethodStore.getState();
-    await callStoreActionInMutation(
-      methodStore.setMethodsForEquipment,
-      newEquipment.id,
-      methods
-    );
-  }
-
-  return newEquipment;
-}
-
 export const {
   loadCustomEquipments,
   saveCustomEquipment,
   deleteCustomEquipment,
-  addEquipmentWithMethods,
 } = coordinateStoreActions(
   {
     loadCustomEquipments: loadCustomEquipmentsInMutation,
     saveCustomEquipment: saveCustomEquipmentInMutation,
     deleteCustomEquipment: deleteCustomEquipmentInMutation,
-    addEquipmentWithMethods: addEquipmentWithMethodsInMutation,
   },
-  [
-    'loadCustomEquipments',
-    'saveCustomEquipment',
-    'deleteCustomEquipment',
-    'addEquipmentWithMethods',
-  ]
+  ['loadCustomEquipments', 'saveCustomEquipment', 'deleteCustomEquipment']
 );

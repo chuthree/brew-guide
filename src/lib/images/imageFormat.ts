@@ -39,11 +39,6 @@ const SUPPORTED_SOURCE_IMAGE_MIME_TYPE_SET = new Set<string>(
   SUPPORTED_SOURCE_IMAGE_MIME_TYPES
 );
 
-export const getAppImageFileName = (fileName: string): string =>
-  /\.[^/.]+$/.test(fileName)
-    ? fileName.replace(/\.[^/.]+$/, '.webp')
-    : `${fileName}.webp`;
-
 export const getThumbnailMimeType = (dataUrl: string): string =>
   dataUrl.startsWith(`data:${JPEG_IMAGE_MIME_TYPE}`)
     ? JPEG_IMAGE_MIME_TYPE

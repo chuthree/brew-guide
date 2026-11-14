@@ -30,44 +30,19 @@ import {
 } from '@/lib/data/repositories';
 import { stripCoffeeBeanImages } from '@/lib/coffee-beans/imageRecords';
 
-/**
- * 初始化状态
- */
-interface InitializationState {
-  isInitialized: boolean;
-  isInitializing: boolean;
-  error: string | null;
-}
-
-let initState: InitializationState = {
-  isInitialized: false,
-  isInitializing: false,
-  error: null,
-};
 let initializationPromise: Promise<void> | null = null;
 
-/**
- * 初始化所有数据 Store
- *
- * 调用顺序很重要：
- * 1. 数据库初始化
- * 2. 设置 Store（其他 Store 可能依赖设置）
- * 3. 核心数据 Store（咖啡豆、笔记）
- * 4. 器具相关 Store
- * 5. 其他 Store
- */
 export function initializeDataLayer(): Promise<void> {
   if (initializationPromise) return initializationPromise;
-  if (initState.isInitialized) return Promise.resolve();
 
-  initializationPromise = initializeStores().finally(() => {
+  initializationPromise = initializeStores().catch(error => {
     initializationPromise = null;
+    throw error;
   });
   return initializationPromise;
 }
 
 async function initializeStores(): Promise<void> {
-  initState.isInitializing = true;
   console.log('📦 开始初始化数据层...');
 
   try {
@@ -75,11 +50,6 @@ async function initializeStores(): Promise<void> {
     console.log('📦 Step 1: 初始化数据运行时...');
     recordCrashCheckpoint('data-layer:db:init');
     const runtimeInitialization = await initializeDataRuntime();
-    if (runtimeInitialization.status !== 'ready') {
-      throw new Error(
-        `Data backend "${runtimeInitialization.backend}" is not implemented: ${runtimeInitialization.reason}`
-      );
-    }
 
     // 3. 并行初始化所有 Store
     console.log('📦 Step 3: 初始化 Stores...');
@@ -124,8 +94,6 @@ async function initializeStores(): Promise<void> {
       }
     }
 
-    initState.isInitialized = true;
-    initState.error = null;
     console.log('✅ 数据层初始化完成');
 
     if (
@@ -155,29 +123,8 @@ async function initializeStores(): Promise<void> {
     }
   } catch (error) {
     console.error('❌ 数据层初始化失败:', error);
-    initState.error = error instanceof Error ? error.message : '初始化失败';
     throw error;
-  } finally {
-    initState.isInitializing = false;
   }
-}
-
-/**
- * 获取初始化状态
- */
-export function getInitializationState(): InitializationState {
-  return { ...initState };
-}
-
-/**
- * 重置初始化状态（用于测试或重新初始化）
- */
-export function resetInitializationState(): void {
-  initState = {
-    isInitialized: false,
-    isInitializing: false,
-    error: null,
-  };
 }
 
 /**
@@ -214,10 +161,7 @@ export async function exportAllData(): Promise<{
   >['methodsByEquipment'];
   grinders: ReturnType<typeof useGrinderStore.getState>['grinders'];
 }> {
-  // 确保已初始化
-  if (!initState.isInitialized) {
-    await initializeDataLayer();
-  }
+  await initializeDataLayer();
 
   return {
     settings: omitSyncConnectionSettings(useSettingsStore.getState().settings),

@@ -318,13 +318,7 @@ const EquipmentManagementDrawer: React.FC<EquipmentManagementDrawerProps> = ({
         ...currentOrder.filter(id => !visibleIds.includes(id)),
       ];
 
-      // 保存排序
       await useSettingsStore.getState().setEquipmentOrder(nextOrder);
-
-      // 通知所有器具栏组件更新
-      const { equipmentEventBus } =
-        await import('@/lib/equipment/equipmentEventBus');
-      equipmentEventBus.notify();
     } catch (error) {
       pendingOrderRef.current = orderToSave;
       console.error('保存器具排序失败:', error);

@@ -93,42 +93,6 @@ const FlavorInfo: React.FC<FlavorInfoProps> = ({
         </div>
       </div>
 
-      {/* <div className="w-full space-y-4">
-        <label className="block text-xs font-medium text-neutral-500 dark:text-neutral-400">
-          常用风味标签
-        </label>
-
-        {Object.entries(FLAVOR_CATEGORIES).map(([category, tags]) => (
-          <div key={category} className="space-y-2">
-            <div className="text-xs text-neutral-500 dark:text-neutral-400">
-              {category}
-            </div>
-            <div className="mb-3 flex flex-wrap gap-2">
-              {tags.map(flavor => (
-                <button
-                  key={flavor}
-                  type="button"
-                  onClick={() => {
-                    if (bean.flavor?.includes(flavor)) {
-                      onRemoveFlavor(flavor);
-                    } else {
-                      // 直接添加标签，无需经过输入框
-                      onAddFlavor(flavor);
-                    }
-                  }}
-                  className={`rounded-full px-3 py-1 text-xs ${
-                    bean.flavor?.includes(flavor)
-                      ? 'bg-neutral-800 text-neutral-100 dark:bg-neutral-200 dark:text-neutral-800'
-                      : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700'
-                  }`}
-                >
-                  {bean.flavor?.includes(flavor) ? `${flavor} ×` : flavor}
-                </button>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div> */}
     </motion.div>
   );
 };

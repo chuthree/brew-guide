@@ -66,34 +66,6 @@ const REDUCED_MOTION_EASING = 'cubic-bezier(0.23, 1, 0.32, 1)';
 // 2. 更舒缓: duration: 400, easing: 'cubic-bezier(0.4, 0, 0.2, 1)'
 // 3. 弹性感: duration: 400, easing: 'cubic-bezier(0.175, 0.885, 0.32, 1.275)'
 
-// 页面栈状态管理
-class PageStackManager {
-  private listeners: Set<(hasModal: boolean) => void> = new Set();
-  private hasModalOpen = false;
-
-  subscribe(listener: (hasModal: boolean) => void) {
-    this.listeners.add(listener);
-    // 立即通知当前状态
-    listener(this.hasModalOpen);
-    return () => {
-      this.listeners.delete(listener);
-    };
-  }
-
-  setModalOpen(isOpen: boolean) {
-    if (this.hasModalOpen !== isOpen) {
-      this.hasModalOpen = isOpen;
-      this.listeners.forEach(listener => listener(isOpen));
-    }
-  }
-
-  getModalOpen() {
-    return this.hasModalOpen;
-  }
-}
-
-export const pageStackManager = new PageStackManager();
-
 let skipNextChildExitTransition = false;
 let skipNextParentExitTransition = false;
 
@@ -128,11 +100,6 @@ function consumeParentExitTransitionSkip(hasModal: boolean) {
  * >=768: 桌面侧栏态
  */
 export const APP_LAYOUT_BREAKPOINT = 768;
-
-/**
- * 兼容旧命名：统一映射为同一断点，避免出现多断点行为分叉
- */
-export const MD_BREAKPOINT = APP_LAYOUT_BREAKPOINT;
 export const LG_BREAKPOINT = APP_LAYOUT_BREAKPOINT;
 
 /**

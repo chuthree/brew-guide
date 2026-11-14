@@ -104,14 +104,6 @@ export interface CoffeeBeansProps {
   };
 }
 
-// 导出工具函数 - 直接返回咖啡豆名称
-export const generateBeanTitle = (bean: ExtendedCoffeeBean): string => {
-  if (!bean || typeof bean !== 'object' || !bean.name) {
-    return bean?.name || '未命名咖啡豆';
-  }
-  return bean.name;
-};
-
 export type BeanType = 'all' | 'espresso' | 'filter' | 'omni';
 export type BeanState = 'green' | 'roasted';
 

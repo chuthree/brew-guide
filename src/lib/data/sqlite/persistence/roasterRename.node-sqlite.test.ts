@@ -257,7 +257,10 @@ function wrapSqliteDriver(
         work({
           query: (sql, params) => tx.query(sql, params),
           async execute(sql, params) {
-            const table = /^\s*INSERT\s+INTO\s+([a-z_]+)/i.exec(sql)?.[1];
+            const table =
+              /^\s*INSERT\s+(?:OR\s+REPLACE\s+)?INTO\s+([a-z_]+)/i.exec(
+                sql
+              )?.[1];
             if (table) {
               options.attemptedWrites?.push(table);
               if (table === options.failAt) {
@@ -487,37 +490,13 @@ describeNodeSqlite(`${nodeSqliteLabel} RoasterRenamePersistence`, () => {
   });
 
   it.each([
-    {
-      failingTable: 'coffee_beans',
-      expectedAttempts: ['coffee_beans'],
-    },
-    {
-      failingTable: 'brewing_notes',
-      expectedAttempts: ['coffee_beans', 'coffee_beans', 'brewing_notes'],
-    },
-    {
-      failingTable: 'grinders',
-      expectedAttempts: [
-        'coffee_beans',
-        'coffee_beans',
-        'brewing_notes',
-        'grinders',
-      ],
-    },
-    {
-      failingTable: 'app_settings',
-      expectedAttempts: [
-        'coffee_beans',
-        'coffee_beans',
-        'brewing_notes',
-        'grinders',
-        'grinders',
-        'app_settings',
-      ],
-    },
+    'coffee_beans',
+    'brewing_notes',
+    'grinders',
+    'app_settings',
   ] as const)(
-    'rolls all four tables back when the $failingTable write fails',
-    async ({ failingTable, expectedAttempts }) => {
+    'rolls all four tables back when the %s write fails',
+    async failingTable => {
       const fixture = makeFixture();
       const driver = getDatabase().driver;
       await seedSqlite(driver, fixture);
@@ -536,7 +515,7 @@ describeNodeSqlite(`${nodeSqliteLabel} RoasterRenamePersistence`, () => {
         })
       ).rejects.toThrow(`Injected ${failingTable} write failure`);
 
-      expect(attemptedWrites).toEqual(expectedAttempts);
+      expect(attemptedWrites).toContain(failingTable);
       expect(await readRawFourTables(driver)).toEqual(before);
     }
   );

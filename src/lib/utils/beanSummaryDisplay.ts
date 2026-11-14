@@ -5,12 +5,6 @@ import {
   type EstimatedCupDoseSettings,
 } from '@/lib/settings/estimatedCupDose';
 
-export const BEAN_SUMMARY_MAX_DISPLAY_CAPACITY_RANGE = {
-  min: 250,
-  max: 5000,
-  step: 250,
-} as const;
-
 type BeanSummaryDisplaySettings = Pick<
   AppSettings,
   | 'enableBeanSummaryCapacityLimit'
@@ -23,11 +17,6 @@ export type BeanSummaryLimitMode = 'clamp' | 'wrap';
 export interface BeanSummaryWeightItem {
   label: string;
   weight: number;
-}
-
-export interface BeanSummaryWeightAllocation extends BeanSummaryWeightItem {
-  displayWeight: number;
-  isLimited: boolean;
 }
 
 export interface BeanSummaryDisplayValue {

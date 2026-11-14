@@ -111,41 +111,6 @@ export const createBrewingNoteDraftSession = ({
   };
 };
 
-const normalizeComparableNote = (note: BrewingNoteDraftData) => {
-  const taste = note.taste || DEFAULT_TASTE;
-  const params = normalizeBrewingNoteParams(note.params);
-  const images = normalizeImages(note);
-  const selectedCoffeeBean = note.coffeeBean;
-
-  return {
-    bean: selectedCoffeeBean
-      ? {
-          id: 'id' in selectedCoffeeBean ? selectedCoffeeBean.id : undefined,
-          name: selectedCoffeeBean.name || '',
-        }
-      : null,
-    beanId: note.beanId || '',
-    coffeeBeanInfo: {
-      name: note.coffeeBeanInfo?.name || '',
-      roastLevel: note.coffeeBeanInfo?.roastLevel || '',
-      roastDate: note.coffeeBeanInfo?.roastDate || '',
-      roaster: note.coffeeBeanInfo?.roaster || '',
-    },
-    equipment: note.equipment || '',
-    method: note.method || '',
-    equipmentId: note.equipmentId,
-    equipmentName: note.equipmentName,
-    methodId: note.methodId,
-    methodName: note.methodName,
-    params,
-    totalTime: note.totalTime || 0,
-    rating: note.rating || 0,
-    taste,
-    notes: note.notes?.trim() || '',
-    images,
-  };
-};
-
 const normalizeRecordContentComparableNote = (
   currentNote: BrewingNoteDraftData,
   baselineNote?: BrewingNoteDraftData
@@ -237,16 +202,6 @@ export const clearBrewingNoteDraftSession = (): void => {
     STORAGE_MODULE,
     STORAGE_KEY,
     null
-  );
-};
-
-export const hasBrewingNoteDraftChanges = (
-  currentSession: BrewingNoteDraftSession,
-  baselineSession: BrewingNoteDraftSession
-): boolean => {
-  return (
-    JSON.stringify(normalizeComparableNote(currentSession.note)) !==
-    JSON.stringify(normalizeComparableNote(baselineSession.note))
   );
 };
 

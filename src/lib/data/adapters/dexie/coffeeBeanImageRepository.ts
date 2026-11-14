@@ -96,20 +96,6 @@ const putOrDeleteThumbnailRecord = async (
   await database.coffeeBeanImageThumbnails.put(record);
 };
 
-export async function persistCoffeeBeanImagesFromBean(
-  bean: CoffeeBean,
-  options: { generateThumbnails?: boolean } = {}
-): Promise<CoffeeBean> {
-  const prepared = await prepareCoffeeBeanImageWrite(bean, options);
-
-  if (!prepared.hasImageChange) {
-    return prepared.bean;
-  }
-
-  await writePreparedCoffeeBeanImages(prepared);
-  return prepared.bean;
-}
-
 type PreparedCoffeeBeanImageWrite = {
   bean: CoffeeBean;
   imageRecord?: CoffeeBeanImageRecord;
@@ -576,21 +562,3 @@ export const coffeeBeanImageRepository: CoffeeBeanImageRepository = {
     return { records, thumbnails };
   },
 };
-
-/** Dexie-adapter compatibility helpers; application code uses the contracts above. */
-export function saveCoffeeBeanWithImages(
-  bean: CoffeeBean,
-  options: { generateThumbnails?: boolean } = {}
-): Promise<CoffeeBean> {
-  return coffeeBeanPersistence.saveWithImages(bean, options);
-}
-
-export function replaceCoffeeBeansWithSplitImages(
-  beans: CoffeeBean[],
-  options: {
-    allowEmptyReplace?: boolean;
-    allowDestructiveReplace?: boolean;
-  } = {}
-): Promise<boolean> {
-  return coffeeBeanPersistence.replaceAllWithImages(beans, options);
-}

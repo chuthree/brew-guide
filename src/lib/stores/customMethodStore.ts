@@ -22,7 +22,6 @@ import {
   autoMigrateStages,
 } from '@/lib/brewing/stageMigration';
 import { exportJsonFile } from '@/lib/utils/jsonExport';
-import { methodToReadableText } from '@/lib/utils/jsonUtils';
 
 /**
  * 自定义方案 Store 状态接口
@@ -532,16 +531,6 @@ async function loadCustomMethodsInMutation(): Promise<
 }
 
 /**
- * 便捷函数：加载特定器具的方案（兼容旧 API）
- */
-async function loadCustomMethodsForEquipmentInMutation(
-  equipmentId: string
-): Promise<Method[]> {
-  const store = getCustomMethodStore();
-  return callStoreActionInMutation(store.loadMethodsForEquipment, equipmentId);
-}
-
-/**
  * 便捷函数：保存或更新方案
  * 兼容旧的 saveCustomMethod 调用方式
  */
@@ -629,39 +618,6 @@ async function saveCustomMethodInMutation(
 }
 
 /**
- * 便捷函数：复制方案到另一个器具
- */
-async function copyMethodToEquipmentInMutation(
-  method: Method,
-  targetEquipmentId: string
-): Promise<Method> {
-  const store = getCustomMethodStore();
-
-  // 创建新方案（不保留原ID）
-  const newMethod = { ...method };
-  delete (newMethod as { id?: string }).id;
-
-  return callStoreActionInMutation(
-    store.addMethod,
-    targetEquipmentId,
-    newMethod
-  );
-}
-
-// ==================== 文本生成/导出工具函数 ====================
-
-/**
- * 生成冲煮方案的可读文本
- * 用于复制分享，UI 层使用 useCopy hook 处理实际复制逻辑
- */
-export function generateMethodShareText(
-  method: Method,
-  customEquipment?: CustomEquipment
-): string {
-  return methodToReadableText(method, customEquipment);
-}
-
-/**
  * 导出器具配置为 JSON 文件
  */
 export async function exportEquipmentToFile(
@@ -705,26 +661,15 @@ export const copyEquipmentToClipboard = exportEquipmentToFile;
 
 export const {
   loadCustomMethods,
-  loadCustomMethodsForEquipment,
   saveMethod,
   deleteCustomMethod,
   saveCustomMethod,
-  copyMethodToEquipment,
 } = coordinateStoreActions(
   {
     loadCustomMethods: loadCustomMethodsInMutation,
-    loadCustomMethodsForEquipment: loadCustomMethodsForEquipmentInMutation,
     saveMethod: saveMethodInMutation,
     deleteCustomMethod: deleteCustomMethodInMutation,
     saveCustomMethod: saveCustomMethodInMutation,
-    copyMethodToEquipment: copyMethodToEquipmentInMutation,
   },
-  [
-    'loadCustomMethods',
-    'loadCustomMethodsForEquipment',
-    'saveMethod',
-    'deleteCustomMethod',
-    'saveCustomMethod',
-    'copyMethodToEquipment',
-  ]
+  ['loadCustomMethods', 'saveMethod', 'deleteCustomMethod', 'saveCustomMethod']
 );

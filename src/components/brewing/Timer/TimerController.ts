@@ -5,7 +5,7 @@ import { playTimerSound } from './Audio';
  * 计时器回调接口
  */
 export interface TimerCallbacks {
-  onTick: (updater: (currentTime: number) => number) => void;
+  onTick: (currentTime: number) => void;
   onComplete: () => void;
   onHaptic?: (type: string) => void;
 }
@@ -65,27 +65,22 @@ export const handleTimerTick = (
     }
   }
 
-  if (shouldPlayDing) {
+  if (shouldPlayDing || shouldNotifyPourEnd) {
     playTimerSound('ding', notificationSoundEnabled);
   }
 
-  if (shouldPlayStart) {
-    playTimerSound('start', notificationSoundEnabled);
-  }
-
-  if (shouldPreNotifyPourEnd) {
+  if (shouldPlayStart || shouldPreNotifyPourEnd) {
     playTimerSound('start', notificationSoundEnabled);
   }
 
   if (shouldNotifyPourEnd) {
-    playTimerSound('ding', notificationSoundEnabled);
     if (hapticEnabled && hapticCallback) {
       hapticCallback('medium');
     }
   }
 
   // 检查是否完成所有阶段
-  const isCompleted = newTime > expandedStages[lastStageIndex].endTime;
+  const isCompleted = newTime >= expandedStages[lastStageIndex].endTime;
 
   // 如果完成了所有阶段，返回最后阶段的结束时间
   if (isCompleted) {
@@ -102,27 +97,26 @@ export const handleTimerTick = (
  * 启动主计时器并返回计时器ID
  */
 export const startMainTimer = (
+  initialTime: number,
   expandedStages: ExpandedStage[],
   notificationSoundEnabled: boolean,
   hapticEnabled: boolean,
   callbacks: TimerCallbacks
 ): NodeJS.Timeout => {
-  return setInterval(() => {
-    callbacks.onTick((currentTime: number) => {
-      const { newTime, isCompleted } = handleTimerTick(
-        currentTime,
-        expandedStages,
-        notificationSoundEnabled,
-        hapticEnabled,
-        callbacks.onHaptic
-      );
+  let currentTime = initialTime;
+  const timer = setInterval(() => {
+    const { newTime, isCompleted } = handleTimerTick(
+      currentTime,
+      expandedStages,
+      notificationSoundEnabled,
+      hapticEnabled,
+      callbacks.onHaptic
+    );
 
-      if (isCompleted) {
-        // 这里不直接处理，而是通过回调，让组件处理停止计时器等逻辑
-        callbacks.onComplete();
-      }
-
-      return newTime;
-    });
+    currentTime = newTime;
+    if (isCompleted) clearInterval(timer);
+    callbacks.onTick(newTime);
+    if (isCompleted) callbacks.onComplete();
   }, 1000);
+  return timer;
 };

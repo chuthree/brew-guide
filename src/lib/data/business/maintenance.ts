@@ -6,9 +6,6 @@ export const BUSINESS_HISTORY_INVALIDATED_EVENT =
   'brew-guide:business-history-invalidated';
 const HISTORY_CHANNEL = 'brew-guide:business-history';
 const HISTORY_STORAGE_KEY = 'brew-guide:business-history-revision';
-export function getBusinessHistoryRevision(): string {
-  return localStorage.getItem(HISTORY_STORAGE_KEY) ?? '';
-}
 let invalidateHistory: (() => Promise<void>) | undefined;
 
 /** Bound with the selected repositories; generic callers never load a backend. */

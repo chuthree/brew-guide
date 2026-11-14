@@ -3,18 +3,11 @@ import { detectAppRuntime } from '@/lib/app/runtime';
 
 export type StorageBackend = 'dexie' | 'native-sqlite';
 
-export type DataRuntimeInitialization =
-  | {
-      status: 'ready';
-      runtime: AppRuntime;
-      backend: StorageBackend;
-    }
-  | {
-      status: 'not-implemented';
-      runtime: AppRuntime;
-      backend: 'native-sqlite';
-      reason: string;
-    };
+export interface DataRuntimeInitialization {
+  status: 'ready';
+  runtime: AppRuntime;
+  backend: StorageBackend;
+}
 
 /**
  * Bundled native apps use SQLite; OL shells, browsers and PWAs keep Dexie storage.

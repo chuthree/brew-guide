@@ -1,6 +1,6 @@
 import type { CoffeeBean } from '@/types/app';
 import type { BrewingNote } from '@/lib/core/config';
-import { invalid, McpToolError } from '@/lib/mcp/validation';
+import { invalid } from '@/lib/mcp/validation';
 
 const missing = (value: unknown) =>
   value === undefined ||
@@ -20,34 +20,6 @@ const grams = (value: unknown): number | null => {
     ? amount
     : null;
 };
-
-/** Raw storage values take precedence over a parsed view, including invalid text. */
-export const getBeanRemainingValue = (before: {
-  remaining?: unknown;
-  remainingGrams?: unknown;
-}) =>
-  Object.prototype.hasOwnProperty.call(before, 'remaining')
-    ? before.remaining
-    : before.remainingGrams;
-
-/** Capacity alone must not silently choose whether unknown stock is initialized. */
-export function assertBeanInventoryChoice(
-  before: { remaining?: unknown; remainingGrams?: unknown },
-  requestedCapacity: unknown,
-  choice: unknown
-): void {
-  const remaining = getBeanRemainingValue(before);
-  if (
-    requestedCapacity !== undefined &&
-    missing(remaining) &&
-    choice !== true &&
-    choice !== false
-  )
-    throw new McpToolError(
-      'INVENTORY_CHOICE_REQUIRED',
-      'Remaining stock is unknown. Explicitly set initializeRemainingFromCapacity to true to initialize it from capacity, or false to keep it unknown.'
-    );
-}
 
 function assertCanInitializeBeanInventory(
   before: CoffeeBean,
@@ -79,35 +51,6 @@ function assertCanInitializeBeanInventory(
     invalid(
       'Inventory initialization requires no linked history or roasting relationships'
     );
-}
-
-/** Call only for explicit initialization, using records read inside the write transaction. */
-export function getInitializedBeanRemaining(
-  before: CoffeeBean,
-  requestedCapacity: unknown,
-  savedCapacity: string | undefined,
-  beans: readonly CoffeeBean[],
-  notes: readonly BrewingNote[]
-): string {
-  if (
-    typeof requestedCapacity !== 'number' ||
-    !Number.isFinite(requestedCapacity) ||
-    requestedCapacity <= 0 ||
-    requestedCapacity > 1_000_000
-  )
-    invalid('Initializing inventory requires an explicit positive capacity');
-  if (grams(savedCapacity) !== requestedCapacity)
-    invalid(
-      'Initial capacity must be exactly representable at the supported gram precision'
-    );
-  if (!missing(before.capacity) && grams(before.capacity) !== requestedCapacity)
-    invalid(
-      'Initial capacity must be missing or equal to the supplied capacity'
-    );
-  assertCanInitializeBeanInventory(before, beans, notes);
-
-  // Unknown stock is not zero. Do not invent a reversible 0 -> capacity adjustment.
-  return savedCapacity!;
 }
 
 /** Exact assignment is safe without an old amount; a delta or consumption is not. */

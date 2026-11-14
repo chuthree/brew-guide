@@ -35,27 +35,6 @@ const getRecordImages = (record: {
 }): string[] =>
   record.images?.length ? record.images : record.image ? [record.image] : [];
 
-export async function persistBrewingNoteImagesFromNote(
-  note: BrewingNote,
-  _options: { generateThumbnails?: boolean } = {}
-): Promise<BrewingNote> {
-  const { note: strippedNote, imageRecord } = splitBrewingNoteImages(note);
-
-  if (!imageRecord && !hasImageFieldUpdate(note)) {
-    return strippedNote;
-  }
-
-  if (imageRecord) {
-    await db.brewingNoteImages.put(imageRecord);
-    await db.brewingNoteImageThumbnails.delete(note.id);
-  } else {
-    await db.brewingNoteImages.delete(note.id);
-    await db.brewingNoteImageThumbnails.delete(note.id);
-  }
-
-  return strippedNote;
-}
-
 async function saveBrewingNoteWithImagesInDatabase(
   note: BrewingNote,
   database: BrewGuideDB = db
@@ -399,20 +378,3 @@ export const brewingNoteImageRepository: BrewingNoteImageRepository = {
     return { records, thumbnails };
   },
 };
-
-/** Dexie-adapter compatibility helpers; application code uses the contracts above. */
-export function saveBrewingNoteWithImages(
-  note: BrewingNote
-): Promise<BrewingNote> {
-  return brewingNotePersistence.saveWithImages(note);
-}
-
-export function replaceBrewingNotesWithSplitImages(
-  notes: BrewingNote[],
-  options: {
-    allowEmptyReplace?: boolean;
-    allowDestructiveReplace?: boolean;
-  } = {}
-): Promise<boolean> {
-  return brewingNotePersistence.replaceAllWithImages(notes, options);
-}

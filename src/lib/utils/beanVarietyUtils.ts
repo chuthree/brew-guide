@@ -13,10 +13,7 @@ import {
   normalizeDelimitedTextList,
   removeRoasterFromDisplayName,
 } from './coffeeBeanUtils';
-import {
-  type BeanFieldId,
-  getComponentOriginDisplay,
-} from '@/lib/coffee-beans/beanFields';
+import type { BeanFieldId } from '@/lib/coffee-beans/beanFields';
 
 /**
  * 检查文本是否为有效值
@@ -134,29 +131,6 @@ export const extractUniqueProcesses = (beans: CoffeeBean[]): string[] => {
     .map(entry => entry[0]);
 
   return processes;
-};
-
-/**
- * 获取咖啡豆的产地信息
- * 从blendComponents获取产地信息
- * @param bean 咖啡豆对象
- * @returns 产地数组
- */
-export const getBeanOrigins = (bean: CoffeeBean): string[] => {
-  const origins: string[] = [];
-
-  // 从blendComponents获取产地信息
-  if (bean.blendComponents && Array.isArray(bean.blendComponents)) {
-    bean.blendComponents.forEach(component => {
-      const originDisplay = getComponentOriginDisplay(component);
-      if (isValidText(originDisplay)) {
-        origins.push(originDisplay);
-      }
-    });
-  }
-
-  // 去重并返回
-  return Array.from(new Set(origins));
 };
 
 /**

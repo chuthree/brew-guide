@@ -1,4 +1,3 @@
-import { BrewingNote } from '@/lib/core/config';
 import { SortOption, SORT_OPTIONS, DateGroupingMode } from '../types';
 import {
   getStringState,
@@ -14,41 +13,6 @@ import { DATE_GROUPING_MODES } from '@/lib/utils/dateUtils';
 
 // 模块名称
 const MODULE_NAME = 'brewing-notes';
-
-// 创建全局缓存对象，确保跨组件实例保持数据
-export const globalCache: {
-  notes: BrewingNote[];
-  filteredNotes: BrewingNote[];
-  equipmentNames: Record<string, string>;
-  beanPrices: Record<string, number>;
-  selectedEquipment: string | null;
-  selectedDate: string | null;
-  filterMode: 'equipment' | 'date';
-  dateGroupingMode: DateGroupingMode;
-  sortOption: SortOption;
-  availableEquipments: string[];
-  availableDates: string[];
-  initialized: boolean;
-  totalConsumption: number;
-  isLoading: boolean;
-  lastUpdated: number;
-} = {
-  notes: [],
-  filteredNotes: [],
-  equipmentNames: {},
-  beanPrices: {},
-  selectedEquipment: null,
-  selectedDate: null,
-  filterMode: 'date',
-  dateGroupingMode: 'day', // 默认按日分组
-  sortOption: SORT_OPTIONS.TIME_DESC,
-  availableEquipments: [],
-  availableDates: [],
-  initialized: false,
-  totalConsumption: 0,
-  isLoading: false,
-  lastUpdated: 0, // 🔥 初始化为0
-};
 
 // 从localStorage读取选中的设备ID
 export const getSelectedEquipmentPreference = (): string | null => {
@@ -112,11 +76,6 @@ export const saveDateGroupingModePreference = (
 ): void => {
   saveStringState(MODULE_NAME, 'dateGroupingMode', value);
 };
-
-// 初始化全局缓存的状态
-globalCache.selectedEquipment = getSelectedEquipmentPreference();
-globalCache.filterMode = getFilterModePreference();
-globalCache.sortOption = getSortOptionPreference();
 
 // 导出主utils文件的函数，保持兼容性
 export const calculateTotalCoffeeConsumption = calculateConsumption;

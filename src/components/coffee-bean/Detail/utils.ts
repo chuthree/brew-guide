@@ -28,26 +28,6 @@ export const formatNumber = (value: string | undefined): string =>
       ? Math.floor(parseFloat(value)).toString()
       : value;
 
-// 工具函数：格式化日期显示
-export const formatDateString = (dateStr: string): string => {
-  try {
-    const timestamp = parseDateToTimestamp(dateStr);
-    const date = new Date(timestamp);
-    const formattedDate = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
-
-    const daysSinceRoast = getDaysSinceDateString(dateStr);
-
-    // 如果是今天或未来日期，不显示天数
-    if (daysSinceRoast === null || daysSinceRoast <= 0) {
-      return formattedDate;
-    }
-
-    return `${formattedDate} (已养豆 ${daysSinceRoast} 天)`;
-  } catch {
-    return dateStr;
-  }
-};
-
 export const getDaysSinceDateString = (dateStr: string): number | null => {
   try {
     const timestamp = parseDateToTimestamp(dateStr);

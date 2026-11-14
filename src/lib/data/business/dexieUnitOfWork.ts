@@ -138,12 +138,6 @@ async function defaultUnit() {
   return defaultUnitOfWork;
 }
 
-export async function executeDexieBusinessMutation<
-  T extends Record<string, unknown>,
->(command: BusinessMutation<T>): Promise<BusinessResult<T>> {
-  return (await defaultUnit()).execute(command);
-}
-
 export async function recoverDexieBusinessPublications() {
   return (await defaultUnit()).recoverPublications();
 }

@@ -10,7 +10,6 @@ import React, {
 import { Capacitor } from '@capacitor/core';
 import { useModalHistory } from '@/lib/hooks/useModalHistory';
 import { useThemeColor } from '@/lib/hooks/useThemeColor';
-import { pageStackManager } from '@/lib/navigation/pageTransition';
 
 /**
  * Tailwind md 断点的像素值 (768px)
@@ -259,17 +258,6 @@ const AdaptiveModal = forwardRef<AdaptiveModalHandle, AdaptiveModalProps>(
         setIsIOS(platform === 'ios');
       }
     }, []);
-
-    // 通知 pageStackManager 以触发主页面动画（仅在全屏模式下）
-    useEffect(() => {
-      // 只在小屏幕（全屏模式）时通知主页面
-      if (!isMediumScreen && isOpen) {
-        pageStackManager.setModalOpen(true);
-        return () => {
-          pageStackManager.setModalOpen(false);
-        };
-      }
-    }, [isOpen, isMediumScreen]);
 
     // 处理显示/隐藏动画
     useEffect(() => {

@@ -78,15 +78,9 @@ export const StorageUtils = coordinateStoreActions(
      */
     async initialize(): Promise<void> {
       try {
-        const runtimeInitialization = await import('@/lib/data/runtime').then(
+        await import('@/lib/data/runtime').then(
           ({ initializeDataRuntime }) => initializeDataRuntime()
         );
-        if (runtimeInitialization.status !== 'ready') {
-          throw new Error(
-            `Data backend "${runtimeInitialization.backend}" is not implemented: ${runtimeInitialization.reason}`
-          );
-        }
-
         if (process.env.NODE_ENV === 'development') {
           console.warn('存储系统初始化完成');
         }

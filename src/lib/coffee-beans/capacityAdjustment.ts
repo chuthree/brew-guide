@@ -128,17 +128,12 @@ async function revertCapacityAdjustmentRecordInMutation(
 }
 
 export const {
-  createCapacityAdjustmentRecord,
-  createCapacityAdjustmentRecordIfNeeded,
   addBeanWithInitialCapacityAdjustmentRecord,
   updateBeanWithCapacityAdjustmentRecord,
   applyCapacityAdjustmentDelta,
   revertCapacityAdjustmentRecord,
 } = coordinateStoreActions(
   {
-    createCapacityAdjustmentRecord: createCapacityAdjustmentRecordInMutation,
-    createCapacityAdjustmentRecordIfNeeded:
-      createCapacityAdjustmentRecordIfNeededInMutation,
     addBeanWithInitialCapacityAdjustmentRecord:
       addBeanWithInitialCapacityAdjustmentRecordInMutation,
     updateBeanWithCapacityAdjustmentRecord:
@@ -147,8 +142,6 @@ export const {
     revertCapacityAdjustmentRecord: revertCapacityAdjustmentRecordInMutation,
   },
   [
-    'createCapacityAdjustmentRecord',
-    'createCapacityAdjustmentRecordIfNeeded',
     'addBeanWithInitialCapacityAdjustmentRecord',
     'updateBeanWithCapacityAdjustmentRecord',
     'applyCapacityAdjustmentDelta',

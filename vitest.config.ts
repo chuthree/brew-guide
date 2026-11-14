@@ -10,6 +10,6 @@ export default defineConfig({
   },
   test: {
     environment: 'node',
-    include: ['**/*.test.{ts,tsx}'],
+    include: ['{src,node-functions,edge-functions}/**/*.test.{ts,tsx}'],
   },
 });

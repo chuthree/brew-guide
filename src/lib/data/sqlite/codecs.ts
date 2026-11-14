@@ -54,13 +54,6 @@ export interface CustomMethodsSnapshot {
   [key: string]: unknown;
 }
 
-/**
- * @deprecated Use the backend-neutral StoredPendingOperation model.
- * This alias remains for codec callers; raw legacy table/action names are
- * preserved until the runtime queue validates them.
- */
-export type PendingOperationStorageSnapshot = StoredPendingOperation;
-
 const ownKeysExcept = (
   value: Record<string, unknown>,
   omitted: ReadonlySet<string>
@@ -876,11 +869,3 @@ export function decodeHistoricalYearlyReport(
   }
   return { ...extra, id, year, username, content, createdAt };
 }
-
-export type ActiveSQLiteDTOs = {
-  coffeeBean: CoffeeBean;
-  brewingNote: BrewingNote;
-  customEquipment: CustomEquipment;
-  customMethods: CustomMethodsSnapshot;
-  grinder: Grinder;
-};

@@ -9,11 +9,10 @@ const mocks = vi.hoisted(() => ({
   }),
   diagnostics: vi.fn(async () => undefined),
   recordError: vi.fn(),
-  exportFile: vi.fn(async () => undefined),
+  copy: vi.fn(async () => ({ success: true })),
 }));
 vi.mock('@/lib/core/dataLayer', () => ({
   initializeDataLayer: mocks.initialize,
-  getInitializationState: vi.fn(),
 }));
 vi.mock('@/lib/app/crashDiagnostics', () => ({
   installCrashDiagnostics: mocks.diagnostics,
@@ -29,13 +28,14 @@ vi.mock('@/lib/app/runtime', () => ({
 vi.mock('@/lib/data/runtime', () => ({
   resolveStorageBackend: () => 'native-sqlite',
 }));
-vi.mock('@/lib/utils/jsonExport', () => ({ exportJsonFile: mocks.exportFile }));
+vi.mock('@/lib/utils/exportUtils', () => ({ copyToClipboard: mocks.copy }));
 vi.mock('next/dynamic', () => ({ default: () => () => null }));
 vi.mock('@/components/common/ui/ActionDrawer', () => ({
   default: Object.assign(
     ({ isOpen, children }: { isOpen: boolean; children: React.ReactNode }) =>
       isOpen ? children : null,
     {
+      Icon: () => null,
       Content: ({ children }: { children: React.ReactNode }) => children,
       Actions: ({ children }: { children: React.ReactNode }) => children,
       PrimaryButton: 'button',
@@ -49,7 +49,7 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-it('exports diagnostics when startup fails without mounting editable data screens', async () => {
+it('copies diagnostics when startup fails without mounting editable data screens', async () => {
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
   const container = document.createElement('div');
   const root = createRoot(container);
@@ -73,15 +73,13 @@ it('exports diagnostics when startup fails without mounting editable data screen
         .click();
     });
     const button = Array.from(container.querySelectorAll('button')).find(
-      element => element.textContent === '导出诊断'
+      element => element.textContent === '复制诊断'
     )!;
     await act(async () => {
       button.click();
     });
-    expect(mocks.exportFile).toHaveBeenCalledWith(
-      expect.objectContaining({
-        jsonData: expect.stringContaining('database read failed'),
-      })
+    expect(mocks.copy).toHaveBeenCalledWith(
+      expect.stringContaining('database read failed')
     );
   } finally {
     await act(async () => root.unmount());

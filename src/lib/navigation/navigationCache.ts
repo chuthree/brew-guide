@@ -66,21 +66,4 @@ export const resolveVisibleMainTab = (
  */
 export const saveMainTabPreference = (tab: MainTabType): void => {
   saveStringState(MODULE_NAME, 'activeMainTab', tab);
-
-  // 简化：不需要复杂的事件通知系统
 };
-
-/**
- * 清除导航状态缓存
- */
-const clearNavigationCache = (): void => {
-  if (typeof window !== 'undefined') {
-    try {
-      localStorage.removeItem('brew-guide:navigation:activeMainTab');
-    } catch (error) {
-      console.error('清除导航缓存失败:', error);
-    }
-  }
-};
-
-// 移除复杂的全局事件监听系统

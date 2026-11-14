@@ -768,40 +768,6 @@ function dispatchMethodParamOverrideChanged(
 export const getSettingsStore = () => useSettingsStore.getState();
 
 /**
- * 便捷 Hook：获取特定设置
- */
-export function useSetting<K extends keyof AppSettings>(
-  key: K
-): AppSettings[K] {
-  return useSettingsStore(state => state.settings[key]);
-}
-
-/**
- * 便捷 Hook：获取多个设置
- */
-export function useSettings<K extends keyof AppSettings>(
-  keys: K[]
-): Pick<AppSettings, K> {
-  return useSettingsStore(state => {
-    const result = {} as Pick<AppSettings, K>;
-    for (const key of keys) {
-      result[key] = state.settings[key];
-    }
-    return result;
-  });
-}
-
-// ==================== 隐藏器具/方案工具函数 ====================
-
-/**
- * 检查器具是否被隐藏
- */
-export function isEquipmentHidden(equipmentId: string): boolean {
-  const settings = getSettingsStore().settings;
-  return (settings.hiddenEquipments || []).includes(equipmentId);
-}
-
-/**
  * 获取所有隐藏的器具ID
  */
 export function getHiddenEquipmentIds(): string[] {
@@ -830,24 +796,6 @@ export function filterHiddenEquipments<T extends { id: string }>(
 }
 
 /**
- * 检查方案是否被隐藏
- */
-export function isMethodHidden(equipmentId: string, methodId: string): boolean {
-  const settings = getSettingsStore().settings;
-  const hiddenMethods = settings.hiddenCommonMethods || {};
-  const equipmentHidden = hiddenMethods[equipmentId] || [];
-  return equipmentHidden.includes(methodId);
-}
-
-/**
- * 获取所有隐藏的方案
- */
-export function getAllHiddenMethods(): Record<string, string[]> {
-  const settings = getSettingsStore().settings;
-  return settings.hiddenCommonMethods || {};
-}
-
-/**
  * 获取指定器具的隐藏方案ID列表
  */
 export function getHiddenMethodIds(equipmentId: string): string[] {
@@ -869,27 +817,6 @@ export function filterHiddenMethods<T extends { id?: string; name: string }>(
     const methodId = m.id || m.name;
     return !hiddenIds.includes(methodId);
   });
-}
-
-// ==================== 器具排序工具函数 ====================
-
-interface EquipmentOrder {
-  equipmentIds: string[];
-}
-
-/**
- * 加载器具排序信息
- */
-export function loadEquipmentOrder(): EquipmentOrder {
-  const settings = getSettingsStore().settings;
-  return { equipmentIds: settings.equipmentOrder || [] };
-}
-
-/**
- * 保存器具排序信息
- */
-export async function saveEquipmentOrder(order: EquipmentOrder): Promise<void> {
-  await getSettingsStore().setEquipmentOrder(order.equipmentIds);
 }
 
 // ==================== 烘焙商配置工具函数 ====================
@@ -929,13 +856,6 @@ export function getRoasterLogoFromConfigs(
   roasterName: string
 ): string | undefined {
   return getRoasterConfigFromConfigs(configs, roasterName)?.logoData;
-}
-
-/**
- * 获取烘焙商 Logo（同步，非响应式）
- */
-export function getRoasterLogoSync(roasterName: string): string | undefined {
-  return getRoasterLogoFromConfigs(getRoasterConfigsSync(), roasterName);
 }
 
 /**
@@ -1000,32 +920,4 @@ export function migrateTasteRatings(
 ): Record<string, number> {
   // 配置变化只补齐当前维度，历史评分只能由用户明确移除。
   return { ...createEmptyTasteRatings(dimensions), ...oldRatings };
-}
-
-// ==================== 方案参数覆盖工具函数 ====================
-
-/**
- * 同步获取方案参数覆盖
- */
-export function getMethodParamOverrideSync(
-  equipmentId: string,
-  methodId: string
-): {
-  coffee?: string;
-  water?: string;
-  ratio?: string;
-  grindSize?: string;
-  temp?: string;
-} | null {
-  return getSettingsStore().getMethodParamOverride(equipmentId, methodId);
-}
-
-/**
- * 检查方案是否有参数覆盖
- */
-export function hasMethodParamOverride(
-  equipmentId: string,
-  methodId: string
-): boolean {
-  return getMethodParamOverrideSync(equipmentId, methodId) !== null;
 }

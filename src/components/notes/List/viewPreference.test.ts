@@ -6,12 +6,13 @@ import {
 
 beforeEach(() => {
   const values = new Map<string, string>();
-  vi.stubGlobal('window', {});
-  vi.stubGlobal('localStorage', {
+  const storage = {
     getItem: (key: string) => values.get(key) ?? null,
     setItem: (key: string, value: string) => values.set(key, value),
     removeItem: (key: string) => values.delete(key),
-  });
+  };
+  vi.stubGlobal('window', { localStorage: storage });
+  vi.stubGlobal('localStorage', storage);
 });
 afterEach(() => vi.unstubAllGlobals());
 

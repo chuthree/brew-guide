@@ -198,10 +198,6 @@ export const getNoteEspressoParamParts = (
   ].filter((value): value is string => !!value);
 };
 
-export const hasBrewingNoteParams = (
-  params?: BrewingNote['params'] | null
-): boolean => !!normalizeBrewingNoteParams(params);
-
 export const normalizeBrewingNoteSelection = (
   selection: Pick<BrewingNote, 'equipment' | 'method'>
 ): Pick<BrewingNote, 'equipment' | 'method'> => {

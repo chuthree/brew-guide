@@ -1,23 +1,11 @@
 'use client';
 
-import {
-  getEquipmentNameById,
-  getEquipmentIdByName,
-} from '@/lib/utils/equipmentUtils';
 import type { BrewingNote } from '@/lib/core/config';
 import { SORT_OPTIONS, type SortOption } from './types';
-import { coffeeBeanRepository } from '@/lib/data/repositories';
 import {
-  getBeanUnitPrice,
   resolveNoteCoffeeBeanInfo,
   type CoffeeBeanLookup,
 } from '@/lib/notes/noteDisplay';
-import {
-  calculateEstimatedCupsFromWeights,
-  parseEstimatedCupRemainingWeight,
-  type EstimatedCupDoseSettings,
-} from '@/lib/settings/estimatedCupDose';
-import { findCoffeeBeanByIdentity } from '@/lib/utils/coffeeBeanUtils';
 
 interface NoteDeleteDisplay {
   itemName: string;
@@ -279,44 +267,6 @@ export const formatRating = (rating: number): string => {
   return `[ ${rating}/5 ]`;
 };
 
-// 获取设备名称的辅助函数 - 使用统一工具函数
-export const getEquipmentName = async (
-  equipmentId: string
-): Promise<string> => {
-  try {
-    // 加载自定义设备列表
-    const customEquipmentsModule =
-      await import('@/lib/stores/customEquipmentStore');
-    const customEquipments =
-      await customEquipmentsModule.loadCustomEquipments();
-
-    // 使用统一的工具函数
-    return getEquipmentNameById(equipmentId, customEquipments);
-  } catch (error) {
-    console.error('加载自定义设备失败:', error);
-    return equipmentId; // 出错时返回原始ID
-  }
-};
-
-// 规范化器具ID的辅助函数 - 使用统一工具函数
-export const normalizeEquipmentId = async (
-  equipmentIdOrName: string
-): Promise<string> => {
-  try {
-    // 加载自定义器具列表
-    const customEquipmentsModule =
-      await import('@/lib/stores/customEquipmentStore');
-    const customEquipments =
-      await customEquipmentsModule.loadCustomEquipments();
-
-    // 使用统一的工具函数：如果传入的是名称，转为ID；如果是ID，直接返回
-    return getEquipmentIdByName(equipmentIdOrName, customEquipments);
-  } catch (error) {
-    console.error('规范化器具ID失败:', error);
-    return equipmentIdOrName; // 出错时返回原始值
-  }
-};
-
 // 计算总咖啡消耗量的函数
 export const calculateTotalCoffeeConsumption = (
   notes: BrewingNote[]
@@ -348,126 +298,6 @@ export const calculateTotalCoffeeConsumption = (
   }, 0);
 };
 
-// 获取咖啡豆单位价格的函数
-export const getCoffeeBeanUnitPrice = async (
-  beanName: string,
-  roaster?: string
-): Promise<number> => {
-  try {
-    // 直接从 DB 获取所有咖啡豆
-    const beans = await coffeeBeanRepository.list();
-    const bean = findCoffeeBeanByIdentity(beans, { name: beanName, roaster });
-    const unitPrice = getBeanUnitPrice(bean);
-    if (unitPrice > 0) {
-      return unitPrice;
-    }
-
-    return 0; // 找不到匹配的咖啡豆或无法计算价格时返回0
-  } catch (error) {
-    console.error('获取咖啡豆单位价格出错:', error);
-    return 0;
-  }
-};
-
-// 计算笔记消费的函数
-export const calculateNoteCost = async (note: BrewingNote): Promise<number> => {
-  if (!note.params?.coffee) return 0;
-
-  const coffeeMatch = note.params.coffee.match(/(\d+(?:\.\d+)?)/);
-  if (!coffeeMatch) return 0;
-
-  const coffeeAmount = parseFloat(coffeeMatch[0]);
-  if (isNaN(coffeeAmount)) return 0;
-
-  if (note.beanId) {
-    const linkedBean = await coffeeBeanRepository.get(note.beanId);
-    const linkedBeanUnitPrice = getBeanUnitPrice(linkedBean);
-    if (linkedBeanUnitPrice > 0) {
-      return coffeeAmount * linkedBeanUnitPrice;
-    }
-  }
-
-  if (!note.coffeeBeanInfo?.name) return 0;
-
-  const unitPrice = await getCoffeeBeanUnitPrice(
-    note.coffeeBeanInfo.name,
-    note.coffeeBeanInfo.roaster
-  );
-  return coffeeAmount * unitPrice;
-};
-
-/**
- * 从笔记中提取咖啡豆使用量或容量变化量
- * @param note 笔记对象
- * @returns 咖啡豆使用量(g)或容量变化量(g)，如果无法提取则返回0
- */
-export const extractCoffeeAmountFromNote = (note: BrewingNote): number => {
-  try {
-    // 输入验证
-    if (!note) {
-      console.warn('extractCoffeeAmountFromNote: 笔记对象为空');
-      return 0;
-    }
-
-    // 处理快捷扣除笔记
-    if (note.source === 'quick-decrement' && note.quickDecrementAmount) {
-      const amount =
-        typeof note.quickDecrementAmount === 'number'
-          ? note.quickDecrementAmount
-          : parseFloat(String(note.quickDecrementAmount));
-
-      if (!isNaN(amount) && amount > 0) {
-        return amount;
-      }
-    }
-
-    // 处理容量调整笔记 - 优先使用changeRecord中的信息，确保数据一致性
-    if (
-      note.source === 'capacity-adjustment' &&
-      note.changeRecord?.capacityAdjustment
-    ) {
-      const changeAmount = note.changeRecord.capacityAdjustment.changeAmount;
-      if (typeof changeAmount === 'number' && !isNaN(changeAmount)) {
-        // 对于容量调整记录，返回0，因为它不消耗咖啡豆，删除时使用专门的恢复函数
-        return 0;
-      }
-    }
-
-    // 处理普通笔记
-    if (note.params && note.params.coffee) {
-      // 提取咖啡量中的数字部分（如"18g" -> 18）
-      const match = note.params.coffee.match(/(\d+(?:\.\d+)?)/);
-      if (match) {
-        const coffeeAmount = parseFloat(match[0]);
-        if (!isNaN(coffeeAmount) && coffeeAmount > 0) {
-          return coffeeAmount;
-        }
-      }
-    }
-
-    return 0;
-  } catch (error) {
-    console.error('提取笔记咖啡量失败:', error, note);
-    return 0;
-  }
-};
-
-/**
- * 获取笔记关联的咖啡豆ID
- * @param note 笔记对象
- * @returns 咖啡豆ID，如果没有关联则返回null
- */
-export const getNoteAssociatedBeanId = (note: BrewingNote): string | null => {
-  // 优先使用beanId字段
-  if (note.beanId) {
-    return note.beanId;
-  }
-
-  // 如果没有beanId，但有咖啡豆信息，可以尝试通过名称查找
-  // 但这种情况下我们无法直接获取ID，需要调用者自行处理
-  return null;
-};
-
 // 笔记排序函数
 export const sortNotes = (
   notes: BrewingNote[],
@@ -494,40 +324,4 @@ export const formatConsumption = (amount: number): string => {
   } else {
     return `${(amount / 1000).toFixed(2)}kg`;
   }
-};
-
-/**
- * 按豆子类型汇总剩余量后计算预计杯数
- *
- * 算法说明：
- * 先按豆子类型汇总剩余量，再按对应的每杯克重计算：
- * - 每种豆型的杯数 = floor(typeRemaining / amountPerCup)
- * - 总杯数 = 各豆型杯数之和
- *
- * 这样可以避免零散余量在逐豆计算时被过早舍弃，更符合概览按类型展示的口径。
- * 例如：3款豆子分别剩余 15g/15g/16g，按 15g/杯计算：
- * - 旧算法：floor(15/15) + floor(15/15) + floor(16/15) = 1 + 1 + 1 = 3 杯
- * - 新算法：floor((15 + 15 + 16) / 15) = 3 杯
- *
- * @param beans 咖啡豆数组（需包含 remaining 和 beanType 字段）
- * @returns 预计杯数
- */
-export const calculateEstimatedCupsPerBean = (
-  beans: Array<{
-    remaining?: string;
-    beanType?: 'espresso' | 'filter' | 'omni';
-  }>,
-  estimatedCupDoseSettings?: Partial<EstimatedCupDoseSettings> | null
-): number => {
-  if (!beans || beans.length === 0) {
-    return 0;
-  }
-
-  return calculateEstimatedCupsFromWeights(
-    beans.map(bean => ({
-      beanType: bean.beanType,
-      remainingWeight: parseEstimatedCupRemainingWeight(bean.remaining),
-    })),
-    estimatedCupDoseSettings
-  );
 };

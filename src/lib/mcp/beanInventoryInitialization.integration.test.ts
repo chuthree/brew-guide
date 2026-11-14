@@ -88,7 +88,6 @@ describe('Native initial bean inventory', () => {
     id: bean.id,
     expectedVersion: bean.version,
     changes: capacityChange(capacity),
-    initializeRemainingFromCapacity: true,
   });
   const assignmentArgs = (bean: BeanView, remainingGrams = 250) => ({
     requestId: requestId(),
@@ -137,18 +136,25 @@ describe('Native initial bean inventory', () => {
     expect(await notes()).toHaveLength(0);
   });
 
-  it('exposes initialization only as an optional top-level update flag', () => {
+  it('uses capacity edits for initialization and rejects the retired flag', async () => {
     const schema = TOOL_SCHEMAS.get('update_bean')!;
-    expect(schema.properties!.initializeRemainingFromCapacity.type).toBe(
-      'boolean'
+    expect(schema.properties).not.toHaveProperty(
+      'initializeRemainingFromCapacity'
     );
-    expect(schema.required).not.toContain('initializeRemainingFromCapacity');
     expect(schema.properties!.changes.properties).not.toHaveProperty(
       'initializeRemainingFromCapacity'
     );
     expect(schema.properties!.changes.properties).not.toHaveProperty(
       'remainingGrams'
     );
+    const initial = await create();
+    await expect(
+      call('update_bean', {
+        ...argsFor(initial.bean),
+        initializeRemainingFromCapacity: true,
+      })
+    ).rejects.toMatchObject({ code: 'INVALID_ARGUMENT' });
+    expect((await saved(initial.bean.id))?.remaining).toBe('');
   });
 
   it('atomically fills both unknown amounts without inventing an adjustment record', async () => {
@@ -170,14 +176,7 @@ describe('Native initial bean inventory', () => {
   it.each(['update_bean', 'adjust_bean_inventory'])(
     'repairs the capacity-only partial result through an explicit %s request',
     async tool => {
-      const initial = await create();
-      const { initializeRemainingFromCapacity: _flag, ...ordinary } = argsFor(
-        initial.bean
-      );
-      const partial = await call('update_bean', {
-        ...ordinary,
-        initializeRemainingFromCapacity: false,
-      });
+      const partial = await unknownWithCapacity();
       expect(partial.bean).toMatchObject({
         capacityGrams: 250,
         remainingGrams: null,
@@ -196,44 +195,40 @@ describe('Native initial bean inventory', () => {
   );
 
   it.each(['', ' ', undefined, null])(
-    'requires an explicit inventory choice when capacity is supplied and remaining is %s',
+    'initializes missing remaining %s together with metadata and capacity',
     async remaining => {
       const initial = await create();
       const bean = await editFixture(initial.bean, {
         remaining,
       } as Partial<CoffeeBean>);
-      const before = await saved(bean.id);
-      const { initializeRemainingFromCapacity: _flag, ...args } = argsFor(bean);
-      await expect(
-        call('update_bean', {
-          ...args,
-          changes: {
-            ...args.changes,
-            name: 'Must roll back this metadata too',
-          },
-        })
-      ).rejects.toMatchObject({ code: 'INVENTORY_CHOICE_REQUIRED' });
-      expect(await saved(bean.id)).toEqual(before);
-      expect(await receipts()).toBe(1);
+      const args = argsFor(bean);
+      const result = await call('update_bean', {
+        ...args,
+        changes: {
+          ...args.changes,
+          name: 'Updated metadata',
+        },
+      });
+      expect(result).toMatchObject({
+        inventoryInitialized: true,
+        bean: {
+          name: 'Updated metadata',
+          capacityGrams: 250,
+          remainingGrams: 250,
+        },
+      });
+      expect(await receipts()).toBe(2);
       expect(await notes()).toHaveLength(0);
     }
   );
 
-  it('requires the same choice for zero capacity, but allows explicit false', async () => {
+  it('initializes zero capacity as zero remaining', async () => {
     const initial = await create();
-    const { initializeRemainingFromCapacity: _flag, ...args } = argsFor(
-      initial.bean,
-      0
-    );
-    await expect(call('update_bean', args)).rejects.toMatchObject({
-      code: 'INVENTORY_CHOICE_REQUIRED',
+    const args = argsFor(initial.bean, 0);
+    expect(await call('update_bean', args)).toMatchObject({
+      inventoryInitialized: true,
+      bean: { capacityGrams: 0, remainingGrams: 0 },
     });
-    expect(
-      await call('update_bean', {
-        ...args,
-        initializeRemainingFromCapacity: false,
-      })
-    ).toMatchObject({ bean: { capacityGrams: 0, remainingGrams: null } });
   });
 
   it('allows metadata-only edits without an inventory choice', async () => {
@@ -454,23 +449,18 @@ describe('Native initial bean inventory', () => {
     expect(await notes()).toHaveLength(0);
   });
 
-  it.each([undefined, false])(
-    'leaves ordinary capacity edits inventory-neutral (%s)',
-    async flag => {
+  it.each([
+    { remaining: '200', expected: 300 },
+    { remaining: '150', expected: 150 },
+  ])(
+    'updates capacity with stock $remaining to $expected',
+    async ({ remaining, expected }) => {
       const initial = await create(200);
-      const { initializeRemainingFromCapacity: _flag, ...ordinary } = argsFor(
-        initial.bean,
-        300
-      );
-      const result = await call('update_bean', {
-        ...ordinary,
-        ...(flag === undefined
-          ? {}
-          : { initializeRemainingFromCapacity: flag }),
-      });
+      const bean = await editFixture(initial.bean, { remaining });
+      const result = await call('update_bean', argsFor(bean, 300));
       expect(result.bean).toMatchObject({
         capacityGrams: 300,
-        remainingGrams: 200,
+        remainingGrams: expected,
       });
       expect(result).not.toHaveProperty('inventoryInitialized');
     }
@@ -490,8 +480,25 @@ describe('Native initial bean inventory', () => {
     expect((await saved(other.bean.id))?.remaining).toBe('');
   });
 
-  it.each(['0', 0, '75', 'invalid', '-1'])(
-    'rejects nonempty remaining %s without any writes',
+  it.each(['0', 0, '75'])(
+    'preserves known remaining %s when adding a missing capacity',
+    async remaining => {
+      const initial = await create();
+      const bean = await editFixture(initial.bean, {
+        remaining,
+      } as Partial<CoffeeBean>);
+      const result = await call('update_bean', argsFor(bean));
+      expect(result.bean).toMatchObject({
+        capacityGrams: 250,
+        remainingGrams: Number(remaining),
+      });
+      expect(result).not.toHaveProperty('inventoryInitialized');
+      expect(await notes()).toHaveLength(0);
+    }
+  );
+
+  it.each(['invalid', '-1'])(
+    'rejects malformed remaining %s without any writes',
     async remaining => {
       const initial = await create();
       const bean = await editFixture(initial.bean, {
@@ -506,8 +513,21 @@ describe('Native initial bean inventory', () => {
     }
   );
 
-  it.each(['200', '0', 'unknown', '250 or 500g', '-250'])(
-    'rejects different or malformed original capacity %s',
+  it.each(['200', '0'])(
+    'initializes unknown stock from the new capacity after previous capacity %s',
+    async capacity => {
+      const initial = await create();
+      const bean = await editFixture(initial.bean, { capacity });
+      expect(await call('update_bean', argsFor(bean))).toMatchObject({
+        inventoryInitialized: true,
+        bean: { capacityGrams: 250, remainingGrams: 250 },
+      });
+      expect(await notes()).toHaveLength(0);
+    }
+  );
+
+  it.each(['unknown', '250 or 500g', '-250'])(
+    'rejects malformed original capacity %s',
     async capacity => {
       const initial = await create();
       const bean = await editFixture(initial.bean, { capacity });
@@ -535,23 +555,20 @@ describe('Native initial bean inventory', () => {
   );
 
   it.each([{}, { zero: true }])(
-    'requires this request to supply positive capacity (%j)',
+    'initializes only when this request supplies capacity (%j)',
     async variant => {
       const initial = await create();
       const bean = await editFixture(initial.bean, { capacity: '250' });
       const args = argsFor(bean);
-      await expect(
-        call('update_bean', {
-          ...args,
-          changes: variant.zero
-            ? capacityChange(0)
-            : { name: 'Unrelated edit' },
-        })
-      ).rejects.toMatchObject({ code: 'INVALID_ARGUMENT' });
-      expect(await saved(bean.id)).toMatchObject({
-        capacity: '250',
-        remaining: '',
+      const result = await call('update_bean', {
+        ...args,
+        changes: variant.zero ? capacityChange(0) : { name: 'Unrelated edit' },
       });
+      expect(await saved(bean.id)).toMatchObject({
+        capacity: variant.zero ? '0' : '250',
+        remaining: variant.zero ? '0' : '',
+      });
+      expect(result.inventoryInitialized).toBe(variant.zero ? true : undefined);
     }
   );
 

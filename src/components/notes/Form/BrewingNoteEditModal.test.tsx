@@ -40,7 +40,7 @@ describe('BrewingNoteEditModal roasting records', () => {
     );
 
     expect(markup).toContain('日期');
-    expect(markup).toContain('咖啡豆');
+    expect(markup).toContain('QA green bean');
     expect(markup).toContain('烘焙量');
     expect(markup).toContain('保存记录');
     expect(markup).not.toContain('笔记内容');

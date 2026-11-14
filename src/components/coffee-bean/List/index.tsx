@@ -48,7 +48,6 @@ import {
   saveSelectedBeanStatePreference,
   getValidBeanState,
   saveViewModePreference,
-  saveSortOptionPreference,
   saveInventorySortOptionPreference,
   saveInventorySortOptionByStatePreference,
   getInventorySortOptionByStatePreference,
@@ -172,10 +171,6 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
 
   // 获取笔记数据用于计算自动评分
   const notes = useBrewingNoteStore(state => state.notes);
-
-  const [_ratedBeans, setRatedBeans] = useState<ExtendedCoffeeBean[]>(
-    globalCache.ratedBeans
-  );
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingBean, setEditingBean] = useState<ExtendedCoffeeBean | null>(
     null
@@ -220,7 +215,6 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
   const [selectedBeanState, setSelectedBeanState] = useState<BeanState>(() => {
     // 使用 getValidBeanState 确保生豆库未启用时不会返回 green 状态
     const validState = getValidBeanState();
-    globalCache.selectedBeanState = validState;
     return validState;
   });
   const effectiveInventorySort =
@@ -286,9 +280,6 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
   const [rankingSelectedRoaster, setRankingSelectedRoaster] = useState<
     string | null
   >(globalCache.rankingSelectedRoaster);
-
-  const unmountTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const isLoadingRef = useRef<boolean>(false);
   const beansContainerRef = useRef<HTMLDivElement | null>(null);
   const hiddenExportContainerRef = useRef<HTMLDivElement>(null);
 
@@ -526,24 +517,6 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
   const totalFilterCount = typeStats.filterCount;
   const totalOmniCount = typeStats.omniCount;
 
-  const updateFilteredBeansAndCategories = useCallback(() => {
-    globalCache.varieties = availableVarieties;
-    globalCache.availableOrigins = availableOrigins;
-    globalCache.availableFlavorPeriods = availableFlavorPeriods;
-    globalCache.availableRoasters = availableRoasters;
-    globalCache.availableBeanGroupIds = availableBeanGroups.map(
-      group => group.id
-    );
-    globalCache.filteredBeans = filteredBeans;
-  }, [
-    availableVarieties,
-    availableOrigins,
-    availableFlavorPeriods,
-    availableRoasters,
-    availableBeanGroups,
-    filteredBeans,
-  ]);
-
   // 初始化加载数据
   useEffect(() => {
     if (!storeInitialized) {
@@ -567,11 +540,6 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
       window.removeEventListener('coffeeBeanListChanged', handleBeansUpdated);
     };
   }, [loadBeansFromStore]);
-
-  // 当 beans 变化时更新 globalCache（仅用于 UI 偏好设置）
-  useEffect(() => {
-    globalCache.filteredBeans = filteredBeans;
-  }, [filteredBeans]);
 
   const [rankingBeansCount, setRankingBeansCount] = useState<number>(0);
   const [rankingEspressoCount, setRankingEspressoCount] = useState<number>(0);
@@ -644,8 +612,6 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         // 保存到按状态的存储
         const storageKey = `brew-guide:coffee-beans:displayMode_${selectedBeanState}`;
         localStorage.setItem(storageKey, mode);
-        // 同时更新 globalCache 保持一致
-        globalCache.displayMode = mode;
         globalCache.displayModes[selectedBeanState] = mode;
       }
     },
@@ -674,7 +640,6 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
   useEffect(() => {
     if (!enableGreenBeanInventory && selectedBeanState === 'green') {
       setSelectedBeanState('roasted');
-      globalCache.selectedBeanState = 'roasted';
       saveSelectedBeanStatePreference('roasted');
       window.dispatchEvent(
         new CustomEvent(COFFEE_BEAN_NAVIGATION_EVENTS.INVENTORY_STATE_CHANGED, {
@@ -805,10 +770,7 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
       })
     );
 
-    setRatedBeans(filteredRatedBeans);
     setRankingBeansCount(filteredRatedBeans.length);
-
-    globalCache.ratedBeans = filteredRatedBeans;
   }, [
     viewMode,
     beans,
@@ -823,32 +785,16 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
   // 组件打开时加载榜单数据
   useEffect(() => {
     if (isOpen) {
-      if (unmountTimeoutRef.current) {
-        clearTimeout(unmountTimeoutRef.current);
-        unmountTimeoutRef.current = null;
-      }
       loadRatedBeans();
     }
   }, [isOpen, loadRatedBeans]);
-
-  // 清理 timeout
-  useEffect(() => {
-    return () => {
-      if (unmountTimeoutRef.current) {
-        clearTimeout(unmountTimeoutRef.current);
-        unmountTimeoutRef.current = null;
-      }
-    };
-  }, []);
 
   // 在视图切换时更新数据
   useEffect(() => {
     if (viewMode === VIEW_OPTIONS.RANKING) {
       loadRatedBeans();
-    } else if (viewMode === VIEW_OPTIONS.INVENTORY) {
-      updateFilteredBeansAndCategories();
     }
-  }, [viewMode, loadRatedBeans, updateFilteredBeansAndCategories]);
+  }, [viewMode, loadRatedBeans]);
 
   // 确保在榜单beanType变化时更新计数
   useEffect(() => {
@@ -882,32 +828,10 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
 
   useEffect(() => {
     if (storeInitialized) {
-      let newSortOption: SortOption;
-
-      switch (viewMode) {
-        case VIEW_OPTIONS.INVENTORY:
-          newSortOption = inventorySortOption;
-          break;
-        case VIEW_OPTIONS.RANKING:
-          newSortOption = rankingSortOption;
-          break;
-        default:
-          newSortOption = inventorySortOption;
-      }
-
-      globalCache.sortOption = newSortOption;
-      saveSortOptionPreference(newSortOption);
       globalCache.viewMode = viewMode;
       saveViewModePreference(viewMode);
     }
-  }, [storeInitialized, viewMode, inventorySortOption, rankingSortOption]);
-
-  // 当库存快照变化时同步全局缓存，避免旧的分类数据残留
-  useEffect(() => {
-    if (viewMode === VIEW_OPTIONS.INVENTORY) {
-      updateFilteredBeansAndCategories();
-    }
-  }, [viewMode, updateFilteredBeansAndCategories]);
+  }, [storeInitialized, viewMode]);
 
   // 处理品种标签点击 - 简化版本，优化的Hook会自动处理筛选
   const handleVarietyClick = useCallback(
@@ -999,7 +923,6 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
 
       // 切换 beanState
       setSelectedBeanState(beanState);
-      globalCache.selectedBeanState = beanState;
       saveSelectedBeanStatePreference(beanState);
       window.dispatchEvent(
         new CustomEvent(COFFEE_BEAN_NAVIGATION_EVENTS.INVENTORY_STATE_CHANGED, {
@@ -1054,7 +977,6 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         targetDisplayMode = globalCache.displayModes[beanState];
       }
       setDisplayModeState(targetDisplayMode);
-      globalCache.displayMode = targetDisplayMode;
       globalCache.displayModes[beanState] = targetDisplayMode;
 
       // 加载目标 beanState 的分类筛选值
@@ -1396,27 +1318,6 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
       loadRatedBeans();
     }
   }, [storeInitialized, rankingBeanType, loadRatedBeans, viewMode]);
-
-  // 组件加载后初始化各视图的排序选项
-  useEffect(() => {
-    if (isOpen && !isLoadingRef.current) {
-      // 初始化时根据当前视图设置全局排序选项
-      let currentSortOption: SortOption;
-
-      switch (viewMode) {
-        case VIEW_OPTIONS.INVENTORY:
-          currentSortOption = inventorySortOption;
-          break;
-        case VIEW_OPTIONS.RANKING:
-          currentSortOption = rankingSortOption;
-          break;
-        default:
-          currentSortOption = inventorySortOption;
-      }
-
-      globalCache.sortOption = currentSortOption;
-    }
-  }, [isOpen, viewMode, inventorySortOption, rankingSortOption]);
 
   // 添加搜索状态
   const [isSearching, setIsSearching] = useState(false);
@@ -1963,9 +1864,6 @@ const CoffeeBeans: React.FC<CoffeeBeansProps> = ({
         saveRankingSortOptionPreference(option);
         break;
     }
-
-    globalCache.sortOption = option;
-    saveSortOptionPreference(option);
   };
 
   // 处理搜索历史点击

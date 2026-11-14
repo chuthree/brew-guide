@@ -86,36 +86,11 @@ export interface SyncPlan {
 }
 
 /**
- * 同步方向
- */
-type SyncDirection = 'upload' | 'download' | 'none' | 'conflict';
-
-/**
- * 冲突解决策略
- */
-export enum ConflictStrategy {
-  /** 保留更新的版本（基于修改时间） */
-  KEEP_NEWER = 'newer',
-  /** 保留更大的文件 */
-  KEEP_LARGER = 'larger',
-  /** 保留本地版本 */
-  KEEP_LOCAL = 'local',
-  /** 保留远程版本 */
-  KEEP_REMOTE = 'remote',
-  /** 保留两者并重命名 */
-  KEEP_BOTH = 'both',
-  /** 手动解决（返回错误让用户选择） */
-  MANUAL = 'manual',
-}
-
-/**
  * 同步选项
  */
 export interface SyncOptions {
   /** 首选同步方向 */
   preferredDirection?: 'auto' | 'upload' | 'download';
-  /** 冲突解决策略 */
-  conflictStrategy?: ConflictStrategy;
   /** 是否自动解决冲突 */
   autoResolve?: boolean;
   /** 是否执行干运行（只计划不执行） */
@@ -182,52 +157,4 @@ export interface SyncResult {
   plan?: SyncPlan;
   /** 调试日志（用于诊断同步问题） */
   debugLogs?: string[];
-}
-
-/**
- * 文件变更类型
- */
-export enum FileChangeType {
-  /** 新增 */
-  ADDED = 'added',
-  /** 修改 */
-  MODIFIED = 'modified',
-  /** 删除 */
-  DELETED = 'deleted',
-  /** 冲突 */
-  CONFLICT = 'conflict',
-  /** 未变更 */
-  UNCHANGED = 'unchanged',
-}
-
-/**
- * 文件变更记录
- */
-export interface FileChange {
-  /** 文件键名 */
-  key: string;
-  /** 变更类型 */
-  type: FileChangeType;
-  /** 同步方向（仅对 MODIFIED 类型有意义） */
-  direction?: 'upload' | 'download';
-  /** 本地元数据 */
-  local?: FileMetadata;
-  /** 远程元数据 */
-  remote?: FileMetadata;
-  /** 基准元数据（上次同步时的状态） */
-  base?: FileMetadata;
-}
-
-/**
- * 同步状态
- */
-interface SyncStatus {
-  /** 是否正在同步 */
-  inProgress: boolean;
-  /** 最后同步时间 */
-  lastSyncTime: Date | null;
-  /** 最后同步结果 */
-  lastResult: SyncResult | null;
-  /** 是否需要同步 */
-  needsSync: boolean;
 }

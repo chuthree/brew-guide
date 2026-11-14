@@ -905,15 +905,6 @@ export const DataManager = {
 
         // 触发数据变更事件，通知应用中的组件重新加载数据
         if (isBrowser) {
-          // 触发器具排序更新事件
-          try {
-            const { equipmentEventBus } =
-              await import('@/lib/equipment/equipmentEventBus');
-            equipmentEventBus.notify();
-          } catch (error) {
-            console.error('触发器具排序更新事件失败:', error);
-          }
-
           // 触发自定义器具更新事件
           const equipmentEvent = new CustomEvent('customEquipmentUpdate', {
             detail: { source: 'resetAllData' },

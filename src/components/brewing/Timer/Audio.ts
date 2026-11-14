@@ -201,8 +201,6 @@ export type { TimerSound };
 export const initializeTimerAudio = (): Promise<void> =>
   timerAudio.initialize();
 
-export const unlockTimerAudio = (): Promise<void> => timerAudio.resume();
-
 export const playTimerSound = (sound: TimerSound, enabled = true): void => {
   void timerAudio.play(sound, enabled);
 };

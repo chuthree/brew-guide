@@ -14,10 +14,7 @@ import {
   useContext,
   ReactNode,
 } from 'react';
-import {
-  initializeDataLayer,
-  getInitializationState,
-} from '@/lib/core/dataLayer';
+import { initializeDataLayer } from '@/lib/core/dataLayer';
 import {
   markCrashDiagnosticsReady,
   recordCrashCheckpoint,
@@ -76,14 +73,13 @@ export function DataLayerProvider({ children }: DataLayerProviderProps) {
         await initializeDataLayer();
 
         if (mounted) {
-          const initState = getInitializationState();
           markCrashDiagnosticsReady({
-            initialized: initState.isInitialized,
+            initialized: true,
           });
           setState({
-            isInitialized: initState.isInitialized,
+            isInitialized: true,
             isInitializing: false,
-            error: initState.error,
+            error: null,
           });
         }
       } catch (error) {

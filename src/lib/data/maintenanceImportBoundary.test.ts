@@ -4,7 +4,6 @@ const importTargets = [
   ['dataLayer', () => import('@/lib/core/dataLayer')],
   ['brewingNoteStore', () => import('@/lib/stores/brewingNoteStore')],
   ['notes/cleanup', () => import('@/lib/notes/cleanup')],
-  ['notes/imageRepository', () => import('@/lib/notes/imageRepository')],
   ['notes/imageRecords', () => import('@/lib/notes/imageRecords')],
 ] as const;
 

@@ -125,7 +125,6 @@ import type { BeanReadyReminderItem } from '@/lib/utils/beanReadyReminderUtils';
 import { getEquipmentById } from '@/lib/utils/equipmentUtils';
 import {
   IOS_TRANSITION_CONFIG,
-  pageStackManager,
   getParentPageStyle,
   shouldMoveParentPage,
   useIsDesktopLayout,
@@ -742,11 +741,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
   // 注意：brewingNoteEditOpen 使用 ResponsiveModal，自己管理动画，不需要触发主页面转场
   const hasOverlayModalOpen = isSettingsOpen || hasSubSettingsOpen;
   const hasContentDetailOpen = beanDetailOpen || noteDetailOpen;
-
-  // 统一管理 pageStackManager 的状态
-  React.useEffect(() => {
-    pageStackManager.setModalOpen(hasAnyModalOpen);
-  }, [hasAnyModalOpen]);
 
   // 自动跳转到笔记的状态
   const [hasAutoNavigatedToNotes, setHasAutoNavigatedToNotes] = useState(false);
@@ -3988,16 +3982,6 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                         );
                         window.dispatchEvent(event);
                       }, 0);
-                    }}
-                    onComplete={isComplete => {
-                      if (isComplete) {
-                        const event = new CustomEvent('brewing:complete');
-                        window.dispatchEvent(event);
-                      }
-                    }}
-                    onTimerComplete={() => {
-                      // 冲煮完成后的处理，确保显示笔记表单
-                      // 这里不需要额外设置，因为BrewingTimer组件内部已经处理了显示笔记表单的逻辑
                     }}
                     onExpandedStagesChange={stages => {
                       expandedStagesRef.current = stages;

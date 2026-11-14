@@ -145,18 +145,6 @@ export type LegacySourcePresenceMap = Record<
   LegacySourcePresence
 >;
 
-/**
- * Generic source facts leave the future migration runner free to record
- * per-table presence (LegacySourcePresenceMap, including absent vs
- * present-empty) without encoding a state machine in the v1 row contract.
- */
-export interface MigrationStateRow {
-  id: string;
-  status: 'in_progress' | 'completed' | 'failed';
-  source_presence_json: string;
-  details_json: string;
-}
-
 export const SQLITE_SCHEMA_V1_SQL = `
 CREATE TABLE coffee_beans (
   id TEXT NOT NULL PRIMARY KEY,

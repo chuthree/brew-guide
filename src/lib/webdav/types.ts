@@ -10,8 +10,6 @@ import type {
   SyncOptions,
   SyncProgress,
   SyncResult,
-  ConflictStrategy,
-  FileChangeType,
 } from '@/lib/s3/types';
 
 /**
@@ -56,6 +54,4 @@ export type {
   SyncOptions,
   SyncProgress,
   SyncResult,
-  ConflictStrategy,
-  FileChangeType,
 };

@@ -67,7 +67,6 @@ export const globalCache: {
   selectedVariety: string | null;
   selectedBeanType: BeanType;
   selectedBeanTypes: { green: BeanType; roasted: BeanType };
-  selectedBeanState: BeanState;
   filterMode: BeanFilterMode;
   filterModes: { green: BeanFilterMode; roasted: BeanFilterMode };
   selectedOrigin: string | null;
@@ -86,17 +85,11 @@ export const globalCache: {
   selectedBeanGroupIds: { green: string | null; roasted: string | null };
   showEmptyBeans: boolean;
   showEmptyBeansSettings: { green: boolean; roasted: boolean };
-
-  // 视图状态
-  isImageFlowMode: boolean;
-  isImageFlowModes: { green: boolean; roasted: boolean };
-  displayMode: 'list' | 'imageFlow' | 'table';
   displayModes: {
     green: 'list' | 'imageFlow' | 'table';
     roasted: 'list' | 'imageFlow' | 'table';
   };
   viewMode: ViewOption;
-  sortOption: SortOption;
   inventorySortOption: SortOption;
   inventorySortOptions: { green: SortOption; roasted: SortOption };
   rankingSortOption: SortOption;
@@ -111,20 +104,10 @@ export const globalCache: {
   selectedDate: string | null;
   selectedDates: Record<DateGroupingMode, string | null>;
   statsBeanState: 'roasted' | 'green';
-
-  // 临时数据（用于 UI 计算，不持久化）
-  filteredBeans: ExtendedCoffeeBean[];
-  ratedBeans: ExtendedCoffeeBean[];
-  varieties: string[];
-  availableOrigins: string[];
-  availableFlavorPeriods: FlavorPeriodStatus[];
-  availableRoasters: string[];
-  availableBeanGroupIds: string[];
 } = {
   selectedVariety: null,
   selectedBeanType: 'all',
   selectedBeanTypes: { green: 'all', roasted: 'all' },
-  selectedBeanState: 'roasted',
   filterMode: 'flavorPeriod',
   filterModes: { green: 'variety', roasted: 'flavorPeriod' },
   selectedOrigin: null,
@@ -143,12 +126,8 @@ export const globalCache: {
     green: DEFAULT_SHOW_EMPTY_BEANS,
     roasted: DEFAULT_SHOW_EMPTY_BEANS,
   },
-  isImageFlowMode: false,
-  isImageFlowModes: { green: false, roasted: false },
-  displayMode: 'list',
   displayModes: { green: 'list', roasted: 'list' },
   viewMode: 'inventory',
-  sortOption: 'remaining_days_asc',
   inventorySortOption: 'remaining_days_asc',
   inventorySortOptions: {
     green: 'last_modified_desc',
@@ -164,13 +143,6 @@ export const globalCache: {
   selectedDate: null,
   selectedDates: { year: null, month: null, week: null, day: null },
   statsBeanState: 'roasted',
-  filteredBeans: [],
-  ratedBeans: [],
-  varieties: [],
-  availableOrigins: [],
-  availableFlavorPeriods: [],
-  availableRoasters: [],
-  availableBeanGroupIds: [],
 };
 
 // ==================== 偏好设置读写函数 ====================
@@ -254,11 +226,6 @@ const getSupportedSortPreference = (key: string, fallback: SortOption) => {
   }
   return value as SortOption;
 };
-
-export const getSortOptionPreference = () =>
-  getSupportedSortPreference('sortOption', 'remaining_days_asc');
-export const saveSortOptionPreference = (v: SortOption) =>
-  saveStringState(MODULE_NAME, 'sortOption', v);
 export const getInventorySortOptionPreference = () =>
   getSupportedSortPreference('inventorySortOption', 'remaining_days_asc');
 export const saveInventorySortOptionPreference = (v: SortOption) =>
@@ -395,23 +362,6 @@ export const saveSelectedBeanGroupByStatePreference = (
 // 显示模式: list（列表）、imageFlow（图片流）、table（表格）
 export type DisplayMode = 'list' | 'imageFlow' | 'table';
 
-export const getDisplayModePreference = (): DisplayMode => {
-  // 优先读取新的 displayMode，如果没有则从旧的 isImageFlowMode 迁移
-  const newMode = getStringState(MODULE_NAME, 'displayMode', '');
-  if (
-    newMode &&
-    (newMode === 'list' || newMode === 'imageFlow' || newMode === 'table')
-  ) {
-    return newMode as DisplayMode;
-  }
-  // 迁移旧的 isImageFlowMode 设置
-  const oldMode = getBooleanState(MODULE_NAME, 'isImageFlowMode', false);
-  return oldMode ? 'imageFlow' : 'list';
-};
-
-export const saveDisplayModePreference = (v: DisplayMode) =>
-  saveStringState(MODULE_NAME, 'displayMode', v);
-
 export const getDisplayModeByStatePreference = (s: BeanState): DisplayMode => {
   const newMode = getStringState(MODULE_NAME, `displayMode_${s}`, '');
   if (
@@ -424,17 +374,6 @@ export const getDisplayModeByStatePreference = (s: BeanState): DisplayMode => {
   const oldMode = getBooleanState(MODULE_NAME, `isImageFlowMode_${s}`, false);
   return oldMode ? 'imageFlow' : 'list';
 };
-
-export const saveDisplayModeByStatePreference = (
-  s: BeanState,
-  v: DisplayMode
-) => saveStringState(MODULE_NAME, `displayMode_${s}`, v);
-
-// 向后兼容：isImageFlowMode 函数
-export const getImageFlowModePreference = () =>
-  getDisplayModePreference() === 'imageFlow';
-export const getImageFlowModeByStatePreference = (s: BeanState) =>
-  getDisplayModeByStatePreference(s) === 'imageFlow';
 
 // 统计视图
 export const getDateGroupingModePreference = (): DateGroupingMode => {
@@ -586,18 +525,11 @@ const initGlobalCache = () => {
     green: getSelectedBeanTypeByStatePreference('green'),
     roasted: getSelectedBeanTypeByStatePreference('roasted'),
   };
-  globalCache.isImageFlowMode = getImageFlowModePreference();
-  globalCache.isImageFlowModes = {
-    green: getImageFlowModeByStatePreference('green'),
-    roasted: getImageFlowModeByStatePreference('roasted'),
-  };
-  globalCache.displayMode = getDisplayModePreference();
   globalCache.displayModes = {
     green: getDisplayModeByStatePreference('green'),
     roasted: getDisplayModeByStatePreference('roasted'),
   };
   globalCache.viewMode = getViewModePreference();
-  globalCache.sortOption = getSortOptionPreference();
   globalCache.inventorySortOption = getInventorySortOptionPreference();
   globalCache.inventorySortOptions = {
     green: getInventorySortOptionByStatePreference('green'),
