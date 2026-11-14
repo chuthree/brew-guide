@@ -9,7 +9,7 @@ import type { CloudProvider, SyncDirection } from '@/lib/sync/types';
 import { syncService } from '@/lib/sync/UnifiedSyncService';
 import { showToast } from '@/components/common/feedback/LightToast';
 import hapticsUtils from '@/lib/ui/haptics';
-import { useSyncDiagnostics } from './useSyncDiagnostics';
+import { showErrorReport } from '@/lib/feedback/errorReport';
 
 export type CloudSyncStatus =
   | 'disconnected'
@@ -17,7 +17,7 @@ export type CloudSyncStatus =
   | 'connected'
   | 'error';
 
-interface UseCloudSyncReturn extends ReturnType<typeof useSyncDiagnostics> {
+interface UseCloudSyncReturn {
   status: CloudSyncStatus;
   provider: CloudProvider;
   isSyncing: boolean;
@@ -32,8 +32,6 @@ export function useCloudSyncConnection(
   const status: CloudSyncStatus =
     provider !== 'none' ? 'connected' : 'disconnected';
   const [isSyncing, setIsSyncing] = useState(false);
-  const diagnostics = useSyncDiagnostics();
-  const { showSyncFailure } = diagnostics;
 
   const performSync = useCallback(
     async (direction: SyncDirection) => {
@@ -67,22 +65,27 @@ export function useCloudSyncConnection(
           }
           if (settings.hapticFeedback) hapticsUtils.medium();
         } else {
-          showSyncFailure(result);
+          showErrorReport({
+            title: '同步失败',
+            source: `${provider}:${direction}`,
+            error: result.message,
+            logs: [...result.errors, ...(result.debugLogs ?? [])],
+          });
         }
       } catch (e) {
-        showSyncFailure({
-          message: `同步失败: ${e instanceof Error ? e.message : '未知错误'}`,
-          errors: [],
+        showErrorReport({
+          title: '同步失败',
+          source: `${provider}:${direction}`,
+          error: e,
         });
       } finally {
         setIsSyncing(false);
       }
     },
-    [isSyncing, provider, settings, showSyncFailure]
+    [isSyncing, provider, settings]
   );
 
   return {
-    ...diagnostics,
     status,
     provider,
     isSyncing,

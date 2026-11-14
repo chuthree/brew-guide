@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { SettingInput, SettingRow } from '../atomic';
 import ActionDrawer from '@/components/common/ui/ActionDrawer';
 import { showToast } from '@/components/common/feedback/LightToast';
+import { showErrorReport } from '@/lib/feedback/errorReport';
 import { useModalHistory } from '@/lib/hooks/useModalHistory';
 import { WebDAVSyncManager } from '@/lib/webdav/syncManager';
 import { CloudProxySetting } from './shared/CloudProxySetting';
@@ -123,16 +124,17 @@ const WebDAVTutorialModal: React.FC<WebDAVTutorialModalProps> = ({
         });
         goToNextStep();
       } else {
-        showToast({
-          type: 'error',
-          title: manager.getLastError() || '连接失败，请检查配置信息',
+        showErrorReport({
+          title: 'WebDAV 连接失败',
+          source: 'webdav:tutorial-connect',
+          error: manager.getLastError(),
         });
       }
     } catch (error) {
-      console.error('WebDAV 连接测试失败:', error);
-      showToast({
-        type: 'error',
-        title: error instanceof Error ? error.message : '连接失败',
+      showErrorReport({
+        title: 'WebDAV 连接失败',
+        source: 'webdav:tutorial-connect',
+        error,
       });
     } finally {
       setIsConnecting(false);

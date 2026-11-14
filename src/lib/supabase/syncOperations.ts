@@ -17,8 +17,8 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import {
   describeSyncPayload,
   recordSupabaseDiagnosticEvent,
-  sanitizeDiagnosticText,
 } from './syncDiagnostics';
+import { sanitizeDiagnosticText } from '@/lib/feedback/sanitizeDiagnosticText';
 import {
   appSettingsRepository,
   grinderRepository,

@@ -25,6 +25,7 @@ import type { BrewingNoteData } from '@/types/app';
 import type { BrewingNoteSaveOptions } from '@/lib/notes/inventory';
 import { saveMainTabPreference } from '@/lib/navigation/navigationCache';
 import { showToast } from '@/components/common/feedback/LightToast';
+import { showErrorReport } from '@/lib/feedback/errorReport';
 import { getEquipmentName } from '@/lib/brewing/parameters';
 import BottomActionBar from '@/components/layout/BottomActionBar';
 import CoffeeBeanList from '@/components/coffee-bean/List/ListView';
@@ -487,8 +488,11 @@ const TabContent: React.FC<TabContentProps> = ({
           createdFromSearch: true,
         });
       } catch (error) {
-        console.error('创建咖啡豆失败:', error);
-        showToast({ type: 'error', title: '创建咖啡豆失败', duration: 2000 });
+        showErrorReport({
+          title: '创建咖啡豆失败',
+          source: 'beans:create-from-search',
+          error,
+        });
       }
     },
     [addBean, onCoffeeBeanSelect, triggerHapticFeedback]

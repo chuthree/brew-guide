@@ -10,7 +10,6 @@ import React, {
 import { Command } from 'cmdk';
 import { RefreshCw, Upload, Download } from 'lucide-react';
 import { useCloudSyncConnection } from '@/lib/hooks/useCloudSync';
-import { SyncDebugDrawer } from '@/components/settings/data-settings/shared/SyncDebugDrawer';
 import type { SyncDirection } from '@/lib/sync/types';
 import ActionDrawer from '@/components/common/ui/ActionDrawer';
 import type { CustomEquipment, BrewingNote } from '@/lib/core/config';
@@ -233,9 +232,6 @@ const DesktopGlobalSearch: React.FC<DesktopGlobalSearchProps> = ({
     status: cloudSyncStatus,
     isSyncing,
     performSync,
-    debugLogs,
-    showDebugDrawer,
-    setShowDebugDrawer,
   } = useCloudSyncConnection(settings);
   const [syncConfirmation, setSyncConfirmation] = useState<{
     direction: 'upload' | 'download';
@@ -655,12 +651,6 @@ const DesktopGlobalSearch: React.FC<DesktopGlobalSearchProps> = ({
           </ActionDrawer.PrimaryButton>
         </ActionDrawer.Actions>
       </ActionDrawer>
-      <SyncDebugDrawer
-        isOpen={showDebugDrawer}
-        onClose={() => setShowDebugDrawer(false)}
-        logs={debugLogs}
-        hapticFeedback={settings.hapticFeedback}
-      />
     </>
   );
 };

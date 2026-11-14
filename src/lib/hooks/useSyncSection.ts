@@ -5,7 +5,6 @@
  */
 
 import { useState, useCallback } from 'react';
-import { useSyncDiagnostics } from './useSyncDiagnostics';
 import type { ConnectionStatus, SyncProgress } from '@/lib/sync/types';
 import hapticsUtils from '@/lib/ui/haptics';
 
@@ -16,9 +15,7 @@ export interface UseSyncSectionOptions {
   onSyncComplete?: () => void;
 }
 
-export interface UseSyncSectionReturn extends ReturnType<
-  typeof useSyncDiagnostics
-> {
+export interface UseSyncSectionReturn {
   // 连接状态
   status: ConnectionStatus;
   setStatus: (status: ConnectionStatus) => void;
@@ -67,11 +64,6 @@ export function useSyncSection(
   // ============================================
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncProgress, setSyncProgress] = useState<SyncProgress | null>(null);
-
-  // ============================================
-  // 调试日志
-  // ============================================
-  const diagnostics = useSyncDiagnostics();
 
   // ============================================
   // 状态显示
@@ -138,9 +130,6 @@ export function useSyncSection(
     setIsSyncing,
     syncProgress,
     setSyncProgress,
-
-    // 调试日志
-    ...diagnostics,
 
     // 工具函数
     getStatusColor,

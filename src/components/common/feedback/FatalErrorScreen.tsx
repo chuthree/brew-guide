@@ -3,6 +3,11 @@
 import Image from 'next/image';
 import { useCallback, useState } from 'react';
 import ActionDrawer from '@/components/common/ui/ActionDrawer';
+import { ErrorReportDrawer } from './ErrorReportDrawer';
+import {
+  createErrorReport,
+  type ErrorReport,
+} from '@/lib/feedback/errorReport';
 import {
   getCrashDiagnosticReport,
   getCurrentCrashDiagnosticSession,
@@ -17,45 +22,43 @@ export default function FatalErrorScreen({
   description: string;
   error: string;
 }) {
-  const [diagnosticStatus, setDiagnosticStatus] = useState('');
-  const [exportingDiagnostics, setExportingDiagnostics] = useState(false);
-  const [panel, setPanel] = useState<'diagnostics' | 'contact'>('diagnostics');
+  const [report, setReport] = useState<ErrorReport | null>(null);
+  const [loadingDiagnostics, setLoadingDiagnostics] = useState(false);
   const [isPanelOpen, setPanelOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [exportStatus, setExportStatus] = useState('');
   const [preparedData, setPreparedData] = useState<string>();
-  const showDiagnostics = useCallback(() => {
-    setPanel('diagnostics');
-    setPanelOpen(true);
-  }, []);
-  const showContact = useCallback(() => {
-    setPanel('contact');
-    setPanelOpen(true);
-  }, []);
-  const closePanel = useCallback(() => setPanelOpen(false), []);
-
-  const exportDiagnostics = useCallback(async () => {
-    if (exportingDiagnostics) return;
-    setExportingDiagnostics(true);
-    setDiagnosticStatus('');
+  const showDiagnostics = useCallback(async () => {
+    setLoadingDiagnostics(true);
     try {
-      const { exportJsonFile } = await import('@/lib/utils/jsonExport');
       const [session, previousReport] = await Promise.all([
         getCurrentCrashDiagnosticSession().catch(() => null),
         getCrashDiagnosticReport().catch(() => null),
       ]);
-      await exportJsonFile({
-        jsonData: JSON.stringify({ error, session, previousReport }, null, 2),
-        fileName: 'brew-guide-startup-diagnostics.json',
-        title: '导出启动诊断',
-        dialogTitle: '导出启动诊断',
-      });
-    } catch {
-      setDiagnosticStatus('诊断导出未完成，请重试。');
+      setReport(
+        createErrorReport({
+          title,
+          source: 'app:fatal-error',
+          error,
+          logs: [
+            session
+              ? `当前会话诊断:\n${JSON.stringify(session, null, 2)}`
+              : '当前会话诊断不可用',
+            previousReport
+              ? `历史异常（不代表本次错误）:\n${JSON.stringify(previousReport, null, 2)}`
+              : '历史异常报告不存在或无法读取',
+          ],
+        })
+      );
     } finally {
-      setExportingDiagnostics(false);
+      setLoadingDiagnostics(false);
     }
-  }, [exportingDiagnostics, error]);
+  }, [title, error]);
+  const showContact = useCallback(() => {
+    setPanelOpen(true);
+  }, []);
+  const closePanel = useCallback(() => setPanelOpen(false), []);
+  const closeReport = useCallback(() => setReport(null), []);
 
   const exportData = useCallback(async () => {
     setExporting(true);
@@ -90,8 +93,6 @@ export default function FatalErrorScreen({
     }
   }, [preparedData]);
 
-  const panelTitle = panel === 'diagnostics' ? '诊断信息' : '联系开发者';
-
   return (
     <main className="app-viewport overflow-y-auto bg-neutral-50 text-neutral-900 dark:bg-neutral-900 dark:text-neutral-100">
       <div className="flex min-h-full flex-col items-center justify-end px-6 pt-[max(1.5rem,env(safe-area-inset-top))] pb-[max(var(--safe-area-bottom,0px),env(safe-area-inset-bottom,0px))] md:justify-center">
@@ -117,9 +118,10 @@ export default function FatalErrorScreen({
           <ActionDrawer.Actions className="flex-col [&>button]:font-semibold [&>button]:text-neutral-800 dark:[&>button]:text-neutral-100">
             <ActionDrawer.SecondaryButton
               onClick={showDiagnostics}
+              disabled={loadingDiagnostics}
               className="min-h-11 text-left"
             >
-              诊断信息
+              {loadingDiagnostics ? '正在读取诊断…' : '诊断信息'}
             </ActionDrawer.SecondaryButton>
             <ActionDrawer.SecondaryButton
               onClick={showContact}
@@ -140,38 +142,22 @@ export default function FatalErrorScreen({
         </section>
       </div>
       <ActionDrawer
-        title={panelTitle}
+        title="联系开发者"
         isOpen={isPanelOpen}
         onClose={closePanel}
         autoFocus
         disableHistory
       >
         <ActionDrawer.Content>
-          {panel === 'diagnostics' ? (
-            <>
-              <p className="text-base leading-snug font-semibold text-neutral-900 dark:text-neutral-100">
-                {panelTitle}
-              </p>
-              <pre
-                tabIndex={0}
-                data-vaul-no-drag
-                className="max-h-[35dvh] overflow-auto rounded-xl bg-neutral-100 p-4 text-xs wrap-anywhere whitespace-pre-wrap select-text dark:bg-neutral-800"
-              >
-                {error}
-              </pre>
-              {diagnosticStatus && <p role="status">{diagnosticStatus}</p>}
-            </>
-          ) : (
-            <div className="rounded-2xl bg-neutral-100 p-2 dark:bg-neutral-800">
-              <Image
-                src="/images/content/chu-code.jpg"
-                alt="开发者微信二维码"
-                width={200}
-                height={200}
-                className="h-auto w-full rounded-xl bg-white"
-              />
-            </div>
-          )}
+          <div className="rounded-2xl bg-neutral-100 p-2 dark:bg-neutral-800">
+            <Image
+              src="/images/content/chu-code.jpg"
+              alt="开发者微信二维码"
+              width={200}
+              height={200}
+              className="h-auto w-full rounded-xl bg-white"
+            />
+          </div>
         </ActionDrawer.Content>
         <ActionDrawer.Actions>
           <ActionDrawer.SecondaryButton
@@ -180,17 +166,16 @@ export default function FatalErrorScreen({
           >
             关闭
           </ActionDrawer.SecondaryButton>
-          {panel === 'diagnostics' && (
-            <ActionDrawer.PrimaryButton
-              onClick={exportDiagnostics}
-              disabled={exportingDiagnostics}
-              className="text-center"
-            >
-              {exportingDiagnostics ? '正在导出…' : '导出诊断'}
-            </ActionDrawer.PrimaryButton>
-          )}
         </ActionDrawer.Actions>
       </ActionDrawer>
+      {report && (
+        <ErrorReportDrawer
+          key={report.id}
+          report={report}
+          onClose={closeReport}
+          disableHistory
+        />
+      )}
     </main>
   );
 }

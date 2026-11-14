@@ -25,7 +25,7 @@ import {
   customMethodRepository,
   imageSourcePayloadValidator,
 } from '@/lib/data/repositories';
-import { copyToClipboard } from '@/lib/utils/exportUtils';
+import { showErrorReport } from '@/lib/feedback/errorReport';
 import {
   completeHydratedImageSnapshot,
   SYNC_TABLES,
@@ -66,7 +66,6 @@ import {
 const SYNC_TIMEOUT = 60000; // 增加到 60s 以适应移动端大文件传输
 const DETAIL_DOWNLOAD_IDLE_TIMEOUT = SYNC_TIMEOUT * 2;
 const BACKGROUND_SETTINGS_DOWNLOAD_TIMEOUT = 12000;
-const SYNC_DIAGNOSTIC_TOAST_DURATION = 8000;
 
 /**
  * 带超时的 Promise 包装器
@@ -382,29 +381,6 @@ async function writeLocalRecordWithDiagnostics<T>(
   }
 }
 
-function createCopyDiagnosticAction(diagnostic: string) {
-  return {
-    label: '复制诊断',
-    onClick: async () => {
-      const result = await copyToClipboard(diagnostic);
-
-      if (result.success) {
-        showToast({
-          type: 'success',
-          title: '诊断已复制',
-          duration: 2000,
-        });
-      } else {
-        showToast({
-          type: 'error',
-          title: '复制诊断失败',
-          duration: 3000,
-        });
-      }
-    },
-  };
-}
-
 function assertSyncSuccess<T>(
   result: SyncOperationResult<T>,
   fallbackMessage: string
@@ -597,23 +573,19 @@ export class InitialSyncManager {
           startedAt: startTime,
           stats,
         });
-        const action = createCopyDiagnosticAction(diagnostic);
-
-        if (errorCount === totalTaskCount) {
-          showToast({
-            type: 'error',
-            title: '同步失败，可复制诊断反馈',
-            duration: SYNC_DIAGNOSTIC_TOAST_DURATION,
-            action,
-          });
-        } else {
-          showToast({
-            type: 'warning',
-            title: '部分数据同步失败',
-            duration: SYNC_DIAGNOSTIC_TOAST_DURATION,
-            action,
-          });
-        }
+        showErrorReport({
+          title:
+            errorCount === totalTaskCount
+              ? 'Supabase 同步失败'
+              : '部分数据同步失败',
+          source: 'supabase:initial-sync',
+          error:
+            state.supabaseSyncProgress.tasks
+              .filter(task => task.error)
+              .map(task => task.error)
+              .join('\n') || '同步任务失败，详见诊断日志',
+          logs: [diagnostic],
+        });
       } else if (
         stats.downloaded > 0 ||
         stats.uploaded > 0 ||

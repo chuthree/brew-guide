@@ -12,7 +12,7 @@ import SortableInventory, {
   SortableBeanRow,
   type ReorderBeans,
 } from './SortableInventory';
-import { showToast } from '@/components/common/feedback/LightToast';
+import { showErrorReport } from '@/lib/feedback/errorReport';
 import {
   buildInventoryVirtuosoData,
   getInventoryVirtuosoItemKey,
@@ -252,25 +252,19 @@ const InventoryView: React.FC<InventoryViewProps> = ({
         }
         return true;
       } else if (result.error) {
-        // 显示错误提示
         const isGreenBean = bean?.beanState === 'green';
-        const errorMessage = result.error.message || '操作失败，请重试';
-        showToast({
-          type: 'error',
-          title: isGreenBean
-            ? `烘焙失败: ${errorMessage}`
-            : `扣除失败: ${errorMessage}`,
-          duration: 3000,
+        showErrorReport({
+          title: isGreenBean ? '烘焙扣除失败' : '库存扣除失败',
+          source: 'inventory:quick-decrement',
+          error: result.error,
         });
       }
       return false;
     } catch (error) {
-      console.error('快捷减量失败:', error);
-      const errorMessage = error instanceof Error ? error.message : '未知错误';
-      showToast({
-        type: 'error',
-        title: `操作失败: ${errorMessage}`,
-        duration: 3000,
+      showErrorReport({
+        title: '库存扣除失败',
+        source: 'inventory:quick-decrement',
+        error,
       });
       return false;
     }

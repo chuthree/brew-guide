@@ -33,6 +33,7 @@ import { useRoasterLogo, useSettingsStore } from '@/lib/stores/settingsStore';
 import { getRoasterName } from '@/lib/utils/beanVarietyUtils';
 import { openImageViewer } from '@/lib/ui/imageViewer';
 import { showToast } from '@/components/common/feedback/LightToast';
+import { showErrorReport } from '@/lib/feedback/errorReport';
 import { getBeanRatingInfo } from '@/lib/utils/beanRatingUtils';
 import ActionDrawer from '@/components/common/ui/ActionDrawer';
 import DeleteConfirmDrawer from '@/components/common/ui/DeleteConfirmDrawer';
@@ -493,7 +494,11 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
         })
       );
     } catch (error) {
-      console.error('更新字段失败:', error);
+      showErrorReport({
+        title: '更新咖啡豆失败',
+        source: 'beans:update-field',
+        error,
+      });
     }
   };
 
@@ -631,10 +636,10 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
           return true;
         }
 
-        showToast({
-          type: 'error',
-          title: result.error || '烘焙失败',
-          duration: 3000,
+        showErrorReport({
+          title: '烘焙扣除失败',
+          source: 'inventory:roast',
+          error: result.error,
         });
         return false;
       }
@@ -664,11 +669,10 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
       );
       return true;
     } catch (error) {
-      console.error('详情页快捷扣除失败:', error);
-      showToast({
-        type: 'error',
-        title: '扣除失败，请重试',
-        duration: 3000,
+      showErrorReport({
+        title: '库存扣除失败',
+        source: 'inventory:detail-decrement',
+        error,
       });
       return false;
     }
@@ -975,7 +979,11 @@ const BeanDetailModal: React.FC<BeanDetailModalProps> = ({
               await import('@/lib/stores/coffeeBeanStore');
             await useCoffeeBeanStore.getState().updateBean(id, ratings);
           } catch (error) {
-            console.error('保存评分失败:', error);
+            showErrorReport({
+              title: '保存评分失败',
+              source: 'beans:rating',
+              error,
+            });
           }
         }}
       />

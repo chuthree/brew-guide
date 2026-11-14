@@ -34,7 +34,7 @@ import {
 } from 'framer-motion';
 import hapticsUtils from '@/lib/ui/haptics';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
-import { showToast } from '@/components/common/feedback/LightToast';
+import { showErrorReport } from '@/lib/feedback/errorReport';
 import type { ExtendedCoffeeBean } from '../types';
 
 export type ReorderBeans = (
@@ -229,8 +229,12 @@ function SortableInventoryContext({
       try {
         await onReorder(dragIds.current, String(active.id), String(over.id));
         return false;
-      } catch {
-        showToast({ type: 'error', title: '排序保存失败，请重试' });
+      } catch (error) {
+        showErrorReport({
+          title: '库存排序保存失败',
+          source: 'inventory:reorder',
+          error,
+        });
         return true;
       }
     },

@@ -159,7 +159,9 @@ export class S3Client {
 
       if (canWrite !== true) {
         this.lastError =
-          typeof canWrite === 'object' ? canWrite.error : '上传连接测试文件失败';
+          typeof canWrite === 'object'
+            ? canWrite.error
+            : '上传连接测试文件失败';
         this.logSummary('test-connection', {
           service: 'qiniu',
           ok: false,
@@ -235,7 +237,10 @@ export class S3Client {
         errorSnippet = responseText.slice(0, 300);
         // 412 是条件写入的正常拒绝，由同步层区分安全探测和真实冲突。
         if (response.status !== 412)
-          console.error('❌ 上传失败，响应内容:', responseText.substring(0, 500));
+          console.error(
+            '❌ 上传失败，响应内容:',
+            responseText.substring(0, 500)
+          );
         errorDetail = this.formatHttpError(response, responseText);
       }
 
@@ -403,10 +408,6 @@ export class S3Client {
       });
 
       if (!response.ok) {
-        if (response.status === 403) {
-          console.warn('列出对象时收到403，返回空列表以避免中断同步流程');
-          return [];
-        }
         const responseText = errorSnippet || '';
         throw new Error(
           this.formatHttpError(response, responseText) ||
@@ -433,18 +434,14 @@ export class S3Client {
   async listFilesSimple(
     prefix: string
   ): Promise<{ key: string; lastModified?: Date }[]> {
-    try {
-      const files = await this.listObjects(prefix);
-      const configuredPrefix = this.getFullKey('');
-      return files.map(f => ({
-        key: f.key.startsWith(configuredPrefix)
-          ? f.key.slice(configuredPrefix.length)
-          : f.key,
-        lastModified: f.lastModified,
-      }));
-    } catch {
-      return [];
-    }
+    const files = await this.listObjects(prefix);
+    const configuredPrefix = this.getFullKey('');
+    return files.map(f => ({
+      key: f.key.startsWith(configuredPrefix)
+        ? f.key.slice(configuredPrefix.length)
+        : f.key,
+      lastModified: f.lastModified,
+    }));
   }
 
   /**
@@ -1113,6 +1110,12 @@ export class S3Client {
     try {
       const parser = new DOMParser();
       const doc = parser.parseFromString(xmlText, 'text/xml');
+      if (
+        doc.querySelector('parsererror') ||
+        doc.documentElement.localName !== 'ListBucketResult'
+      ) {
+        throw new Error('S3 返回的文件列表格式无效');
+      }
       const contents = doc.querySelectorAll('Contents');
       const files: S3File[] = [];
 
@@ -1135,7 +1138,7 @@ export class S3Client {
       return files;
     } catch (error) {
       console.error('解析ListObjects响应失败:', error);
-      return [];
+      throw error;
     }
   }
 }

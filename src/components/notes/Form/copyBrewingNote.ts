@@ -3,6 +3,7 @@ import type { BrewingNoteData } from '@/types/app';
 import { brewingNoteRepository } from '@/lib/data/repositories';
 import { roastingInputs } from '@/lib/coffee-beans/roastingBatch';
 import { showToast } from '@/components/common/feedback/LightToast';
+import { showErrorReport } from '@/lib/feedback/errorReport';
 import { nanoid } from 'nanoid';
 import { useBrewingNoteStore } from '@/lib/stores/brewingNoteStore';
 
@@ -62,9 +63,6 @@ export async function copyBrewingNote(noteId: string): Promise<void> {
       );
     }
   } catch (error) {
-    showToast({
-      type: 'error',
-      title: error instanceof Error ? error.message : '复制笔记失败，请重试',
-    });
+    showErrorReport({ title: '复制记录失败', source: 'notes:copy', error });
   }
 }

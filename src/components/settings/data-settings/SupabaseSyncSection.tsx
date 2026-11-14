@@ -12,6 +12,7 @@
  */
 
 import { SettingInput, SettingRow } from '../atomic';
+import { showErrorReport } from '@/lib/feedback/errorReport';
 import React, { useState, useRef, useEffect } from 'react';
 import { SUPABASE_SETUP_SQL } from '@/lib/supabase';
 import { SettingsOptions } from '../Settings';
@@ -285,10 +286,18 @@ export const SupabaseSyncSection: React.FC<SupabaseSyncSectionProps> = ({
         onSettingChange('lastConnectionSuccess', true);
         triggerHaptic('medium');
       } else {
-        setError('连接失败：请检查配置和网络，并确保已执行 SQL 初始化脚本');
+        showErrorReport({
+          title: 'Supabase 连接失败',
+          source: 'supabase:connect',
+          error: service.getState().error,
+        });
       }
     } catch (err) {
-      setError(`连接失败: ${err instanceof Error ? err.message : '未知错误'}`);
+      showErrorReport({
+        title: 'Supabase 连接失败',
+        source: 'supabase:connect',
+        error: err,
+      });
     } finally {
       setIsConnecting(false);
     }

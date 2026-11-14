@@ -16,6 +16,7 @@ import {
   showToast,
 } from '@/components/common/feedback/LightToast';
 import hapticsUtils from '@/lib/ui/haptics';
+import { showErrorReport } from '@/lib/feedback/errorReport';
 
 const TRIGGER_DISTANCE = 120;
 const MAX_OFFSET = 80;
@@ -25,7 +26,12 @@ interface PullToSyncProps {
   contextKey: string;
   indicatorHost: HTMLElement | null;
   hapticFeedback: boolean;
-  onSync: () => Promise<{ success: boolean; message?: string }>;
+  onSync: () => Promise<{
+    success: boolean;
+    message?: string;
+    errors?: readonly string[];
+    debugLogs?: readonly string[];
+  }>;
   children: ReactNode;
 }
 
@@ -183,19 +189,29 @@ export default function PullToSync({
           if (result.success) hapticsUtils.success();
           else hapticsUtils.error();
         }
-        showToast({
-          type: result.success ? 'success' : 'error',
-          title:
-            result.message ||
-            (result.success ? '同步完成' : '同步失败，请重试'),
-          duration: result.success ? 2500 : 5000,
-        });
+        if (result.success)
+          showToast({
+            type: 'success',
+            title: result.message || '同步完成',
+            duration: 2500,
+          });
+        else
+          showErrorReport({
+            title: '同步失败',
+            source: 'sync:pull-to-sync',
+            error: result.message,
+            logs: [...(result.errors ?? []), ...(result.debugLogs ?? [])],
+          });
       } catch (error) {
         if (mountedRef.current) {
           const message =
             error instanceof Error ? error.message : '同步失败，请重试';
           setAnnouncement(message);
-          showToast({ type: 'error', title: message, duration: 5000 });
+          showErrorReport({
+            title: '同步失败',
+            source: 'sync:pull-to-sync',
+            error,
+          });
         }
       } finally {
         busyRef.current = false;

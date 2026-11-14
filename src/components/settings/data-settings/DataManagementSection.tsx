@@ -2,6 +2,7 @@
 
 import React, { useState, useRef } from 'react';
 import ActionDrawer from '@/components/common/ui/ActionDrawer';
+import { showErrorReport } from '@/lib/feedback/errorReport';
 import ArrowUpIcon from '@public/images/icons/ui/arrow-up.svg';
 import { reloadApp } from '@/lib/app/reload';
 import { DataManager as DataManagerUtil } from '@/lib/core/dataManager';
@@ -29,14 +30,11 @@ export const DataManagementSection: React.FC<DataManagementSectionProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const importingRef = useRef(false);
   const [importStatus, setImportStatus] = useState<{
-    phase: 'importing' | 'success' | 'error';
+    phase: 'importing' | 'success';
     message: string;
   } | null>(null);
-  const closeImportDrawer = () => {
-    if (importStatus?.phase === 'error') setImportStatus(null);
-  };
   const [status, setStatus] = useState<{
-    type: 'success' | 'error' | 'info' | null;
+    type: 'success' | 'info' | null;
     message: string;
     scope?: 'data' | 'image';
   }>({
@@ -122,9 +120,11 @@ export const DataManagementSection: React.FC<DataManagementSectionProps> = ({
         },
         operationId
       );
-      setStatus({
-        type: 'error',
-        message: `导出失败: ${(_error as Error).message}`,
+      setStatus({ type: null, message: '' });
+      showErrorReport({
+        title: '导出数据失败',
+        source: 'data:export',
+        error: _error,
       });
     } finally {
       setIsExporting(false);
@@ -168,12 +168,19 @@ export const DataManagementSection: React.FC<DataManagementSectionProps> = ({
         },
         operationId
       );
-      setImportStatus({
-        phase: result.success ? 'success' : 'error',
-        message: result.success
-          ? '数据已导入。请刷新应用，加载最新数据。'
-          : result.message,
-      });
+      if (result.success) {
+        setImportStatus({
+          phase: 'success',
+          message: '数据已导入。请刷新应用，加载最新数据。',
+        });
+      } else {
+        setImportStatus(null);
+        showErrorReport({
+          title: '导入数据失败',
+          source: 'data:import',
+          error: result.message,
+        });
+      }
     } catch (error) {
       recordCrashOperationComplete(
         {
@@ -182,10 +189,8 @@ export const DataManagementSection: React.FC<DataManagementSectionProps> = ({
         },
         operationId
       );
-      setImportStatus({
-        phase: 'error',
-        message: `导入失败：${error instanceof Error ? error.message : '请重新选择文件后重试'}`,
-      });
+      setImportStatus(null);
+      showErrorReport({ title: '导入数据失败', source: 'data:import', error });
     } finally {
       importingRef.current = false;
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -203,12 +208,19 @@ export const DataManagementSection: React.FC<DataManagementSectionProps> = ({
         window.dispatchEvent(new CustomEvent('globalCacheReset'));
         setTimeout(() => window.location.reload(), 1000);
       } else {
-        setStatus({ type: 'error', message: result.message });
+        setStatus({ type: null, message: '' });
+        showErrorReport({
+          title: '重置数据失败',
+          source: 'data:reset',
+          error: result.message,
+        });
       }
     } catch (_error) {
-      setStatus({
-        type: 'error',
-        message: `重置失败: ${(_error as Error).message}`,
+      setStatus({ type: null, message: '' });
+      showErrorReport({
+        title: '重置数据失败',
+        source: 'data:reset',
+        error: _error,
       });
     } finally {
       setShowConfirmReset(false);
@@ -225,19 +237,31 @@ export const DataManagementSection: React.FC<DataManagementSectionProps> = ({
         await import('@/lib/images/recompressAppImages');
       const stats = await recompressOversizedAppImages();
 
+      if (stats.failedCount > 0) {
+        setStatus({ type: null, message: '', scope: 'image' });
+        showErrorReport({
+          title: '部分图片补压失败',
+          source: 'data:recompress-images',
+          error: `${stats.failedCount} 张图片处理失败；此操作未返回逐项错误原因。`,
+          logs: [JSON.stringify(stats)],
+        });
+        return;
+      }
       setStatus({
-        type: stats.failedCount > 0 ? 'error' : 'success',
+        type: 'success',
         scope: 'image',
         message:
-          stats.failedCount > 0
-            ? `补压完成，${stats.failedCount} 张失败`
-            : stats.compressedCount > 0
-              ? `已补压 ${stats.compressedCount} 张图片`
-              : '没有需要补压的图片',
+          stats.compressedCount > 0
+            ? `已补压 ${stats.compressedCount} 张图片`
+            : '没有需要补压的图片',
       });
     } catch (_error) {
-      console.error('图片补压失败:', _error);
-      setStatus({ type: 'error', message: '图片补压失败', scope: 'image' });
+      setStatus({ type: null, message: '', scope: 'image' });
+      showErrorReport({
+        title: '图片补压失败',
+        source: 'data:recompress-images',
+        error: _error,
+      });
     } finally {
       setIsRecompressing(false);
     }
@@ -259,10 +283,7 @@ export const DataManagementSection: React.FC<DataManagementSectionProps> = ({
   const buttonClass =
     'setting-control cursor-pointer text-sm font-medium text-neutral-600 active:opacity-70 disabled:cursor-not-allowed disabled:opacity-40 dark:text-neutral-300';
   const statusMessage = status.type ? (
-    <p
-      role={status.type === 'error' ? 'alert' : 'status'}
-      className={`text-xs ${status.type === 'error' ? 'text-red-500 dark:text-red-400' : 'text-neutral-500 dark:text-neutral-400'}`}
-    >
+    <p role="status" className="text-xs text-neutral-500 dark:text-neutral-400">
       {status.message}
     </p>
   ) : undefined;
@@ -334,13 +355,13 @@ export const DataManagementSection: React.FC<DataManagementSectionProps> = ({
       <ActionDrawer
         title="导入数据"
         isOpen={importStatus !== null}
-        onClose={closeImportDrawer}
-        dismissible={importStatus?.phase === 'error'}
+        onClose={() => {}}
+        dismissible={false}
       >
         <ActionDrawer.Icon icon={ArrowUpIcon} />
         <ActionDrawer.Content>
           <p
-            role={importStatus?.phase === 'error' ? 'alert' : 'status'}
+            role="status"
             aria-live="polite"
             className="text-neutral-500 dark:text-neutral-400"
           >
@@ -350,15 +371,9 @@ export const DataManagementSection: React.FC<DataManagementSectionProps> = ({
         <ActionDrawer.Actions>
           <ActionDrawer.PrimaryButton
             disabled={importStatus?.phase === 'importing'}
-            onClick={
-              importStatus?.phase === 'success' ? reloadApp : closeImportDrawer
-            }
+            onClick={reloadApp}
           >
-            {importStatus?.phase === 'importing'
-              ? '正在导入…'
-              : importStatus?.phase === 'success'
-                ? '刷新应用'
-                : '关闭'}
+            {importStatus?.phase === 'importing' ? '正在导入…' : '刷新应用'}
           </ActionDrawer.PrimaryButton>
         </ActionDrawer.Actions>
       </ActionDrawer>

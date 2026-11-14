@@ -639,34 +639,30 @@ export abstract class BaseSyncManager {
    * 获取可用备份列表（直接从服务器扫描）
    */
   async listBackups(): Promise<BackupRecord[]> {
-    if (!this.client) return [];
+    if (!this.client) throw new Error('同步客户端未初始化');
+    this.client.clearDiagnostic?.();
     return this.getBackupManager().listBackupsFromServer(this.client);
   }
 
   /**
    * 从备份恢复数据
    */
-  async restoreFromBackup(backupKey: string): Promise<boolean> {
-    if (!this.client || useSyncStatusStore.getState().manualSyncInProgress) {
-      console.error(`❌ [${this.getServiceName()}] 恢复失败：客户端未初始化`);
-      return false;
-    }
+  async restoreFromBackup(backupKey: string): Promise<void> {
+    if (!this.client) throw new Error('同步客户端未初始化');
+    if (useSyncStatusStore.getState().manualSyncInProgress)
+      throw new Error('同步正在进行中，请稍后恢复备份');
 
     useSyncStatusStore.getState().setManualSyncInProgress(true);
     try {
+      this.client.clearDiagnostic?.();
       const content = await this.getBackupManager().restoreBackup(
         this.client,
         backupKey
       );
-      if (!content) return false;
       await this.saveFileContent('brew-guide-data.json', content);
       console.warn(
         `✅ [${this.getServiceName()}] 数据已从备份恢复: ${backupKey}`
       );
-      return true;
-    } catch (error) {
-      console.error(`❌ [${this.getServiceName()}] 恢复数据失败:`, error);
-      return false;
     } finally {
       useSyncStatusStore.getState().setManualSyncInProgress(false);
     }

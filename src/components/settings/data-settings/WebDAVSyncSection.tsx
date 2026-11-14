@@ -18,12 +18,8 @@ import { useSyncSection } from '@/lib/hooks/useSyncSection';
 import { SettingsOptions } from '../Settings';
 import WebDAVTutorialModal from './WebDAVTutorialModal';
 import { showToast } from '@/components/common/feedback/LightToast';
-import {
-  SyncHeaderButton,
-  SyncDebugDrawer,
-  SyncButtons,
-  BackupHistoryDrawer,
-} from './shared';
+import { showErrorReport } from '@/lib/feedback/errorReport';
+import { SyncHeaderButton, SyncButtons, BackupHistoryDrawer } from './shared';
 
 type WebDAVSyncSettings = NonNullable<SettingsOptions['webdavSync']>;
 
@@ -68,11 +64,6 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
     isSyncing,
     setIsSyncing,
     setSyncProgress,
-    debugLogs,
-    setDebugLogs,
-    showDebugDrawer,
-    setShowDebugDrawer,
-    showSyncFailure,
     notifyCloudSyncStatusChange,
     triggerHaptic,
   } = useSyncSection(enabled, { hapticFeedback, onSyncComplete });
@@ -207,17 +198,19 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
         triggerHaptic('light');
       } else {
         setStatus('error');
-        setError(
-          manager.getLastError() ||
-            (settings.remotePath
-              ? '连接失败：请检查服务器地址、账号、应用密码和路径是否正确'
-              : '连接失败：请检查服务器地址、账号或应用密码')
-        );
+        showErrorReport({
+          title: 'WebDAV 连接失败',
+          source: 'webdav:connect',
+          error: manager.getLastError(),
+        });
       }
     } catch (err) {
       setStatus('error');
-      const errorMsg = err instanceof Error ? err.message : '未知错误';
-      setError(`连接失败: ${errorMsg}`);
+      showErrorReport({
+        title: 'WebDAV 连接失败',
+        source: 'webdav:connect',
+        error: err,
+      });
     }
   };
 
@@ -289,12 +282,11 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
             result.debugLogs &&
             result.debugLogs.length > 0
           ) {
-            setDebugLogs(result.debugLogs);
-            setShowDebugDrawer(true);
-            showToast({
-              type: 'warning',
-              title: `${direction === 'upload' ? '上传' : '下载'}完成但未传输任何文件，请查看详细日志`,
-              duration: 3000,
+            showErrorReport({
+              title: '同步未传输文件',
+              source: 'webdav:' + direction,
+              error: result.message,
+              logs: result.debugLogs,
             });
           } else {
             showToast({
@@ -308,15 +300,18 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
         triggerHaptic('medium');
         onSyncComplete?.();
       } else {
-        showSyncFailure(result);
-        setError(result.message || '同步失败');
+        showErrorReport({
+          title: 'WebDAV 同步失败',
+          source: 'webdav:' + direction,
+          error: result.message,
+          logs: [...result.errors, ...(result.debugLogs ?? [])],
+        });
       }
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : '未知错误';
-      setError(`同步失败: ${errorMsg}`);
-      showSyncFailure({
-        message: `WebDAV 同步失败: ${errorMsg}`,
-        errors: [],
+      showErrorReport({
+        title: 'WebDAV 同步失败',
+        source: 'webdav:' + direction,
+        error: err,
       });
     } finally {
       setIsSyncing(false);
@@ -341,7 +336,11 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
           true
         );
         if (!connected) {
-          showToast({ type: 'error', title: '连接失败', duration: 2000 });
+          showErrorReport({
+            title: '读取备份失败',
+            source: 'webdav:list-backups',
+            error: manager.getLastError(),
+          });
           return;
         }
         setSyncManager(manager);
@@ -350,6 +349,12 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
       const list = await manager.listBackups();
       setBackups(list);
       setShowBackupDrawer(true);
+    } catch (error) {
+      showErrorReport({
+        title: '读取备份失败',
+        source: 'webdav:list-backups',
+        error,
+      });
     } finally {
       setIsLoadingBackups(false);
     }
@@ -359,19 +364,21 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
     if (!activeSyncManager) return false;
     setIsRestoring(true);
     try {
-      const success = await activeSyncManager.restoreFromBackup(backupKey);
-      if (success) {
-        showToast({
-          type: 'success',
-          title: '恢复成功，即将重启...',
-          duration: 2000,
-        });
-        setTimeout(reloadApp, 2000);
-        return true;
-      } else {
-        showToast({ type: 'error', title: '恢复失败', duration: 2000 });
-        return false;
-      }
+      await activeSyncManager.restoreFromBackup(backupKey);
+      showToast({
+        type: 'success',
+        title: '恢复成功，即将重启...',
+        duration: 2000,
+      });
+      setTimeout(reloadApp, 2000);
+      return true;
+    } catch (error) {
+      showErrorReport({
+        title: '恢复备份失败',
+        source: 'webdav:restore',
+        error,
+      });
+      return false;
     } finally {
       setIsRestoring(false);
     }
@@ -543,15 +550,6 @@ export const WebDAVSyncSection: React.FC<WebDAVSyncSectionProps> = ({
         isOpen={showTutorial}
         onClose={() => setShowTutorial(false)}
         onComplete={handleTutorialComplete}
-      />
-
-      {/* 调试日志抽屉 */}
-      <SyncDebugDrawer
-        isOpen={showDebugDrawer}
-        onClose={() => setShowDebugDrawer(false)}
-        logs={debugLogs}
-        hapticFeedback={hapticFeedback}
-        title="WebDAV 同步日志"
       />
     </>
   );

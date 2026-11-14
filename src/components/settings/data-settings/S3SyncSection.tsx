@@ -16,12 +16,8 @@ import type { SyncResult, BackupRecord } from '@/lib/s3/types';
 import { useSyncSection } from '@/lib/hooks/useSyncSection';
 import { SettingsOptions } from '../Settings';
 import { showToast } from '@/components/common/feedback/LightToast';
-import {
-  SyncHeaderButton,
-  SyncDebugDrawer,
-  SyncButtons,
-  BackupHistoryDrawer,
-} from './shared';
+import { showErrorReport } from '@/lib/feedback/errorReport';
+import { SyncHeaderButton, SyncButtons, BackupHistoryDrawer } from './shared';
 
 type S3SyncSettings = NonNullable<SettingsOptions['s3Sync']>;
 
@@ -66,11 +62,6 @@ export const S3SyncSection: React.FC<S3SyncSectionProps> = ({
     isSyncing,
     setIsSyncing,
     setSyncProgress,
-    debugLogs,
-    setDebugLogs,
-    showDebugDrawer,
-    setShowDebugDrawer,
-    showSyncFailure,
     notifyCloudSyncStatusChange,
     triggerHaptic,
   } = useSyncSection(enabled, { hapticFeedback, onSyncComplete });
@@ -177,16 +168,19 @@ export const S3SyncSection: React.FC<S3SyncSectionProps> = ({
         triggerHaptic('light');
       } else {
         setStatus('error');
-        setError(
-          manager.getLastError() ||
-            (settings.endpoint
-              ? '连接失败：无法访问存储桶或缺少写入权限'
-              : '连接失败：请检查 Bucket 名称和 Region 是否正确')
-        );
+        showErrorReport({
+          title: 'S3 连接失败',
+          source: 's3:connect',
+          error: manager.getLastError(),
+        });
       }
     } catch (err) {
       setStatus('error');
-      setError(`连接失败: ${err instanceof Error ? err.message : '未知错误'}`);
+      showErrorReport({
+        title: 'S3 连接失败',
+        source: 's3:connect',
+        error: err,
+      });
     }
   };
 
@@ -260,12 +254,11 @@ export const S3SyncSection: React.FC<S3SyncSectionProps> = ({
             result.debugLogs &&
             result.debugLogs.length > 0
           ) {
-            setDebugLogs(result.debugLogs);
-            setShowDebugDrawer(true);
-            showToast({
-              type: 'warning',
-              title: `${direction === 'upload' ? '上传' : '下载'}完成但未传输任何文件，请查看详细日志`,
-              duration: 3000,
+            showErrorReport({
+              title: '同步未传输文件',
+              source: 's3:' + direction,
+              error: result.message,
+              logs: result.debugLogs,
             });
           } else {
             showToast({
@@ -279,15 +272,18 @@ export const S3SyncSection: React.FC<S3SyncSectionProps> = ({
         triggerHaptic('medium');
         onSyncComplete?.();
       } else {
-        showSyncFailure(result);
-        setError(result.message || '同步失败');
+        showErrorReport({
+          title: 'S3 同步失败',
+          source: 's3:' + direction,
+          error: result.message,
+          logs: [...result.errors, ...(result.debugLogs ?? [])],
+        });
       }
     } catch (err) {
-      console.error('同步失败:', err);
-      setError(`同步失败: ${err instanceof Error ? err.message : '未知错误'}`);
-      showSyncFailure({
-        message: `同步失败: ${err instanceof Error ? err.message : '未知错误'}`,
-        errors: [],
+      showErrorReport({
+        title: 'S3 同步失败',
+        source: 's3:' + direction,
+        error: err,
       });
     } finally {
       setIsSyncing(false);
@@ -314,7 +310,11 @@ export const S3SyncSection: React.FC<S3SyncSectionProps> = ({
           true
         );
         if (!connected) {
-          showToast({ type: 'error', title: '连接失败', duration: 2000 });
+          showErrorReport({
+            title: '读取备份失败',
+            source: 's3:list-backups',
+            error: manager.getLastError(),
+          });
           return;
         }
         setSyncManager(manager);
@@ -323,6 +323,12 @@ export const S3SyncSection: React.FC<S3SyncSectionProps> = ({
       const list = await manager.listBackups();
       setBackups(list);
       setShowBackupDrawer(true);
+    } catch (error) {
+      showErrorReport({
+        title: '读取备份失败',
+        source: 's3:list-backups',
+        error,
+      });
     } finally {
       setIsLoadingBackups(false);
     }
@@ -332,19 +338,17 @@ export const S3SyncSection: React.FC<S3SyncSectionProps> = ({
     if (!activeSyncManager) return false;
     setIsRestoring(true);
     try {
-      const success = await activeSyncManager.restoreFromBackup(backupKey);
-      if (success) {
-        showToast({
-          type: 'success',
-          title: '恢复成功，即将重启...',
-          duration: 2000,
-        });
-        setTimeout(reloadApp, 2000);
-        return true;
-      } else {
-        showToast({ type: 'error', title: '恢复失败', duration: 2000 });
-        return false;
-      }
+      await activeSyncManager.restoreFromBackup(backupKey);
+      showToast({
+        type: 'success',
+        title: '恢复成功，即将重启...',
+        duration: 2000,
+      });
+      setTimeout(reloadApp, 2000);
+      return true;
+    } catch (error) {
+      showErrorReport({ title: '恢复备份失败', source: 's3:restore', error });
+      return false;
     } finally {
       setIsRestoring(false);
     }
@@ -542,15 +546,6 @@ export const S3SyncSection: React.FC<S3SyncSectionProps> = ({
         backups={backups}
         onRestore={handleRestoreBackup}
         isRestoring={isRestoring}
-      />
-
-      {/* 调试日志抽屉 */}
-      <SyncDebugDrawer
-        isOpen={showDebugDrawer}
-        onClose={() => setShowDebugDrawer(false)}
-        logs={debugLogs}
-        hapticFeedback={hapticFeedback}
-        title="S3 同步日志"
       />
     </>
   );

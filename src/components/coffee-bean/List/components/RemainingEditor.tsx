@@ -15,7 +15,7 @@ import {
 import { cn } from '@/lib/utils/classNameUtils';
 import { CoffeeBean } from '@/types/app';
 import { nanoid } from 'nanoid';
-import { showToast } from '@/components/common/feedback/LightToast';
+import { showErrorReport } from '@/lib/feedback/errorReport';
 import { buildQuickDecrementRecord } from '@/lib/coffee-beans/inventoryRecords';
 import hapticsUtils from '@/lib/ui/haptics';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
@@ -354,10 +354,10 @@ const RemainingEditor: React.FC<RemainingEditorProps> = ({
         });
       }
     } catch (error) {
-      console.error('快捷扣除操作失败:', error);
-      showToast({
-        type: 'error',
-        title: error instanceof Error ? error.message : '扣除失败，请重试',
+      showErrorReport({
+        title: '库存扣除失败',
+        source: 'inventory:decrement',
+        error,
       });
     } finally {
       isSavingRef.current = false;

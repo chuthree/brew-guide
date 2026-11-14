@@ -114,6 +114,7 @@ import {
 import { useDataLayer } from '@/providers/DataLayerProvider';
 import LegacyDataNoticeDrawer from '@/components/common/modals/LegacyDataNoticeDrawer';
 import { showToast } from '@/components/common/feedback/LightToast';
+import { showErrorReport } from '@/lib/feedback/errorReport';
 import BackupReminderModal from '@/components/common/modals/BackupReminderModal';
 import BeanReadyReminderDrawer from '@/components/common/modals/BeanReadyReminderDrawer';
 import {
@@ -1051,18 +1052,17 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
 
         handleBeanListChange();
       } else {
-        showToast({
-          type: 'error',
-          title: result.error || '转换失败',
-          duration: 3000,
+        showErrorReport({
+          title: '转换生豆失败',
+          source: 'beans:convert-to-green',
+          error: result.error,
         });
       }
     } catch (error) {
-      console.error('转换失败:', error);
-      showToast({
-        type: 'error',
-        title: '转换失败',
-        duration: 2000,
+      showErrorReport({
+        title: '转换生豆失败',
+        source: 'beans:convert-to-green',
+        error,
       });
     }
   }, [convertToGreenPreview]);
@@ -1723,12 +1723,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         setBrewingNoteEditData(noteToEdit);
         setBrewingNoteEditOpen(true);
       } catch (error) {
-        console.error('加载完整笔记失败:', error);
-        showToast({
-          type: 'error',
-          title: '加载笔记失败，请稍后重试',
-          duration: 2000,
-        });
+        showErrorReport({ title: '加载笔记失败', source: 'notes:load', error });
       }
     },
     []
@@ -1974,11 +1969,10 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
           didDeductCoffee = true;
         }
       } catch (error) {
-        console.error('自动扣除咖啡豆失败:', error);
-        showToast({
-          type: 'error',
-          title: '自动扣除失败',
-          duration: 2500,
+        showErrorReport({
+          title: '自动扣除库存失败',
+          source: 'inventory:auto-decrement',
+          error,
         });
         return;
       }
@@ -2913,32 +2907,12 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
   const handlePullToSync = useCallback(async (): Promise<{
     success: boolean;
     message?: string;
+    errors?: readonly string[];
+    debugLogs?: readonly string[];
   }> => {
-    try {
-      const result = await syncService.sync(
-        settings as SettingsOptions,
-        'auto'
-      );
-
-      if (result.success) {
-        if (result.downloadedCount > 0) reloadApp();
-        return { success: true, message: result.message };
-      } else {
-        return {
-          success: false,
-          message:
-            result.message === '未配置云同步服务'
-              ? '云同步未配置'
-              : result.message || '同步失败',
-        };
-      }
-    } catch (error) {
-      console.error('下拉同步失败:', error);
-      return {
-        success: false,
-        message: error instanceof Error ? error.message : '同步失败',
-      };
-    }
+    const result = await syncService.sync(settings as SettingsOptions, 'auto');
+    if (result.success && result.downloadedCount > 0) reloadApp();
+    return result;
   }, [settings]);
   // ==================== 云同步相关状态和处理结束 ====================
 
@@ -3391,11 +3365,10 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         duration: 2000,
       });
     } catch (error) {
-      console.error('导出器具失败:', error);
-      showToast({
-        type: 'error',
-        title: '导出失败，请重试',
-        duration: 2000,
+      showErrorReport({
+        title: '导出器具失败',
+        source: 'equipment:export',
+        error,
       });
     }
   };

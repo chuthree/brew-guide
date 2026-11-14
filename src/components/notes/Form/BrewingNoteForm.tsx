@@ -3,6 +3,7 @@ import { withDataMutation } from '@/lib/data/mutationCoordinator';
 import { callStoreActionInMutation } from '@/lib/data/storeMutationBoundary';
 import { nanoid } from 'nanoid';
 import { showToast } from '@/components/common/feedback/LightToast';
+import { showErrorReport } from '@/lib/feedback/errorReport';
 import type { BrewingNoteSaveOptions } from '@/lib/notes/inventory';
 
 import React, {
@@ -1404,11 +1405,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
       // Dialogs and completion callbacks never retain the native mutation lease.
       if (onSaveSuccess) await Promise.resolve(onSaveSuccess());
     } catch (error) {
-      showToast({
-        type: 'error',
-        title:
-          error instanceof Error ? error.message : '保存笔记时出错，请重试',
-      });
+      showErrorReport({ title: '保存笔记失败', source: 'notes:save', error });
     } finally {
       isSubmittingRef.current = false;
       onSubmitStateChange?.(false);

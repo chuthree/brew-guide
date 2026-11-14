@@ -541,7 +541,10 @@ export class WebDAVClient {
         return this.parseListResponse(xmlText, path);
       }
 
-      return [];
+      if (response.status === 404) return [];
+      throw new Error(
+        errorDetail || `列出 WebDAV 文件失败：HTTP ${response.status}`
+      );
     } catch (error) {
       console.error('列出文件失败:', error);
       this.logSummary('list', {
@@ -549,7 +552,7 @@ export class WebDAVClient {
         ok: false,
         error: error instanceof Error ? error.message : String(error),
       });
-      return [];
+      throw error;
     }
   }
 
@@ -818,6 +821,12 @@ export class WebDAVClient {
     try {
       const parser = new DOMParser();
       const doc = parser.parseFromString(xmlText, 'text/xml');
+      if (
+        doc.querySelector('parsererror') ||
+        doc.documentElement.localName !== 'multistatus'
+      ) {
+        throw new Error('WebDAV 返回的文件列表格式无效');
+      }
       const responses = doc.querySelectorAll('response');
       const files: WebDAVFile[] = [];
 
@@ -879,7 +888,7 @@ export class WebDAVClient {
       return files.filter(f => f.type === 'file');
     } catch (error) {
       console.error('解析 WebDAV 响应失败:', error);
-      return [];
+      throw error;
     }
   }
 

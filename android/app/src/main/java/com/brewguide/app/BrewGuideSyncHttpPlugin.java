@@ -23,14 +23,31 @@ import okhttp3.ResponseBody;
 /** HttpURLConnection does not support WebDAV verbs; OkHttp preserves them. */
 @CapacitorPlugin(name = "BrewGuideSyncHttp")
 public class BrewGuideSyncHttpPlugin extends Plugin {
-  private final OkHttpClient client = new OkHttpClient.Builder()
-      .connectTimeout(15, TimeUnit.SECONDS)
-      .readTimeout(60, TimeUnit.SECONDS)
-      .callTimeout(90, TimeUnit.SECONDS)
-      .followRedirects(false)
-      .followSslRedirects(false)
-      .retryOnConnectionFailure(false)
-      .build();
+  private OkHttpClient client;
+
+  private synchronized OkHttpClient getClient() throws IOException {
+    // Capacitor discards constructor failures and reports the entire plugin as unimplemented.
+    if (client == null) {
+      try {
+        client = new OkHttpClient.Builder()
+            .connectTimeout(15, TimeUnit.SECONDS)
+            .readTimeout(60, TimeUnit.SECONDS)
+            .callTimeout(90, TimeUnit.SECONDS)
+            .followRedirects(false)
+            .followSslRedirects(false)
+            .retryOnConnectionFailure(false)
+            .build();
+      } catch (RuntimeException | LinkageError | AssertionError error) {
+        Throwable cause = error.getCause() == null ? error : error.getCause();
+        throw new IOException(
+            "同步网络组件初始化失败（Android " + android.os.Build.VERSION.RELEASE
+                + " / API " + android.os.Build.VERSION.SDK_INT
+                + " / " + android.os.Build.MANUFACTURER + " " + android.os.Build.MODEL
+                + " / " + cause + "）", error);
+      }
+    }
+    return client;
+  }
 
   @PluginMethod
   public void request(PluginCall call) {
@@ -54,6 +71,13 @@ public class BrewGuideSyncHttpPlugin extends Plugin {
   }
 
   private void request(PluginCall call, boolean fileTransfer) {
+    final OkHttpClient httpClient;
+    try {
+      httpClient = getClient();
+    } catch (IOException error) {
+      call.reject(error.getMessage(), "SYNC_HTTP_INIT_FAILED", error);
+      return;
+    }
     try {
       File responseFile = fileTransfer
           ? syncCacheFile(getContext().getCacheDir(), call.getString("responseFile")) : null;
@@ -85,7 +109,7 @@ public class BrewGuideSyncHttpPlugin extends Plugin {
         body = RequestBody.create(null, new byte[0]);
       }
       builder.method(method, body);
-      client.newCall(builder.build()).enqueue(new Callback() {
+      httpClient.newCall(builder.build()).enqueue(new Callback() {
         @Override
         public void onFailure(Call request, IOException error) {
           call.reject("原生同步请求失败", error);

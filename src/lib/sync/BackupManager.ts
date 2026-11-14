@@ -52,22 +52,16 @@ export class BackupManager {
    * 从服务器扫描备份文件列表
    */
   async listBackupsFromServer(client: IStorageClient): Promise<BackupRecord[]> {
-    try {
-      const files = await client.listFilesSimple(BACKUP_DIR);
-
-      return files
-        .filter(f => f.key.endsWith('.json') && f.key.includes('backup-'))
-        .map(f => ({
-          timestamp:
-            f.lastModified?.getTime() || this.parseTimestampFromKey(f.key),
-          key: f.key.startsWith(BACKUP_DIR) ? f.key : `${BACKUP_DIR}/${f.key}`,
-          hash: '', // 从文件列表无法获取 hash
-        }))
-        .sort((a, b) => a.timestamp - b.timestamp);
-    } catch (error) {
-      console.error(`❌ [${this.serviceName}] 扫描备份目录失败:`, error);
-      return [];
-    }
+    const files = await client.listFilesSimple(BACKUP_DIR);
+    return files
+      .filter(f => f.key.endsWith('.json') && f.key.includes('backup-'))
+      .map(f => ({
+        timestamp:
+          f.lastModified?.getTime() || this.parseTimestampFromKey(f.key),
+        key: f.key.startsWith(BACKUP_DIR) ? f.key : `${BACKUP_DIR}/${f.key}`,
+        hash: '', // 从文件列表无法获取 hash
+      }))
+      .sort((a, b) => a.timestamp - b.timestamp);
   }
 
   /**
@@ -137,7 +131,13 @@ export class BackupManager {
     const newBackup = await this.createBackupByCopy(client, sourceKey, hash);
     if (!newBackup) return false;
 
-    await this.cleanupOldBackups(client);
+    try {
+      await this.cleanupOldBackups(client);
+    } catch (error) {
+      // Cleanup failure must not prevent updating metadata for the uploaded main file.
+      console.warn(`⚠️ [${this.serviceName}] 清理旧备份失败:`, error);
+      return false;
+    }
     return true;
   }
 
@@ -147,18 +147,17 @@ export class BackupManager {
   async restoreBackup(
     client: IStorageClient,
     backupKey: string
-  ): Promise<string | null> {
-    try {
-      const content = await client.downloadFile(backupKey);
-      if (!content) {
-        console.error(`❌ [${this.serviceName}] 备份文件不存在: ${backupKey}`);
-        return null;
-      }
-      console.warn(`✅ [${this.serviceName}] 备份下载成功: ${backupKey}`);
-      return content;
-    } catch (error) {
-      console.error(`❌ [${this.serviceName}] 备份恢复失败:`, error);
-      return null;
+  ): Promise<string> {
+    const content = await client.downloadFile(backupKey);
+    if (!content) {
+      const diagnostic = client.getLastDiagnostic?.();
+      throw new Error(
+        diagnostic?.error ||
+          (diagnostic?.status
+            ? `下载备份失败（HTTP ${diagnostic.status}）`
+            : '备份文件不存在或内容为空')
+      );
     }
+    return content;
   }
 }

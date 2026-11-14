@@ -6,7 +6,7 @@ import ActionMenu, {
   type ActionMenuItem,
 } from '@/components/coffee-bean/ui/action-menu';
 import { ArrowRight, ChevronLeft } from 'lucide-react';
-import { showToast } from '@/components/common/feedback/LightToast';
+import { showErrorReport } from '@/lib/feedback/errorReport';
 import {
   DEFAULT_ORIGINS,
   DEFAULT_ESTATES,
@@ -241,12 +241,7 @@ const HeaderBar: React.FC<HeaderBarProps> = ({
         onClose();
       }
     } catch (error) {
-      console.error('保存咖啡豆失败:', error);
-      showToast({
-        type: 'error',
-        title: '保存失败，请重试',
-        duration: 3000,
-      });
+      showErrorReport({ title: '保存咖啡豆失败', source: 'beans:save', error });
     } finally {
       setIsSaving(false);
     }

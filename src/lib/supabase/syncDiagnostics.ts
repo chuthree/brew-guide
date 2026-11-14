@@ -1,4 +1,5 @@
 import { BUILD_INFO } from '@/lib/core/buildInfo';
+import { sanitizeDiagnosticText } from '@/lib/feedback/sanitizeDiagnosticText';
 import type {
   SupabaseSyncProgress,
   SupabaseSyncTask,
@@ -8,27 +9,6 @@ const MAX_DIAGNOSTIC_TEXT_LENGTH = 4000;
 const MAX_EVENTS = 80;
 const events: string[] = [];
 const importantEvents: string[] = [];
-
-/** Keep only structural context; PostgreSQL details can contain an entire private row. */
-export function sanitizeDiagnosticText(text: string): string {
-  return text
-    .replace(
-      /Failing row contains[^\r\n]*/gi,
-      'Failing row contains [已隐藏记录内容]'
-    )
-    .replace(/(Key \([^)]+\)\s*=\s*)\([^\r\n]*\)/gi, '$1([已隐藏字段值])')
-    .replace(
-      /(invalid input syntax for [^\r\n:]+:\s*)[^\r\n]*/gi,
-      '$1"[已隐藏字段值]"'
-    )
-    .replace(/Bearer\s+[^\s,;]+/gi, 'Bearer [已隐藏]')
-    .replace(
-      /eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/g,
-      '[已隐藏 JWT]'
-    )
-    .replace(/sb_(?:publishable|secret)_[A-Za-z0-9_-]+/g, '[已隐藏 Key]')
-    .replace(/https?:\/\/[^\s<>"']+/gi, '[已隐藏 URL]');
-}
 
 export function recordSupabaseDiagnosticEvent(
   event: string,
@@ -43,8 +23,12 @@ export function recordSupabaseDiagnosticEvent(
   if (events.length > MAX_EVENTS) events.splice(0, events.length - MAX_EVENTS);
 }
 
-function getSupabaseDiagnosticEvents(): string[] {
-  const recent = events.filter(event => !importantEvents.includes(event));
+function getSupabaseDiagnosticEvents(startedAt: number): string[] {
+  const recent = events.filter(
+    event =>
+      Date.parse(event.slice(0, 24)) >= startedAt &&
+      !importantEvents.includes(event)
+  );
   return recent.length ? recent : ['无其他操作记录'];
 }
 
@@ -264,6 +248,9 @@ export function createSupabaseSyncDiagnostic(params: {
   stats: { uploaded: number; downloaded: number; deleted: number };
 }): string {
   const { progress } = params;
+  const currentImportantEvents = importantEvents.filter(
+    event => Date.parse(event.slice(0, 24)) >= params.startedAt
+  );
   const failedTasks = progress.tasks.filter(
     task => task.status === 'error' || Boolean(task.error)
   );
@@ -289,7 +276,7 @@ export function createSupabaseSyncDiagnostic(params: {
     `构建时间: ${BUILD_INFO.buildTime}`,
     `实时连接: ${params.connectionStatus}（仅表示订阅状态，写入结果见下方）`,
     `离线待同步: ${params.pendingChangesCount}`,
-    '日志范围: 当前应用会话最近 80 项操作及 10 项重要事件；仅记录字段结构，数据库行详情和凭据已脱敏。',
+    '日志范围: 本轮同步开始后的最近 80 项操作及 10 项重要事件；仅记录字段结构，数据库行详情和凭据已脱敏。',
     `生成时间: ${new Date().toISOString()}`,
     `同步阶段: ${progress.phase}`,
     `进度消息: ${progress.message || '无'}`,
@@ -306,10 +293,10 @@ export function createSupabaseSyncDiagnostic(params: {
     taskSummary,
     '',
     '最近错误与兼容处理（独立保留最近 10 项）:',
-    ...(importantEvents.length ? importantEvents : ['无']),
+    ...(currentImportantEvents.length ? currentImportantEvents : ['无']),
     '',
-    '最近操作（按完成时间排序，可能包含此前同步）:',
-    ...getSupabaseDiagnosticEvents(),
+    '本轮最近操作（按完成时间排序）:',
+    ...getSupabaseDiagnosticEvents(params.startedAt),
   ]
     .map(line => sanitizeDiagnosticText(line))
     .join('\n');
