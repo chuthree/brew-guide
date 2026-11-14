@@ -10,6 +10,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
 import java.util.Iterator;
 import java.util.concurrent.TimeUnit;
 import okhttp3.Call;
@@ -32,18 +33,18 @@ public class BrewGuideSyncHttpPlugin extends Plugin {
         client = new OkHttpClient.Builder()
             .connectTimeout(15, TimeUnit.SECONDS)
             .readTimeout(60, TimeUnit.SECONDS)
+            .writeTimeout(60, TimeUnit.SECONDS)
             .callTimeout(90, TimeUnit.SECONDS)
             .followRedirects(false)
             .followSslRedirects(false)
             .retryOnConnectionFailure(false)
             .build();
       } catch (RuntimeException | LinkageError | AssertionError error) {
-        Throwable cause = error.getCause() == null ? error : error.getCause();
         throw new IOException(
             "同步网络组件初始化失败（Android " + android.os.Build.VERSION.RELEASE
                 + " / API " + android.os.Build.VERSION.SDK_INT
                 + " / " + android.os.Build.MANUFACTURER + " " + android.os.Build.MODEL
-                + " / " + cause + "）", error);
+                + "）", error);
       }
     }
     return client;
@@ -70,12 +71,57 @@ public class BrewGuideSyncHttpPlugin extends Plugin {
     return file;
   }
 
+  private static String sanitizeErrorMessage(String message, PluginCall call) {
+    String url = call.getString("url", "");
+    if (!url.isEmpty()) message = message.replace(url, "[已隐藏 URL]");
+    message = message.replaceAll("(?i)(?:https?|file|content)://[^\\s<>\"']+", "[已隐藏 URL]");
+    if (!url.isEmpty()) {
+      try {
+        String host = URI.create(url).getHost();
+        if (host != null && !host.isEmpty()) message = message.replace(host, "[已隐藏主机]");
+      } catch (IllegalArgumentException ignored) {
+        // Invalid URLs still need to produce a diagnostic.
+      }
+    }
+    JSObject headers = call.getObject("headers", new JSObject());
+    Iterator<String> keys = headers.keys();
+    while (keys.hasNext()) {
+      String value = headers.getString(keys.next());
+      if (value != null && !value.isEmpty()) message = message.replace(value, "[已隐藏请求头值]");
+    }
+    return message
+        .replaceAll("(?i)(?:Bearer|Basic)\\s+[^\\s,;]+", "[已隐藏认证信息]")
+        .replaceAll("eyJ[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+", "[已隐藏 JWT]")
+        .replaceAll("(?i)((?:username|password|passwd|secret(?:AccessKey)?|accessKeyId|api[-_]?key|token|signature|credential|authorization|cookie)\\s*[\"']?\\s*[:=]\\s*)[^\\r\\n]+", "$1[已隐藏]")
+        .replaceAll("(?i)data:[^\\s;,]+;base64,[a-z0-9+/=]+", "[已隐藏文件内容]")
+        .replaceAll("(?<![A-Za-z0-9])/(?:[^\\s<>\"']+)", "[已隐藏路径或地址]")
+        .replaceAll("\\b(?:\\d{1,3}\\.){3}\\d{1,3}(?::\\d+)?\\b", "[已隐藏 IP]")
+        .replaceAll("\\[[0-9a-fA-F:%.]+\\](?::\\d+)?", "[已隐藏 IP]");
+  }
+
+  private static void rejectRequest(PluginCall call, String summary, String code, Exception error) {
+    StringBuilder detail = new StringBuilder(summary);
+    Throwable cause = error;
+    for (int depth = 0; cause != null && depth < 4; depth++, cause = cause.getCause()) {
+      detail.append(depth == 0 ? "\n" : "\n原因: ").append(cause.getClass().getSimpleName());
+      String message = cause.getMessage();
+      if (message != null && !message.isEmpty()) {
+        message = sanitizeErrorMessage(message, call);
+        detail.append(": ").append(message.length() > 1000
+            ? message.substring(0, 1000) + "[内容已截断]" : message);
+      }
+    }
+    if (cause != null) detail.append("\n[原因链已截断]");
+    // Passing the exception to Capacitor would also log its unredacted message and stack.
+    call.reject(detail.toString(), code);
+  }
+
   private void request(PluginCall call, boolean fileTransfer) {
     final OkHttpClient httpClient;
     try {
       httpClient = getClient();
     } catch (IOException error) {
-      call.reject(error.getMessage(), "SYNC_HTTP_INIT_FAILED", error);
+      rejectRequest(call, "同步网络组件初始化失败", "SYNC_HTTP_INIT_FAILED", error);
       return;
     }
     try {
@@ -109,10 +155,12 @@ public class BrewGuideSyncHttpPlugin extends Plugin {
         body = RequestBody.create(null, new byte[0]);
       }
       builder.method(method, body);
+      final long requestBodyBytes = body == null ? 0 : body.contentLength();
       httpClient.newCall(builder.build()).enqueue(new Callback() {
         @Override
         public void onFailure(Call request, IOException error) {
-          call.reject("原生同步请求失败", error);
+          rejectRequest(call, "原生同步请求失败\n请求体大小: " + requestBodyBytes + " bytes",
+              "SYNC_HTTP_REQUEST_FAILED", error);
         }
 
         @Override
@@ -143,12 +191,14 @@ public class BrewGuideSyncHttpPlugin extends Plugin {
             }
             call.resolve(result);
           } catch (Exception error) {
-            call.reject("读取同步响应失败", error);
+            rejectRequest(call, "读取同步响应失败\n请求体大小: " + requestBodyBytes + " bytes",
+                "SYNC_HTTP_RESPONSE_FAILED", error);
           }
         }
       });
     } catch (Exception error) {
-      call.reject("无法发起原生同步请求", error);
+      rejectRequest(call, "无法发起原生同步请求",
+          "SYNC_HTTP_REQUEST_SETUP_FAILED", error);
     }
   }
 }
