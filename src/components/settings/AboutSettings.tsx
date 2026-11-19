@@ -196,15 +196,6 @@ const AboutSettings: React.FC<AboutSettingsProps> = ({ onClose }) => {
                 更新日志
               </a>
               <a
-                href="https://chu3.top/brew2"
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={handleExternalUrlClick}
-                className="text-neutral-800 underline dark:text-neutral-200"
-              >
-                brew2
-              </a>
-              <a
                 href="https://chu3.top/"
                 target="_blank"
                 rel="noopener noreferrer"
