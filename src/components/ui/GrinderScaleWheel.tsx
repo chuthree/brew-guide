@@ -25,6 +25,8 @@ import {
   getScaleAt,
   isMajorScaleMark,
   normalizeScaleInput,
+  type GrinderScaleForm,
+  type GrinderScaleFormErrors,
 } from '@/lib/grinder/quickAdjust';
 
 export interface WheelPointer {
@@ -58,14 +60,13 @@ export default function GrinderScaleWheel({
 }: GrinderScaleWheelProps) {
   const [base, setBase] = useState(grinder.currentGrindSize ?? '');
   const [draft, setDraft] = useState<string | null>(null);
-  const [settings, setSettings] = useState<GrinderQuickAdjust>();
-  const [form, setForm] = useState<{
-    value: string;
-    next: string;
-    min: string;
-    max: string;
-  } | null>(null);
-  const [invalidForm, setInvalidForm] = useState(false);
+  const [preview, setPreview] = useState<{
+    form: GrinderScaleForm;
+    settings: GrinderQuickAdjust;
+  }>();
+  const [form, setForm] = useState<GrinderScaleForm | null>(null);
+  const [formErrors, setFormErrors] = useState<GrinderScaleFormErrors>();
+  const formId = useId();
   const [invalidInput, setInvalidInput] = useState(false);
   const inputErrorId = useId();
   const [position, setPosition] = useState(0);
@@ -76,7 +77,7 @@ export default function GrinderScaleWheel({
   useEffect(() => () => travel.stop(), [travel]);
 
   const drag = useRef<(WheelPointer & { offset: number }) | null>(null);
-  const activeSettings = settings ?? grinder.quickAdjust;
+  const activeSettings = preview?.settings ?? grinder.quickAdjust;
   const configured = useMemo(
     () => getConfiguredGrinderScale(activeSettings),
     [activeSettings]
@@ -126,7 +127,7 @@ export default function GrinderScaleWheel({
       setInvalidInput(true);
       return;
     }
-    if (nextValue) onSave(nextValue, settings);
+    if (nextValue) onSave(nextValue, preview?.settings);
   };
 
   useEffect(() => {
@@ -161,49 +162,61 @@ export default function GrinderScaleWheel({
         className="mt-5"
         onSubmit={event => {
           event.preventDefault();
-          const preview = configureGrinderScale(
-            form.value.trim(),
-            form.next.trim(),
-            form.min.trim(),
-            form.max.trim()
-          );
-          if (!preview) {
-            setInvalidForm(true);
+          const result = configureGrinderScale(form);
+          if ('errors' in result) {
+            setFormErrors(result.errors);
             return;
           }
-          setSettings(preview.settings);
+          setPreview({ form, settings: result.settings });
           setCurrentValue(form.value.trim());
           setForm(null);
         }}
       >
         <ActionDrawer.Content className="grid grid-cols-2 gap-2 space-y-0">
-          {fields.map(({ key, label, placeholder }) => (
-            <label key={key} className="flex min-w-0 flex-col gap-1">
-              <span className="text-xs text-neutral-500 dark:text-neutral-400">
-                {label}
-              </span>
-              <input
-                className={INPUT}
-                inputMode="decimal"
-                autoComplete="off"
-                maxLength={300}
-                placeholder={placeholder}
-                value={form[key]}
-                onChange={event => {
-                  setInvalidForm(false);
-                  setForm({ ...form, [key]: event.target.value });
-                }}
-              />
-            </label>
-          ))}
-          {invalidForm && (
-            <p
-              role="alert"
-              className="col-span-2 text-xs text-red-600 dark:text-red-400"
-            >
-              请使用相同的刻度格式。下一格应大于起始刻度，起始刻度须在范围内。
-            </p>
-          )}
+          {fields.map(({ key, label, placeholder }) => {
+            const id = `${formId}-${key}`;
+            const error = formErrors?.[key];
+            return (
+              <div key={key} className="flex min-w-0 flex-col gap-1">
+                <label
+                  htmlFor={id}
+                  className="text-xs text-neutral-500 dark:text-neutral-400"
+                >
+                  {label}
+                </label>
+                <input
+                  id={id}
+                  className={INPUT}
+                  aria-invalid={error ? true : undefined}
+                  aria-describedby={error ? `${id}-error` : undefined}
+                  inputMode="decimal"
+                  autoComplete="off"
+                  maxLength={300}
+                  placeholder={placeholder}
+                  value={form[key]}
+                  onChange={event => {
+                    const nextForm = { ...form, [key]: event.target.value };
+                    setForm(nextForm);
+                    if (formErrors) {
+                      const result = configureGrinderScale(nextForm);
+                      setFormErrors(
+                        'errors' in result ? result.errors : undefined
+                      );
+                    }
+                  }}
+                />
+                {error && (
+                  <p
+                    id={`${id}-error`}
+                    role="alert"
+                    className="text-xs text-red-600 dark:text-red-400"
+                  >
+                    {error}
+                  </p>
+                )}
+              </div>
+            );
+          })}
         </ActionDrawer.Content>
         <ActionDrawer.Actions>
           <ActionDrawer.SecondaryButton onClick={() => setForm(null)}>
@@ -378,16 +391,18 @@ export default function GrinderScaleWheel({
               disabled={saving}
               onClick={() => {
                 const current = getGrinderScale(value, activeSettings);
-                setInvalidForm(false);
-                setForm({
-                  value: current ? value : '',
-                  next:
-                    current && activeSettings?.step
-                      ? getNextScaleExample(current)
-                      : '',
-                  min: activeSettings?.min ?? '',
-                  max: activeSettings?.max ?? '',
-                });
+                setFormErrors(undefined);
+                setForm(
+                  preview?.form ?? {
+                    value: current ? value : '',
+                    next:
+                      current && activeSettings?.step
+                        ? getNextScaleExample(current)
+                        : '',
+                    min: activeSettings?.min ?? '',
+                    max: activeSettings?.max ?? '',
+                  }
+                );
               }}
             >
               设置刻度
