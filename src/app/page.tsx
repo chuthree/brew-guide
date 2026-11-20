@@ -54,6 +54,7 @@ import {
 } from '@/components/layout/NavigationControls';
 import { SettingsOptions } from '@/components/settings/Settings';
 import { useSettingsStore, getSettingsStore } from '@/lib/stores/settingsStore';
+import { useScreenWakeLock } from '@/lib/hooks/useScreenWakeLock';
 import {
   selectIsSyncing,
   useSyncStatusStore,
@@ -405,6 +406,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     state => state.supabaseSyncProgress.active
   );
   const isCloudSyncBusy = useSyncStatusStore(selectIsSyncing);
+  useScreenWakeLock(isCloudSyncBusy);
   const NAVIGATION_COLLAPSED_STORAGE_KEY = 'navigationCollapsed';
   const [isNavigationCollapsed, setIsNavigationCollapsed] = useState(() => {
     if (typeof window === 'undefined') return false;

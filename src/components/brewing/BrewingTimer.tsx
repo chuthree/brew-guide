@@ -11,11 +11,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import type { Method } from '@/lib/core/config';
 import type { SettingsOptions } from '@/components/settings/Settings';
 import hapticsUtils from '@/lib/ui/haptics';
+import { useScreenWakeLock } from '@/lib/hooks/useScreenWakeLock';
 import {
   BrewingTimerSettings,
   formatTime,
-  handleScreenWake,
-  cleanupScreenWake,
   calculateTargetFlowRate,
   initializeTimerAudio,
   playTimerSound,
@@ -697,15 +696,7 @@ const BrewingTimer: React.FC<BrewingTimerProps> = ({
     hasStartedOnce,
   ]);
 
-  useEffect(() => {
-    // 使用提取出的工具函数处理屏幕常亮
-    handleScreenWake(isRunning, hasStartedOnce);
-
-    return () => {
-      // 使用提取出的清理函数
-      cleanupScreenWake();
-    };
-  }, [isRunning, hasStartedOnce]);
+  useScreenWakeLock(isRunning);
 
   if (!currentBrewingMethod) return null;
 
