@@ -106,15 +106,13 @@ export function mergeSyncData(
     before: unknown,
     left: unknown,
     right: unknown,
-    path: string
+    path: string,
+    collection = false
   ): unknown => {
     if (syncDataEqual(left, right)) return left;
     if (base && syncDataEqual(left, before)) return right;
     if (base && syncDataEqual(right, before)) return left;
 
-    const collection =
-      recordCollections.has(path) ||
-      /^customMethodsByEquipment\.[^.]+$/.test(path);
     if (collection) {
       const b = records(before, path),
         l = records(left, path),
@@ -153,7 +151,9 @@ export function mergeSyncData(
             b[key],
             left[key],
             right[key],
-            path ? `${path}.${key}` : key
+            path ? `${path}.${key}` : key,
+            path === 'customMethodsByEquipment' ||
+              (path === '' && recordCollections.has(key))
           );
           return value === undefined ? [] : [[key, value]];
         })
