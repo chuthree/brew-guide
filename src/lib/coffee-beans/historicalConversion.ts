@@ -87,14 +87,16 @@ export function analyzeHistoricalConversion(
   const input = Number(conversionAmount(capacity - remaining));
   const usage = Number(
     conversionAmount(
-      brews.reduce(
-        (sum, n) =>
-          sum +
-          (n.params?.coffee
-            ? conversionGrams(n.params.coffee, '关联笔记用量')
-            : 0),
-        0
-      )
+      brews.reduce((sum, note) => {
+        const dose = note.params?.coffee
+          ? conversionGrams(note.params.coffee, '关联笔记用量')
+          : 0;
+        const deducted =
+          note.inventoryDeductedGrams === undefined
+            ? dose
+            : conversionGrams(note.inventoryDeductedGrams, '关联笔记扣除量');
+        return sum + Math.min(dose, deducted);
+      }, 0)
     )
   );
   if (usage > input || (input === 0 && brews.length > 0))

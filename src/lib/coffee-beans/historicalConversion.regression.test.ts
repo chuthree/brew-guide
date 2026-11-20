@@ -152,10 +152,22 @@ describe('historical conversion diagnostic boundaries', () => {
     ).toThrow();
   });
 
-  it('rejects a new overstock dose and cannot convert historical overstock data', async () => {
-    await expect(
-      prepareBrewingNoteInventory(note('101g'), undefined, async () => bean)
-    ).rejects.toThrow('咖啡豆不足');
+  it('can convert a recorded partial deduction but rejects unresolved historical overstock', async () => {
+    const {
+      note: saved,
+      beans: [updated],
+    } = await prepareBrewingNoteInventory(
+      note('101g'),
+      undefined,
+      async () => bean
+    );
+    const graph = analyzeHistoricalConversion(updated, [updated], [saved!]);
+    expect(graph.usage).toBe(100);
+    expect(
+      buildHistoricalConversionRecords(graph, 3, () => 'new-id').roasted
+        ?.remaining
+    ).toBe('0');
+
     const historicalBean = { ...bean, remaining: '0' };
     expect(() =>
       analyzeHistoricalConversion(

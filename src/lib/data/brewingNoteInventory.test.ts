@@ -292,7 +292,7 @@ describe.each(['dexie', 'sqlite'] as const)(
       ).toBe('0.001');
     });
 
-    it('keeps fractional restoration within capacity and rejects insufficient stock', async () => {
+    it('caps fractional deductions and restorations at the available stock and capacity', async () => {
       const saved = (
         await repositories.brewingNotePersistence.saveWithInventory(
           note('fraction', 0.009)
@@ -311,17 +311,22 @@ describe.each(['dexie', 'sqlite'] as const)(
         ...bean(),
         remaining: '0.001',
       });
-      await expect(
-        repositories.brewingNotePersistence.saveWithInventory(
-          note('insufficient', 0.009)
-        )
-      ).rejects.toThrow('咖啡豆不足，可用 0.001g');
+      await repositories.brewingNotePersistence.saveWithInventory(
+        note('clamped', 0.009)
+      );
+      expect(
+        (await repositories.coffeeBeanRepository.get('bean'))?.remaining
+      ).toBe('0');
+      expect(
+        await repositories.brewingNoteRepository.get('clamped')
+      ).toMatchObject({
+        inventoryDeductedGrams: 0.001,
+        params: { coffee: '0.009g' },
+      });
+      await repositories.brewingNotePersistence.deleteWithInventory('clamped');
       expect(
         (await repositories.coffeeBeanRepository.get('bean'))?.remaining
       ).toBe('0.001');
-      expect(
-        await repositories.brewingNoteRepository.get('insufficient')
-      ).toBeUndefined();
     });
 
     it.each([15.01, 15.001, 0.001])(

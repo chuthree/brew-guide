@@ -13,6 +13,11 @@ import {
 } from '@/lib/coffee-beans/beanCapacity';
 import { buildNoteInput as buildNote, noteDose } from './noteInput';
 import {
+  getBrewingNoteDeductionTarget,
+  getBrewingNoteInventoryDeduction,
+  setBrewingNoteInventoryDeduction,
+} from '@/lib/notes/inventory';
+import {
   DATA_DOMAINS,
   hasDataAccess,
   parseAccessScopes,
@@ -398,9 +403,10 @@ function checkDeletableNote(note: BrewingNote): void {
 }
 
 function noteStockReversal(note: BrewingNote): number {
-  return note.source === 'capacity-adjustment'
-    ? (getCapacityAdjustmentReversal(note) ?? 0)
-    : noteDose(note);
+  if (note.source === 'capacity-adjustment') {
+    return getCapacityAdjustmentReversal(note) ?? 0;
+  }
+  return note.source ? noteDose(note) : getBrewingNoteInventoryDeduction(note);
 }
 
 function buildBean(fields: Arguments, previous?: CoffeeBean): CoffeeBean {
@@ -1322,9 +1328,16 @@ async function performMutation(
       }
     }
     const deltas = new Map<string, number>();
-    if (before) addDelta(deltas, before.beanId, noteDose(before));
-    addDelta(deltas, after.beanId, -noteDose(after));
+    if (before) addDelta(deltas, before.beanId, noteStockReversal(before));
+    const deduction = after.source
+      ? noteDose(after)
+      : getBrewingNoteDeductionTarget(after, before ?? undefined);
+    addDelta(deltas, after.beanId, -deduction);
     const changes = await changeStock(tx, deltas);
+    setBrewingNoteInventoryDeduction(
+      after,
+      after.beanId && !after.source ? deduction : undefined
+    );
     let saved = after;
     let cleanupPaths: string[] = [];
     if (photoOperation) {

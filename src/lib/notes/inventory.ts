@@ -58,6 +58,48 @@ export function inventorySyncOperations(
   }));
 }
 
+export function getBrewingNoteInventoryDeduction(note: BrewingNote): number {
+  const dose = parseCoffeeBeanAmount(note.params?.coffee) ?? 0;
+  return Math.min(
+    dose,
+    parseCoffeeBeanAmount(note.inventoryDeductedGrams) ?? dose
+  );
+}
+
+export function getBrewingNoteDeductionTarget(
+  note: BrewingNote,
+  previous?: BrewingNote
+): number {
+  const dose = parseCoffeeBeanAmount(note.params?.coffee) ?? 0;
+  if (
+    previous?.inventoryDeductedGrams === undefined ||
+    previous.source ||
+    previous.beanId !== note.beanId
+  ) {
+    return dose;
+  }
+
+  // Replenished stock only covers new usage, never a shortfall from a past brew.
+  const previousDose = parseCoffeeBeanAmount(previous.params?.coffee) ?? 0;
+  return Math.min(
+    dose,
+    getBrewingNoteInventoryDeduction(previous) +
+      Math.max(0, dose - previousDose)
+  );
+}
+
+export function setBrewingNoteInventoryDeduction(
+  note: BrewingNote,
+  deduction: number | undefined
+): void {
+  const dose = parseCoffeeBeanAmount(note.params?.coffee) ?? 0;
+  if (deduction !== undefined && deduction < dose) {
+    note.inventoryDeductedGrams = Number(formatInventoryAmount(deduction));
+  } else {
+    delete note.inventoryDeductedGrams;
+  }
+}
+
 function stockEffect(note: BrewingNote | undefined): number {
   if (!note?.beanId) return 0;
   if (note.source === 'roasting') {
@@ -70,13 +112,13 @@ function stockEffect(note: BrewingNote | undefined): number {
     }
     return change;
   }
-  return -(
-    parseCoffeeBeanAmount(
-      note.source === 'quick-decrement'
-        ? (note.quickDecrementAmount ?? note.params?.coffee)
-        : note.params?.coffee
-    ) ?? 0
-  );
+  if (note.source === 'quick-decrement') {
+    return -(
+      parseCoffeeBeanAmount(note.quickDecrementAmount ?? note.params?.coffee) ??
+      0
+    );
+  }
+  return -getBrewingNoteInventoryDeduction(note);
 }
 
 /** Read and compute inside the backend transaction; publish only after commit. */
@@ -120,7 +162,9 @@ export async function prepareBrewingNoteInventory(
   if (note?.beanId && !previous && options.initializeBeanId === note.beanId) {
     const bean = beans.get(note.beanId);
     if (!bean) throw new Error('咖啡豆不存在，请重新选择');
-    const amount = -stockEffect(note);
+    const amount = note.source
+      ? -stockEffect(note)
+      : getBrewingNoteDeductionTarget(note);
     const initialized = {
       ...bean,
       capacity: amount > 0 ? `${formatInventoryAmount(amount)}g` : '',
@@ -133,12 +177,13 @@ export async function prepareBrewingNoteInventory(
     changedBeans.set(note.beanId, beans.get(note.beanId)!);
   }
 
+  const reversal = -stockEffect(previous);
   if (note?.source === 'quick-decrement') {
     const bean = note.beanId ? beans.get(note.beanId) : undefined;
     if (!bean) throw new Error('咖啡豆不存在，请重新选择');
     const available =
-      (parseCoffeeBeanAmount(bean.remaining) ?? 0) -
-      (previous?.beanId === bean.id ? stockEffect(previous) : 0);
+      (parseCoffeeBeanAmount(bean.remaining) ?? 0) +
+      (previous?.beanId === bean.id ? reversal : 0);
     const requestedAmount = -stockEffect(note);
     if (requestedAmount <= 0) throw new Error('用量须大于 0g');
     const amount = Math.min(requestedAmount, available);
@@ -154,10 +199,15 @@ export async function prepareBrewingNoteInventory(
     };
   }
 
+  let deduction =
+    note?.beanId && !note.source
+      ? getBrewingNoteDeductionTarget(note, previous)
+      : undefined;
   const deltas = new Map<string, number>();
-  if (previous?.beanId) deltas.set(previous.beanId, -stockEffect(previous));
+  if (previous?.beanId) deltas.set(previous.beanId, reversal);
   if (note?.beanId) {
-    deltas.set(note.beanId, (deltas.get(note.beanId) ?? 0) + stockEffect(note));
+    const effect = deduction === undefined ? stockEffect(note) : -deduction;
+    deltas.set(note.beanId, (deltas.get(note.beanId) ?? 0) + effect);
   }
   for (const [id, delta] of deltas) {
     if (Math.abs(delta) < 0.000001) continue;
@@ -173,11 +223,18 @@ export async function prepareBrewingNoteInventory(
     const nextRemaining = (remaining ?? 0) + delta;
     if (nextRemaining < -0.000001) {
       const available =
-        (remaining ?? 0) -
-        (previous?.beanId === id ? stockEffect(previous) : 0);
-      throw new Error(
-        `咖啡豆不足，可用 ${formatInventoryAmount(Math.max(0, available))}g`
-      );
+        (remaining ?? 0) + (previous?.beanId === id ? reversal : 0);
+      if (
+        id !== note?.beanId ||
+        deduction === undefined ||
+        available < -0.000001
+      ) {
+        throw new Error(
+          `咖啡豆不足，可用 ${formatInventoryAmount(Math.max(0, available))}g`
+        );
+      }
+      deduction = Math.max(0, available);
+      if (remaining === 0) continue;
     }
     let amount = Math.max(0, nextRemaining);
     const capacity = parseCoffeeBeanAmount(bean.capacity);
@@ -190,6 +247,7 @@ export async function prepareBrewingNoteInventory(
       timestamp: Math.max(now, bean.timestamp + 1),
     });
   }
+  if (note) setBrewingNoteInventoryDeduction(note, deduction);
   if (!previous && note?.source === 'capacity-adjustment' && note.beanId) {
     const adjustment = note.changeRecord?.capacityAdjustment;
     const bean = beans.get(note.beanId);
