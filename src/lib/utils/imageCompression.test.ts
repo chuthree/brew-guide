@@ -86,16 +86,19 @@ describe('smartCompress', () => {
     );
 
     alpha = 0;
+    toBlob.mockImplementationOnce(callback =>
+      callback(new Blob(['source'], { type: 'image/png' }))
+    );
+    toBlob.mockImplementationOnce(callback =>
+      callback(new Blob([new Uint8Array(200 * 1024)], { type: 'image/png' }))
+    );
     const transparentResult = await compressBase64Image(
-      'data:image/png;base64,c291cmNl'
+      'data:image/gif;base64,R0lGODlhAQABAAAAACw='
     );
     expect(transparentResult.startsWith('data:image/png;base64,')).toBe(true);
+    expect(
+      Buffer.from(transparentResult.split(',')[1], 'base64').byteLength
+    ).toBeLessThanOrEqual(0.1 * 1024 * 1024);
     expect(toBlob).toHaveBeenCalledWith(expect.any(Function), 'image/png', 0.8);
-  });
-
-  it('does not recompress GIF data URLs', async () => {
-    const gifDataUrl = 'data:image/gif;base64,R0lGODlhAQABAAAAACw=';
-
-    await expect(compressBase64Image(gifDataUrl)).resolves.toBe(gifDataUrl);
   });
 });

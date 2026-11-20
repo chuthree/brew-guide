@@ -10,7 +10,11 @@ import { METHOD_RECOGNITION_PROMPT } from '@/lib/constants/methodRecognitionProm
 import AddCircleIcon from '@public/images/icons/ui/add-circle.svg';
 import AddBoxIcon from '@public/images/icons/ui/add-box.svg';
 import { type Method, type CustomEquipment } from '@/lib/core/config';
-import { isSupportedSourceImageFile } from '@/lib/images/imageFormat';
+import { readRecognitionImageFile } from '@/lib/api/shared/recognitionUpload.js';
+import {
+  STILL_IMAGE_ACCEPT,
+  STILL_IMAGE_HINT,
+} from '@/lib/images/stillImageUpload.js';
 import { transferMethodToEquipment } from '@/lib/brewing/methodTransfer';
 import {
   EquipmentSourceStep,
@@ -387,14 +391,9 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
         );
         methodData = MOCK_METHOD_DATA;
       } else {
-        const [{ smartCompress }, { recognizeMethodImage }] = await Promise.all(
-          [
-            import('@/lib/utils/imageCompression'),
-            import('@/lib/api/methodRecognition'),
-          ]
-        );
-        const compressedFile = await smartCompress(file);
-        methodData = await recognizeMethodImage(compressedFile);
+        const { recognizeMethodImage } =
+          await import('@/lib/api/methodRecognition');
+        methodData = await recognizeMethodImage(file);
       }
 
       return { data: methodData };
@@ -408,16 +407,16 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
       const files = event.target.files;
       if (!files || files.length === 0) return;
 
-      const file = files[0];
-      if (!isSupportedSourceImageFile(file)) {
+      const selected = files[0];
+      event.target.value = '';
+      let file: File;
+      try {
+        file = await readRecognitionImageFile(selected);
+      } catch (error) {
         showToast({
           type: 'error',
-          title: '请上传 JPG、PNG、WebP 或 HEIF 格式的图片',
+          title: error instanceof Error ? error.message : '图片读取失败',
         });
-        return;
-      }
-      if (file.size > 10 * 1024 * 1024) {
-        showToast({ type: 'error', title: '图片大小不能超过10MB' });
         return;
       }
 
@@ -440,11 +439,6 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
         URL.revokeObjectURL(imageUrl);
         setRecognizingImageUrl(null);
         setCurrentStep('main');
-      }
-
-      // 清除文件输入，以便可以再次选择同一文件
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
       }
     },
     [handleImportData, recognizeSingleImage]
@@ -521,6 +515,7 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
           className="w-full rounded-full bg-neutral-100 px-4 py-3 text-left text-sm font-medium text-neutral-800 dark:bg-neutral-800 dark:text-white"
         >
           图片识别方案
+          <span className="block text-xs font-normal">{STILL_IMAGE_HINT}</span>
         </motion.button>
         <motion.button
           whileTap={{ scale: 0.98 }}
@@ -678,7 +673,7 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
+        accept={STILL_IMAGE_ACCEPT}
         className="hidden"
         onChange={handleImageUpload}
       />

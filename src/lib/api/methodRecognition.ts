@@ -1,14 +1,12 @@
 import { API_CONFIG } from './shared/config';
 import { fetchWithTimeout, isTimeoutError } from './shared/request';
-import {
-  normalizeRecognitionErrorMessage,
-  validateRecognitionImageFile,
-} from './shared/recognition';
+import { normalizeRecognitionErrorMessage } from './shared/recognitionErrors.js';
+import { smartCompress } from '@/lib/utils/imageCompression';
 
 // 识别冲煮方案图片
 export async function recognizeMethodImage(imageFile: File): Promise<unknown> {
   // 验证文件安全性
-  validateRecognitionImageFile(imageFile);
+  imageFile = await smartCompress(imageFile);
 
   const apiUrl = `${API_CONFIG.baseURL}/api/recognize-method`;
 

@@ -5,25 +5,15 @@ const mocks = vi.hoisted(() => ({
   readFile: vi.fn(),
 }));
 
-vi.mock('@capacitor/camera', () => ({
-  Camera: {
-    getPhoto: vi.fn(),
-    pickImages: mocks.pickImages,
-  },
-  CameraResultType: {
-    Base64: 'base64',
-    DataUrl: 'dataUrl',
-    Uri: 'uri',
-  },
-  CameraSource: {
-    Camera: 'CAMERA',
-    Photos: 'PHOTOS',
-  },
+vi.mock('@capawesome/capacitor-file-picker', () => ({
+  FilePicker: { pickImages: mocks.pickImages },
 }));
 
-vi.mock('@capacitor/core', () => ({
+vi.mock('@capacitor/core', async importOriginal => ({
+  ...(await importOriginal<typeof import('@capacitor/core')>()),
   Capacitor: {
     isNativePlatform: vi.fn(() => true),
+    getPlatform: vi.fn(() => 'android'),
   },
 }));
 
@@ -45,11 +35,12 @@ describe('pickNativeGalleryImageFiles', () => {
     const fetchSpy = vi.fn(async () => new Response(null, { status: 404 }));
     vi.stubGlobal('fetch', fetchSpy);
     mocks.pickImages.mockResolvedValue({
-      photos: [
+      files: [
         {
-          format: 'jpeg',
+          name: 'photo.jpg',
+          size: 11,
+          mimeType: 'image/jpeg',
           path: 'file:///cache/photo.jpg',
-          webPath: 'http://localhost/_capacitor_file_/photo.jpg',
         },
       ],
     });
@@ -58,9 +49,8 @@ describe('pickNativeGalleryImageFiles', () => {
     const [file] = await pickNativeGalleryImageFiles({ limit: 1 });
 
     expect(mocks.pickImages).toHaveBeenCalledWith({
-      correctOrientation: true,
       limit: 1,
-      quality: 90,
+      skipTranscoding: true,
     });
     expect(mocks.readFile).toHaveBeenCalledWith({
       path: 'file:///cache/photo.jpg',

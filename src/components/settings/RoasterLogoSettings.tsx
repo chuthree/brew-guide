@@ -27,7 +27,14 @@ import ConfirmDrawer from '@/components/common/ui/ConfirmDrawer';
 import RoasterLogoImportExport from './RoasterLogoImportExport';
 import { renameRoasters } from '@/lib/utils/roasterRename';
 import DataAlertIcon from '@public/images/icons/ui/data-alert.svg';
-import { compressBase64Image } from '@/lib/utils/imageCapture';
+import {
+  readStillImageFile,
+  STILL_IMAGE_ACCEPT,
+} from '@/lib/images/stillImageUpload.js';
+import {
+  processImageFile,
+  ROASTER_LOGO_COMPRESSION_OPTIONS,
+} from '@/lib/images/imageProcessing';
 import { makeDynamicSettingSearchId } from './settingsSearch';
 import SettingsSearchBar from './SettingsSearchBar';
 
@@ -167,47 +174,18 @@ const RoasterLogoSettings: React.FC<RoasterLogoSettingsProps> = ({
     modalHistory.back();
   };
 
-  // 将文件转换为 base64
-  const fileToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-  };
-
   const handleFileSelect = async (roasterName: string, file: File) => {
     if (!file) return;
-
-    // 仅支持 JPG、PNG、WebP、HEIC 格式
-    const allowedTypes = [
-      'image/jpeg',
-      'image/png',
-      'image/webp',
-      'image/heic',
-      'image/heif',
-    ];
-    if (!allowedTypes.includes(file.type)) {
-      alert('请上传 JPG、PNG 或 WebP 格式的图片');
-      return;
-    }
-
-    // 验证文件大小（最大5MB）
-    if (file.size > 5 * 1024 * 1024) {
-      alert('图片文件不能超过5MB');
-      return;
-    }
 
     setUploading(roasterName);
 
     try {
-      const base64 = await fileToBase64(file);
-      const compressedBase64 = await compressBase64Image(base64, {
-        maxSizeMB: 0.12,
-        maxWidthOrHeight: 512,
-        initialQuality: 0.9,
-      });
+      const compressedBase64 = await processImageFile(
+        await readStillImageFile(file),
+        {
+          compression: ROASTER_LOGO_COMPRESSION_OPTIONS,
+        }
+      );
       await getSettingsStore().updateRoasterConfig(roasterName, {
         logoData: compressedBase64,
       });
@@ -654,7 +632,7 @@ const RoasterLogoSettings: React.FC<RoasterLogoSettingsProps> = ({
                           else fileInputRefs.current.delete(roaster);
                         }}
                         type="file"
-                        accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
+                        accept={STILL_IMAGE_ACCEPT}
                         className="hidden"
                         onChange={e => {
                           const file = e.target.files?.[0];

@@ -423,11 +423,26 @@ final class ProviderRuntime {
                       ? Bitmap.CompressFormat.WEBP_LOSSY
                       : Bitmap.CompressFormat.WEBP;
       ByteArrayOutputStream output = new ByteArrayOutputStream();
-      do {
+      while (true) {
         output.reset();
-        bitmap.compress(format, quality, output);
-        quality -= 10;
-      } while (!png && output.size() > target && quality >= 10);
+        if (!bitmap.compress(format, quality, output) || output.size() == 0)
+          throw new IOException("Image encoding failed");
+        if (output.size() <= target) break;
+        if (!png && quality > 40) {
+          quality = Math.max(40, quality - 10);
+          continue;
+        }
+        if (bitmap.getWidth() == 1 && bitmap.getHeight() == 1)
+          throw new IOException("Image exceeds storage limit");
+        double ratio = Math.min(.8, Math.sqrt((double) target / output.size()));
+        Bitmap smaller = Bitmap.createScaledBitmap(
+            bitmap,
+            Math.max(1, (int) (bitmap.getWidth() * ratio)),
+            Math.max(1, (int) (bitmap.getHeight() * ratio)),
+            true);
+        bitmap.recycle();
+        bitmap = smaller;
+      }
       String mime =
           png ? "image/png" : requestedMime.equals("image/jpeg") ? "image/jpeg" : "image/webp";
       return new JSONObject()

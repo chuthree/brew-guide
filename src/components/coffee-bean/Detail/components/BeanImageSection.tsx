@@ -4,9 +4,12 @@ import React, { useState, useMemo } from 'react';
 import Image from 'next/image';
 import { CoffeeBean } from '@/types/app';
 import { Camera, Image as ImageIcon } from 'lucide-react';
-import { captureImage } from '@/lib/utils/imageCapture';
 import {
-  ImageProcessingError,
+  captureImage,
+  isImageSelectionCancelled,
+} from '@/lib/utils/imageCapture';
+import {
+  COFFEE_BEAN_IMAGE_COMPRESSION_OPTIONS,
   processImageFile,
 } from '@/lib/images/imageProcessing';
 import {
@@ -263,19 +266,9 @@ const BeanImageSection: React.FC<BeanImageSectionProps> = ({
     imageType: 'front' | 'back' = 'front'
   ) => {
     try {
-      const result = await captureImage({ source });
-
-      const response = await fetch(result.dataUrl);
-      const blob = await response.blob();
-      const file = new File([blob], `image.${result.format}`, {
-        type: blob.type || `image/${result.format}`,
-      });
+      const file = await captureImage(source);
       const image = await processImageFile(file, {
-        compression: {
-          maxSizeMB: 0.3,
-          maxWidthOrHeight: 1024,
-          initialQuality: 0.8,
-        },
+        compression: COFFEE_BEAN_IMAGE_COMPRESSION_OPTIONS,
       });
 
       const fieldName = imageType === 'back' ? 'backImage' : 'image';
@@ -285,11 +278,9 @@ const BeanImageSection: React.FC<BeanImageSectionProps> = ({
         handleUpdateField({ [fieldName]: image });
       }
     } catch (error) {
-      alert(
-        error instanceof ImageProcessingError
-          ? error.message
-          : '图片选择失败，请更换图片后重试'
-      );
+      if (!isImageSelectionCancelled(error)) {
+        alert(error instanceof Error ? error.message : '图片选择失败，请重试');
+      }
     }
   };
 

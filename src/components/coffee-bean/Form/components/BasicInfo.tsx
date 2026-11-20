@@ -6,7 +6,10 @@ import AutocompleteInput from '@/components/common/forms/AutocompleteInput';
 import { ExtendedCoffeeBean } from '../types';
 import { pageVariants, pageTransition } from '../constants';
 import { DatePicker } from '@/components/common/ui/DatePicker';
-import { captureImage } from '@/lib/utils/imageCapture';
+import {
+  captureImage,
+  isImageSelectionCancelled,
+} from '@/lib/utils/imageCapture';
 import {
   getRoastProfileFromAmounts,
   getRoastProfileFromMoistureLoss,
@@ -234,15 +237,7 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
     imageType: 'front' | 'back' = 'front'
   ) => {
     try {
-      // 获取图片（已经是base64格式）
-      const result = await captureImage({ source });
-
-      // 将 dataUrl 转换为 File 对象并传递给父组件处理
-      const response = await fetch(result.dataUrl);
-      const blob = await response.blob();
-      const file = new File([blob], `image.${result.format}`, {
-        type: `image/${result.format}`,
-      });
+      const file = await captureImage(source);
 
       // 根据类型使用不同的回调函数处理文件（父组件会进行压缩）
       if (imageType === 'back' && onBackImageUpload) {
@@ -251,8 +246,8 @@ const BasicInfo: React.FC<BasicInfoProps> = ({
         onImageUpload(file);
       }
     } catch (error) {
-      if (process.env.NODE_ENV === 'development') {
-        console.error('打开相机/相册失败:', error);
+      if (!isImageSelectionCancelled(error)) {
+        alert(error instanceof Error ? error.message : '图片选择失败，请重试');
       }
     }
   };

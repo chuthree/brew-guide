@@ -1,35 +1,9 @@
-import {
-  Camera,
-  CameraResultType,
-  CameraSource,
-  type GalleryPhoto,
-} from '@capacitor/camera';
+import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
+import { FilePicker, type PickedFile } from '@capawesome/capacitor-file-picker';
 import { Capacitor } from '@capacitor/core';
 import { Filesystem } from '@capacitor/filesystem';
-import {
-  getImageFormatFromMimeType,
-  IMAGE_FILE_ACCEPT,
-  isSupportedSourceImageFile,
-  normalizeImageMimeType,
-} from '@/lib/images/imageFormat';
-export { compressBase64Image } from '@/lib/utils/imageCompression';
-
-export interface ImageCaptureOptions {
-  source: 'camera' | 'gallery';
-  quality?: number;
-  allowEditing?: boolean;
-  resultType?: CameraResultType;
-}
-
-export interface NativeGalleryImageOptions {
-  quality?: number;
-  limit?: number;
-}
-
-export interface ImageCaptureResult {
-  dataUrl: string;
-  format: string;
-}
+import { IMAGE_FILE_ACCEPT } from '@/lib/images/imageFormat';
+import { validateImageFileSize } from '@/lib/images/imageProcessing';
 
 export function shouldUseNativeGalleryPicker() {
   return Capacitor.isNativePlatform();
@@ -41,11 +15,6 @@ export function isImageSelectionCancelled(error: unknown) {
   return /cancel|cancelled|canceled|用户取消|未选择/i.test(message);
 }
 
-function normalizeImageFormat(format?: string) {
-  if (!format) return 'jpeg';
-  return format === 'jpg' ? 'jpeg' : format.toLowerCase();
-}
-
 function fileDataToBlob(data: string | Blob, mimeType: string) {
   if (typeof data !== 'string') {
     return data.type ? data : new Blob([data], { type: mimeType });
@@ -53,107 +22,69 @@ function fileDataToBlob(data: string | Blob, mimeType: string) {
 
   const base64 = data.includes(',') ? data.split(',').pop() || '' : data;
   const binary = atob(base64);
-  const bytes = Uint8Array.from(binary, character => character.charCodeAt(0));
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < bytes.length; i++) bytes[i] = binary.charCodeAt(i);
   return new Blob([bytes], { type: mimeType });
 }
 
-function getGalleryPhotoFileName(photo: GalleryPhoto, index: number) {
-  const format = normalizeImageFormat(photo.format);
-  const fallback = `gallery-image-${Date.now()}-${index + 1}.${format}`;
-  const sourcePath = photo.path || photo.webPath;
-
-  try {
-    const urlPath = new URL(sourcePath).pathname;
-    const fileName = decodeURIComponent(urlPath.split('/').pop() || '');
-    return /\.[^/.]+$/.test(fileName) ? fileName : fallback;
-  } catch {
-    const fileName = sourcePath.split(/[/?#]/).filter(Boolean).pop() || '';
-    return /\.[^/.]+$/.test(fileName) ? fileName : fallback;
-  }
-}
-
-async function galleryPhotoToFile(photo: GalleryPhoto, index: number) {
-  let blob: Blob;
-  const fallbackType = `image/${normalizeImageFormat(photo.format)}`;
-
-  if (photo.path) {
-    try {
-      const { data } = await Filesystem.readFile({ path: photo.path });
-      blob = fileDataToBlob(data, fallbackType);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      throw new Error(`系统相册图片读取失败：${message}`);
-    }
-  } else {
-    const response = await fetch(photo.webPath);
-
-    if (!response.ok) {
-      throw new Error(`系统相册图片读取失败：HTTP ${response.status}`);
-    }
-
-    blob = await response.blob();
-  }
-
-  const type = blob.type || fallbackType;
-
-  return new File([blob], getGalleryPhotoFileName(photo, index), {
-    type,
-    lastModified: Date.now(),
-  });
-}
-
-export async function pickNativeGalleryImageFiles(
-  options: NativeGalleryImageOptions = {}
+async function galleryPhotoToFile(
+  photo: PickedFile,
+  maxFileSizeBytes?: number
 ) {
-  const { quality = 90, limit } = options;
-  const { photos } = await Camera.pickImages({
-    quality,
-    limit,
-    correctOrientation: true,
-  });
+  if (!photo.path) throw new Error('无法读取所选图片');
+  validateImageFileSize(photo.size, maxFileSizeBytes);
 
-  return Promise.all(photos.map(galleryPhotoToFile));
+  const { data } = await Filesystem.readFile({ path: photo.path });
+  return new File([fileDataToBlob(data, photo.mimeType)], photo.name, {
+    type: photo.mimeType,
+    lastModified: photo.modifiedAt,
+  });
 }
 
-/**
- * 统一的图片选择/拍照工具函数
- * 在原生平台使用 Capacitor Camera API，在网页端使用 HTML input
- */
+export async function pickNativeGalleryImageFiles({
+  limit,
+  maxFileSizeBytes,
+}: {
+  limit: number;
+  maxFileSizeBytes?: number;
+}) {
+  const pickerLimit =
+    Capacitor.getPlatform() === 'android' && limit > 1 ? 0 : limit;
+  const { files } = await FilePicker.pickImages({
+    limit: pickerLimit,
+    skipTranscoding: true,
+  });
+  if (files.length > limit) throw new Error(`最多选择 ${limit} 张图片`);
+  return Promise.all(
+    files.map(photo => galleryPhotoToFile(photo, maxFileSizeBytes))
+  );
+}
+
 export async function captureImage(
-  options: ImageCaptureOptions
-): Promise<ImageCaptureResult> {
-  const {
-    source,
-    quality = 90,
-    allowEditing = false,
-    resultType = CameraResultType.DataUrl,
-  } = options;
-
-  // 在原生平台使用 Capacitor Camera API
-  if (Capacitor.isNativePlatform()) {
-    try {
-      const image = await Camera.getPhoto({
-        quality,
-        allowEditing,
-        resultType,
-        source: source === 'camera' ? CameraSource.Camera : CameraSource.Photos,
-      });
-
-      if (!image.dataUrl) {
-        throw new Error('Failed to get image data');
-      }
-
-      return {
-        dataUrl: image.dataUrl,
-        format: image.format || 'jpeg',
-      };
-    } catch (error) {
-      console.error('Capacitor Camera error:', error);
-      // 如果 Capacitor Camera 失败，降级到 HTML input
-      return captureImageWithHtmlInput(source);
-    }
-  } else {
-    // 在网页端使用 HTML input
+  source: 'camera' | 'gallery'
+): Promise<File> {
+  if (!Capacitor.isNativePlatform()) return captureImageWithHtmlInput(source);
+  if (source === 'gallery') {
+    const [file] = await pickNativeGalleryImageFiles({ limit: 1 });
+    if (!file) throw new Error('未选择图片');
+    return file;
+  }
+  try {
+    const image = await Camera.getPhoto({
+      quality: 90,
+      allowEditing: false,
+      resultType: CameraResultType.Uri,
+      source: CameraSource.Camera,
+    });
+    if (!image.path) throw new Error('无法读取拍摄的图片');
+    const { data } = await Filesystem.readFile({ path: image.path });
+    const type = `image/${image.format}`;
+    return new File([fileDataToBlob(data, type)], `image.${image.format}`, {
+      type,
+    });
+  } catch (error) {
+    if (isImageSelectionCancelled(error)) throw error;
+    console.error('Capacitor Camera error:', error);
     return captureImageWithHtmlInput(source);
   }
 }
@@ -164,7 +95,7 @@ export async function captureImage(
  */
 function captureImageWithHtmlInput(
   source: 'camera' | 'gallery'
-): Promise<ImageCaptureResult> {
+): Promise<File> {
   return new Promise((resolve, reject) => {
     try {
       const fileInput = document.createElement('input');
@@ -199,80 +130,13 @@ function captureImageWithHtmlInput(
       };
 
       // 处理文件选择
-      fileInput.onchange = async e => {
+      fileInput.onchange = () => {
         if (isResolved) return;
-
-        const input = e.target as HTMLInputElement;
-
-        try {
-          if (!input.files || input.files.length === 0) {
-            // 用户取消了选择
-            isResolved = true;
-            cleanup();
-            reject(new Error('未选择图片'));
-            return;
-          }
-
-          const file = input.files[0];
-
-          if (!isSupportedSourceImageFile(file)) {
-            isResolved = true;
-            cleanup();
-            reject(new Error('请上传 JPG、PNG、WebP 或 HEIF/HEIC 格式的图片'));
-            return;
-          }
-
-          // 验证文件大小（最大50MB）
-          if (file.size > 50 * 1024 * 1024) {
-            isResolved = true;
-            cleanup();
-            reject(new Error('图片文件过大，请选择小于50MB的图片'));
-            return;
-          }
-
-          // 读取文件
-          const reader = new FileReader();
-
-          reader.onload = () => {
-            if (isResolved) return;
-
-            isResolved = true;
-            cleanup();
-
-            const result = reader.result as string;
-            if (!result) {
-              reject(new Error('图片读取失败'));
-              return;
-            }
-
-            resolve({
-              dataUrl: result,
-              format: getImageFormatFromMimeType(normalizeImageMimeType(file)),
-            });
-          };
-
-          reader.onerror = () => {
-            if (isResolved) return;
-
-            isResolved = true;
-            cleanup();
-            reject(new Error('图片读取失败，请重试'));
-          };
-
-          // 开始读取文件
-          reader.readAsDataURL(file);
-        } catch (error) {
-          if (isResolved) return;
-
-          isResolved = true;
-          cleanup();
-          reject(
-            new Error(
-              '图片处理失败：' +
-                (error instanceof Error ? error.message : '未知错误')
-            )
-          );
-        }
+        isResolved = true;
+        const file = fileInput.files?.[0];
+        cleanup();
+        if (file) resolve(file);
+        else reject(new Error('未选择图片'));
       };
 
       // 处理用户取消选择（某些浏览器会触发）

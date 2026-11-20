@@ -1,5 +1,4 @@
 import {
-  GIF_IMAGE_MIME_TYPE,
   isHeifImageMimeType,
   isSupportedSourceImageFile,
   normalizeImageMimeType,
@@ -127,14 +126,24 @@ function createImageReadFailedError(file: File, error: unknown) {
   );
 }
 
-export async function processImageFile(
-  file: File,
-  options: ImageProcessingOptions = {}
+export function validateImageFileSize(
+  size: number,
+  maxFileSizeBytes = DEFAULT_MAX_IMAGE_SIZE_BYTES,
+  file?: File
 ) {
-  const { maxFileSizeBytes = DEFAULT_MAX_IMAGE_SIZE_BYTES, compression } =
-    options;
-  const mimeType = normalizeImageMimeType(file);
+  if (size > maxFileSizeBytes) {
+    throw new ImageProcessingError(
+      `图片文件过大，每张最多 ${maxFileSizeBytes / (1024 * 1024)} MiB`,
+      'too-large',
+      file
+    );
+  }
+}
 
+function validateSourceImageFile(
+  file: File,
+  maxFileSizeBytes = DEFAULT_MAX_IMAGE_SIZE_BYTES
+) {
   if (!isSupportedSourceImageFile(file)) {
     throw new ImageProcessingError(
       '请上传 JPG、PNG、WebP、GIF 或 HEIF/HEIC 格式的图片',
@@ -143,25 +152,25 @@ export async function processImageFile(
     );
   }
 
-  if (file.size > maxFileSizeBytes) {
-    throw new ImageProcessingError(
-      '图片文件过大，请选择小于50MB的图片',
-      'too-large',
-      file
-    );
-  }
+  validateImageFileSize(file.size, maxFileSizeBytes, file);
+}
 
+export async function processImageFile(
+  file: File,
+  options: ImageProcessingOptions = {}
+) {
+  const { maxFileSizeBytes, compression } = options;
+  validateSourceImageFile(file, maxFileSizeBytes);
+  const mimeType = normalizeImageMimeType(file);
   let dataUrl: string;
   try {
-    dataUrl = await readFileAsDataUrl(file);
+    dataUrl = await readFileAsDataUrl(
+      file.type === mimeType ? file : file.slice(0, file.size, mimeType)
+    );
   } catch (error) {
     const readError = createImageReadFailedError(file, error);
     console.error('Image file read failed', readError.diagnostics);
     throw readError;
-  }
-
-  if (mimeType === GIF_IMAGE_MIME_TYPE) {
-    return dataUrl;
   }
 
   try {

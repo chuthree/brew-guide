@@ -1,3 +1,5 @@
+import { STILL_IMAGE_TYPES } from './stillImageUpload.js';
+
 export const APP_IMAGE_MIME_TYPE = 'image/webp';
 export const JPEG_IMAGE_MIME_TYPE = 'image/jpeg';
 export const PNG_IMAGE_MIME_TYPE = 'image/png';
@@ -23,14 +25,8 @@ const MIME_TYPE_BY_EXTENSION: Record<string, string> = {
 };
 
 export const SUPPORTED_SOURCE_IMAGE_MIME_TYPES = [
-  JPEG_IMAGE_MIME_TYPE,
-  PNG_IMAGE_MIME_TYPE,
-  WEBP_IMAGE_MIME_TYPE,
+  ...STILL_IMAGE_TYPES,
   GIF_IMAGE_MIME_TYPE,
-  'image/heic',
-  'image/heif',
-  'image/heic-sequence',
-  'image/heif-sequence',
 ] as const;
 
 export const IMAGE_FILE_ACCEPT = SUPPORTED_SOURCE_IMAGE_MIME_TYPES.join(',');
@@ -68,18 +64,4 @@ export function isSupportedSourceImageFile(file: Pick<File, 'name' | 'type'>) {
 
 export function isHeifImageMimeType(mimeType: string) {
   return HEIF_IMAGE_MIME_TYPES.has(mimeType.toLowerCase());
-}
-
-export function getImageFormatFromMimeType(mimeType: string) {
-  if (mimeType === JPEG_IMAGE_MIME_TYPE) return 'jpeg';
-  if (mimeType === PNG_IMAGE_MIME_TYPE) return 'png';
-  if (mimeType === WEBP_IMAGE_MIME_TYPE) return 'webp';
-  if (mimeType === GIF_IMAGE_MIME_TYPE) return 'gif';
-  if (mimeType === 'image/heif' || mimeType === 'image/heif-sequence') {
-    return 'heif';
-  }
-  if (mimeType === 'image/heic' || mimeType === 'image/heic-sequence') {
-    return 'heic';
-  }
-  return mimeType.split('/')[1] || 'jpeg';
 }

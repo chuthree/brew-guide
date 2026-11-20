@@ -1000,15 +1000,11 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
 
     // 拍照使用 captureImage
     try {
-      const result = await captureImage({ source });
-      const response = await fetch(result.dataUrl);
-      const blob = await response.blob();
-      const file = new File([blob], `image.${result.format}`, {
-        type: blob.type || `image/${result.format}`,
-      });
+      const file = await captureImage(source);
 
       await appendSelectedImages([file], 1);
     } catch (error) {
+      if (isImageSelectionCancelled(error)) return;
       showToast({
         type: 'error',
         title: error instanceof Error ? error.message : '打开相机失败，请重试',

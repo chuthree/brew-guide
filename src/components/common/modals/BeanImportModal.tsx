@@ -25,7 +25,12 @@ import {
 } from '@/lib/api/beanRecognition';
 import { normalizeCoffeeBeanPayloadForFieldConfig } from '@/lib/coffee-beans/beanFields';
 import { prepareRecognizedBeanImages } from '@/lib/coffee-beans/beanImportImage';
-import { isSupportedSourceImageFile } from '@/lib/images/imageFormat';
+import { readRecognitionImageFile } from '@/lib/api/shared/recognitionUpload.js';
+import {
+  MAX_STILL_IMAGE_BYTES,
+  STILL_IMAGE_ACCEPT,
+  STILL_IMAGE_HINT,
+} from '@/lib/images/stillImageUpload.js';
 import {
   isImageSelectionCancelled,
   pickNativeGalleryImageFiles,
@@ -86,37 +91,15 @@ type ImportStep =
 const MAX_IMAGES = 5;
 // 最大并发识别数（服务器已优化并发控制，可提高到 5）
 const MAX_CONCURRENT = 5;
-const IMAGE_FILE_ACCEPT =
-  'image/jpeg,image/png,image/webp,image/heic,image/heif';
 const BEAN_PACKAGE_FILE_ACCEPT =
   '.brewbeans.zip,.zip,application/zip,application/x-zip-compressed';
 
 async function compressImageToBase64(file: File): Promise<string | null> {
-  return new Promise(resolve => {
-    const reader = new FileReader();
-    reader.onload = async () => {
-      const base64 = reader.result as string;
-      if (!base64) {
-        resolve(null);
-        return;
-      }
-      try {
-        const { compressBase64Image } =
-          await import('@/lib/utils/imageCapture');
-        resolve(
-          await compressBase64Image(base64, {
-            maxSizeMB: 0.1,
-            maxWidthOrHeight: 1200,
-            initialQuality: 0.8,
-          })
-        );
-      } catch {
-        resolve(null);
-      }
-    };
-    reader.onerror = () => resolve(null);
-    reader.readAsDataURL(file);
-  });
+  const { processImageFile, BEAN_IMAGE_COMPRESSION_OPTIONS } =
+    await import('@/lib/images/imageProcessing');
+  return processImageFile(file, {
+    compression: BEAN_IMAGE_COMPRESSION_OPTIONS,
+  }).catch(() => null);
 }
 
 function showUnmatchedRecognitionImageNotice() {
@@ -377,8 +360,8 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
       ]
     );
   const fileInputAccept = settings?.experimentalBeanSharePackageEnabled
-    ? `${IMAGE_FILE_ACCEPT},${BEAN_PACKAGE_FILE_ACCEPT}`
-    : IMAGE_FILE_ACCEPT;
+    ? `${STILL_IMAGE_ACCEPT},${BEAN_PACKAGE_FILE_ACCEPT}`
+    : STILL_IMAGE_ACCEPT;
   const isDrawerDismissible =
     currentStep !== 'camera-preview' && currentStep !== 'recognizing';
 
@@ -662,13 +645,10 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
         );
         beanData = MOCK_BEAN_DATA;
       } else {
-        const [{ smartCompress }, { recognizeBeanImage }] = await Promise.all([
-          import('@/lib/utils/imageCompression'),
-          import('@/lib/api/beanRecognition'),
-        ]);
-        const compressedFile = await smartCompress(file);
+        const { recognizeBeanImage } =
+          await import('@/lib/api/beanRecognition');
         beanData = await recognizeBeanImage(
-          compressedFile,
+          file,
           undefined,
           customRecognitionConfig,
           fieldSettings
@@ -730,24 +710,20 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
     async (files: File[]) => {
       if (files.length === 0) return;
       const validFiles: File[] = [];
-      for (let i = 0; i < Math.min(files.length, MAX_IMAGES); i++) {
-        const file = files[i];
-        if (!isSupportedSourceImageFile(file)) {
-          continue;
+      const rejected: string[] = [];
+      for (const file of files.slice(0, MAX_IMAGES)) {
+        try {
+          validFiles.push(await readRecognitionImageFile(file));
+        } catch (error) {
+          rejected.push(
+            `${file.name}：${error instanceof Error ? error.message : '图片读取失败'}`
+          );
         }
-        if (file.size > 10 * 1024 * 1024) {
-          continue;
-        }
-        validFiles.push(file);
       }
-
-      if (validFiles.length === 0) {
-        showToast({
-          type: 'error',
-          title: '请上传 JPG、PNG、WebP 或 HEIF 格式的图片',
-        });
-        return;
+      if (rejected.length) {
+        showToast({ type: 'error', title: rejected.join('\n') });
       }
+      if (!validFiles.length) return;
 
       // 如果选择超过限制，提示
       if (files.length > MAX_IMAGES) {
@@ -999,7 +975,10 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
     }
 
     try {
-      const files = await pickNativeGalleryImageFiles({ limit: MAX_IMAGES });
+      const files = await pickNativeGalleryImageFiles({
+        limit: MAX_IMAGES,
+        maxFileSizeBytes: MAX_STILL_IMAGE_BYTES,
+      });
       await processImageFiles(files);
     } catch (error) {
       if (isImageSelectionCancelled(error)) return;
@@ -1172,7 +1151,9 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
     setIsCameraCapturing(true);
 
     try {
-      const file = await captureCameraPhotoFile();
+      const file = await readRecognitionImageFile(
+        await captureCameraPhotoFile()
+      );
       const previewUrl = URL.createObjectURL(file);
 
       setSelectedImages(prev => [
@@ -1298,6 +1279,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
           className="w-full rounded-full bg-neutral-100 px-4 py-3 text-left text-sm font-medium text-neutral-800 dark:bg-neutral-800 dark:text-white"
         >
           图片识别咖啡豆
+          <span className="block text-xs font-normal">{STILL_IMAGE_HINT}</span>
         </motion.button>
         <motion.button
           whileTap={{ scale: 0.98 }}

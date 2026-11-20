@@ -1,4 +1,3 @@
-import { GIF_IMAGE_MIME_TYPE } from '@/lib/images/imageFormat';
 import type { Base64CompressionOptions } from '@/lib/utils/imageCompression';
 import { compressBase64Image } from '@/lib/utils/imageCompression';
 
@@ -57,15 +56,11 @@ export const getDataUrlBytes = (dataUrl: string): number | null => {
   return Math.floor((payload.length * 3) / 4) - padding;
 };
 
-export const isRecompressibleDataUrlImage = (image: string): boolean =>
-  image.startsWith('data:image/') &&
-  !image.toLowerCase().startsWith(`data:${GIF_IMAGE_MIME_TYPE}`);
-
 export const shouldRecompressStoredImage = (
   image: string,
   profile: ImageRecompressionProfile
 ): boolean => {
-  if (!isRecompressibleDataUrlImage(image)) return false;
+  if (!image.startsWith('data:image/')) return false;
 
   const bytes = getDataUrlBytes(image);
   return bytes !== null && bytes > profile.maxSizeBytes;

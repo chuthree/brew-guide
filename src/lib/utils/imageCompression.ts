@@ -1,164 +1,83 @@
-/**
- * 图片压缩工具
- * 用于在上传前压缩图片，减少网络传输时间
- */
-
 import {
   APP_IMAGE_MIME_TYPE,
-  GIF_IMAGE_MIME_TYPE,
   JPEG_IMAGE_MIME_TYPE,
 } from '@/lib/images/imageFormat';
+import { readRecognitionImageFile } from '@/lib/api/shared/recognitionUpload.js';
+import { getImageFileNameForMimeType } from '@/lib/images/stillImageUpload.js';
 
-const LOSSLESS_METADATA_MIME_TYPES = new Set([
-  JPEG_IMAGE_MIME_TYPE,
-  'image/png',
-  'image/webp',
-  'image/heic',
-  'image/heif',
-]);
-
-export interface CompressionOptions {
-  maxWidth?: number; // 最大宽度，默认 1920
-  maxHeight?: number; // 最大高度，默认 1920
-  quality?: number; // 图片质量 0-1，默认 0.8
-  mimeType?: string; // 输出格式，默认应用内图片格式
-  maxSizeMB?: number; // 最大文件大小（MB），如果指定则会循环压缩直到达到目标
-}
-
-/**
- * 压缩图片文件
- * @param file 原始图片文件
- * @param options 压缩选项
- * @returns 压缩后的文件
- */
-export async function compressImage(
-  file: File,
-  options: CompressionOptions = {}
-): Promise<File> {
-  if (file.type.toLowerCase() === GIF_IMAGE_MIME_TYPE) {
-    return file;
-  }
-
+async function encodeImage(
+  source: string,
+  options: Base64CompressionOptions
+): Promise<Blob> {
   const {
-    maxWidth = 1920,
-    maxHeight = 1920,
-    quality = 0.8,
-    mimeType = APP_IMAGE_MIME_TYPE,
-    maxSizeMB,
+    maxSizeMB = 0.1,
+    maxWidthOrHeight = 1200,
+    initialQuality = 0.8,
+    fileType = APP_IMAGE_MIME_TYPE,
   } = options;
-
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-
-    reader.onload = e => {
-      const img = new Image();
-
-      img.onload = async () => {
-        // 计算压缩后的尺寸
-        let { width, height } = img;
-
-        if (width > maxWidth || height > maxHeight) {
-          const ratio = Math.min(maxWidth / width, maxHeight / height);
-          width = Math.round(width * ratio);
-          height = Math.round(height * ratio);
-        }
-
-        // 创建 canvas 进行压缩
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-
-        const ctx = canvas.getContext('2d');
-        if (!ctx) {
-          reject(new Error('无法创建 canvas context'));
-          return;
-        }
-
-        // 设置高质量渲染
-        ctx.imageSmoothingEnabled = true;
-        ctx.imageSmoothingQuality = 'high';
-
-        // 绘制图片
-        ctx.drawImage(img, 0, 0, width, height);
-
-        const createBlob = (type: string, outputQuality: number) =>
-          new Promise<Blob>((resolveBlob, rejectBlob) => {
-            canvas.toBlob(
-              blob =>
-                blob
-                  ? resolveBlob(blob)
-                  : rejectBlob(new Error('图片压缩失败')),
-              type,
-              outputQuality
-            );
-          });
-
-        const compressOnce = async (outputQuality: number) => {
-          const blob = await createBlob(mimeType, outputQuality);
-          const actualType = blob.type || 'image/png';
-
-          if (actualType === mimeType || mimeType === 'image/png') {
-            return blob;
-          }
-
-          const pixels = ctx.getImageData(0, 0, width, height).data;
-          const hasTransparency = pixels.some(
-            (channel, index) => index % 4 === 3 && channel < 255
-          );
-          return createBlob(
-            hasTransparency ? 'image/png' : JPEG_IMAGE_MIME_TYPE,
-            outputQuality
-          );
-        };
-
-        try {
-          const targetSize = maxSizeMB ? maxSizeMB * 1024 * 1024 : 0;
-          let currentQuality = quality;
-          let blob = await compressOnce(currentQuality);
-
-          while (
-            targetSize > 0 &&
-            blob.size > targetSize &&
-            blob.type !== 'image/png' &&
-            currentQuality > 0.1
-          ) {
-            currentQuality = Math.max(0.1, currentQuality - 0.1);
-            blob = await compressOnce(currentQuality);
-          }
-
-          const actualType = blob.type || mimeType;
-          const compressedFile = new File(
-            [blob],
-            getImageFileNameForMimeType(file.name, actualType),
-            {
-              type: actualType,
-              lastModified: Date.now(),
-            }
-          );
-
-          console.log(
-            `📦 图片压缩完成: ${(file.size / 1024).toFixed(1)}KB → ${(compressedFile.size / 1024).toFixed(1)}KB (${Math.round((1 - compressedFile.size / file.size) * 100)}% 压缩率${maxSizeMB ? `, 质量: ${Math.round(currentQuality * 100)}%` : ''})`
-          );
-
-          resolve(compressedFile);
-        } catch (error) {
-          reject(error);
-        }
-      };
-
-      img.onerror = () => {
-        reject(new Error('图片加载失败'));
-      };
-
-      img.src = e.target?.result as string;
-    };
-
-    reader.onerror = () => {
-      reject(new Error('文件读取失败'));
-    };
-
-    reader.readAsDataURL(file);
+  const target = Math.floor(maxSizeMB * 1024 * 1024);
+  if (
+    !Number.isFinite(target) ||
+    target < 1 ||
+    !Number.isFinite(maxWidthOrHeight) ||
+    maxWidthOrHeight < 1
+  ) {
+    throw new Error('图片压缩尺寸或大小上限无效');
+  }
+  const image = new Image();
+  await new Promise<void>((resolve, reject) => {
+    image.onload = () => resolve();
+    image.onerror = () => reject(new Error('图片加载失败'));
+    image.src = source;
   });
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('无法创建 canvas context');
+  const encode = (type: string, quality: number) =>
+    new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob(
+        blob =>
+          blob && blob.size > 0
+            ? resolve(blob)
+            : reject(new Error('图片压缩失败')),
+        type,
+        quality
+      );
+    });
+
+  if (!image.width || !image.height) throw new Error('图片尺寸无效');
+  const scale = Math.min(
+    1,
+    maxWidthOrHeight / Math.max(image.width, image.height)
+  );
+  let width = Math.max(1, Math.round(image.width * scale));
+  let height = Math.max(1, Math.round(image.height * scale));
+  let type = fileType;
+  let quality = initialQuality;
+  for (;;) {
+    canvas.width = width;
+    canvas.height = height;
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(image, 0, 0, width, height);
+    let blob = await encode(type, quality);
+    if (blob.type !== type) {
+      const pixels = ctx.getImageData(0, 0, width, height).data;
+      type = pixels.some((channel, index) => index % 4 === 3 && channel < 255)
+        ? 'image/png'
+        : JPEG_IMAGE_MIME_TYPE;
+      blob = await encode(type, quality);
+    }
+    while (blob.size > target && blob.type !== 'image/png' && quality > 0.4) {
+      quality = Math.max(0.4, quality - 0.1);
+      blob = await encode(type, quality);
+    }
+    if (blob.size <= target) return blob;
+    if (width === 1 && height === 1) throw new Error('图片无法压缩到保存上限');
+    const ratio = Math.min(0.8, Math.sqrt(target / blob.size));
+    width = Math.max(1, Math.floor(width * ratio));
+    height = Math.max(1, Math.floor(height * ratio));
+  }
 }
 
 export interface Base64CompressionOptions {
@@ -176,27 +95,7 @@ export async function compressBase64Image(
   base64: string,
   options: Base64CompressionOptions = {}
 ): Promise<string> {
-  if (base64.startsWith(`data:${GIF_IMAGE_MIME_TYPE}`)) {
-    return base64;
-  }
-
-  const {
-    maxSizeMB = 0.1,
-    maxWidthOrHeight = 1200,
-    initialQuality = 0.8,
-    fileType = APP_IMAGE_MIME_TYPE,
-  } = options;
-
-  const sourceFile = base64ToFile(base64, 'image');
-  const compressedFile = await compressImage(sourceFile, {
-    maxWidth: maxWidthOrHeight,
-    maxHeight: maxWidthOrHeight,
-    quality: initialQuality,
-    mimeType: fileType,
-    maxSizeMB,
-  });
-
-  return readFileAsDataUrl(compressedFile);
+  return readFileAsDataUrl(await encodeImage(base64, options));
 }
 
 export function readFileAsDataUrl(file: Blob): Promise<string> {
@@ -215,138 +114,17 @@ export function readFileAsDataUrl(file: Blob): Promise<string> {
   });
 }
 
-function base64ToFile(base64: string, fileName: string): File {
-  const [header = '', payload = ''] = base64.split(',');
-  const mime = header.match(/:(.*?);/)?.[1] || JPEG_IMAGE_MIME_TYPE;
-  const binary = atob(payload);
-  const bytes = new Uint8Array(binary.length);
-
-  for (let index = 0; index < binary.length; index += 1) {
-    bytes[index] = binary.charCodeAt(index);
-  }
-
-  return new File([bytes], `${fileName}.${mime.split('/')[1] || 'jpg'}`, {
-    type: mime,
-  });
-}
-
-function startsWithBytes(
-  bytes: Uint8Array,
-  signature: number[],
-  offset = 0
-): boolean {
-  if (bytes.length < offset + signature.length) return false;
-  return signature.every((byte, index) => bytes[offset + index] === byte);
-}
-
-function readAscii(bytes: Uint8Array, start: number, end: number): string {
-  return String.fromCharCode(...bytes.slice(start, end));
-}
-
-function detectImageMimeTypeFromBytes(bytes: Uint8Array): string | null {
-  if (startsWithBytes(bytes, [0xff, 0xd8, 0xff])) {
-    return JPEG_IMAGE_MIME_TYPE;
-  }
-
-  if (
-    startsWithBytes(bytes, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
-  ) {
-    return 'image/png';
-  }
-
-  if (
-    startsWithBytes(bytes, [0x52, 0x49, 0x46, 0x46]) &&
-    startsWithBytes(bytes, [0x57, 0x45, 0x42, 0x50], 8)
-  ) {
-    return 'image/webp';
-  }
-
-  if (
-    startsWithBytes(bytes, [0x47, 0x49, 0x46, 0x38, 0x37, 0x61]) ||
-    startsWithBytes(bytes, [0x47, 0x49, 0x46, 0x38, 0x39, 0x61])
-  ) {
-    return GIF_IMAGE_MIME_TYPE;
-  }
-
-  if (bytes.length >= 12 && readAscii(bytes, 4, 8) === 'ftyp') {
-    const boxSize = new DataView(
-      bytes.buffer,
-      bytes.byteOffset,
-      bytes.byteLength
-    ).getUint32(0);
-    const brandEnd = Math.min(
-      bytes.length,
-      boxSize >= 16 ? boxSize : bytes.length,
-      64
-    );
-    const brands = new Set<string>();
-
-    for (let offset = 8; offset + 4 <= brandEnd; offset += 4) {
-      const brand = readAscii(bytes, offset, offset + 4);
-      if (/^[\x20-\x7e]{4}$/.test(brand)) {
-        brands.add(brand);
-      }
-    }
-
-    if (['avif', 'avis'].some(brand => brands.has(brand))) {
-      return 'image/avif';
-    }
-
-    if (
-      ['heic', 'heix', 'hevc', 'hevx', 'heis', 'heim'].some(brand =>
-        brands.has(brand)
-      )
-    ) {
-      return 'image/heic';
-    }
-
-    if (['mif1', 'msf1'].some(brand => brands.has(brand))) {
-      return 'image/heif';
-    }
-  }
-
-  return null;
-}
-
-async function detectImageMimeTypeFromFile(file: File): Promise<string | null> {
-  const bytes = new Uint8Array(await file.slice(0, 64).arrayBuffer());
-  return detectImageMimeTypeFromBytes(bytes);
-}
-
-function getImageFileNameForMimeType(fileName: string, mimeType: string) {
-  const extension =
-    mimeType === JPEG_IMAGE_MIME_TYPE ? 'jpg' : mimeType.split('/')[1];
-  return /\.[^/.]+$/.test(fileName)
-    ? fileName.replace(/\.[^/.]+$/, `.${extension}`)
-    : `${fileName}.${extension}`;
-}
-
-function withDetectedImageMimeType(file: File, mimeType: string): File {
-  if (file.type === mimeType) return file;
-
-  return new File([file], getImageFileNameForMimeType(file.name, mimeType), {
-    type: mimeType,
-    lastModified: file.lastModified,
-  });
-}
-
 /**
  * 智能压缩：根据文件大小自动选择压缩策略
  * @param file 原始图片文件
  * @returns 压缩后的文件
  */
 export async function smartCompress(file: File): Promise<File> {
-  const detectedMimeType = await detectImageMimeTypeFromFile(file);
-  const sourceFile = detectedMimeType
-    ? withDetectedImageMimeType(file, detectedMimeType)
-    : file;
+  const sourceFile = await readRecognitionImageFile(file);
   const fileSizeKB = file.size / 1024;
 
   // 小图或文字截图很容易被过度压缩后影响 OCR，保留原图更稳
-  if (
-    file.size <= 300 * 1024 &&
-    (!detectedMimeType || LOSSLESS_METADATA_MIME_TYPES.has(detectedMimeType))
-  ) {
+  if (file.size <= 300 * 1024) {
     console.log(
       `📸 原始图片大小: ${fileSizeKB.toFixed(1)}KB，已足够小，跳过压缩以保留文字细节`
     );
@@ -359,11 +137,15 @@ export async function smartCompress(file: File): Promise<File> {
   );
 
   // 对大图压到更温和的体积，避免小字和细线信息损失过多
-  return compressImage(sourceFile, {
-    maxWidth: 1600,
-    maxHeight: 1600,
-    quality: 0.82,
-    mimeType: JPEG_IMAGE_MIME_TYPE,
+  const compressed = await encodeImage(await readFileAsDataUrl(sourceFile), {
+    maxWidthOrHeight: 1600,
+    initialQuality: 0.82,
+    fileType: JPEG_IMAGE_MIME_TYPE,
     maxSizeMB: 0.6,
   });
+  return new File(
+    [compressed],
+    getImageFileNameForMimeType(file.name, compressed.type),
+    { type: compressed.type }
+  );
 }

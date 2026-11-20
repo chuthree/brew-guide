@@ -204,7 +204,9 @@ describe('normalizeRecognizedBeanPayload', () => {
     );
 
     const result = await recognizeBeanImage(
-      new File(['image'], 'bean.jpg', { type: 'image/jpeg' }),
+      new File([new Uint8Array([0xff, 0xd8, 0xff])], 'bean.jpg', {
+        type: 'image/jpeg',
+      }),
       undefined,
       {
         enabled: true,

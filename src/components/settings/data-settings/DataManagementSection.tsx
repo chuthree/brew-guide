@@ -380,7 +380,11 @@ export const DataManagementSection: React.FC<DataManagementSectionProps> = ({
       {showImageOperations && (
         <SettingSection
           title="数据操作"
-          footer={status.scope === 'image' ? statusMessage : undefined}
+          footer={
+            status.scope === 'image'
+              ? statusMessage
+              : '补压超出保存上限的图片，动图将保存为静态图。'
+          }
         >
           <SettingRow
             label={isRecompressing ? '补压中…' : '图片补压'}

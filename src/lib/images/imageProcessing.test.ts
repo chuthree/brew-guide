@@ -51,7 +51,7 @@ describe('processImageFile', () => {
     });
   });
 
-  it('keeps GIF images as original data URLs', async () => {
+  it('rejects an undecodable GIF before it can be saved', async () => {
     const gifDataUrl = 'data:image/gif;base64,R0lGODlhAQABAAAAACw=';
 
     const SuccessfulFileReader = class {
@@ -65,11 +65,22 @@ describe('processImageFile', () => {
     } as unknown as typeof FileReader;
 
     vi.stubGlobal('FileReader', SuccessfulFileReader);
+    vi.stubGlobal(
+      'Image',
+      class {
+        onerror?: () => void;
+        set src(_value: string) {
+          this.onerror?.();
+        }
+      }
+    );
 
     const file = new File(['gif-bytes'], 'loop.gif', {
       type: 'image/gif',
     });
 
-    await expect(processImageFile(file)).resolves.toBe(gifDataUrl);
+    await expect(processImageFile(file)).rejects.toMatchObject({
+      code: 'decode-failed',
+    });
   });
 });
