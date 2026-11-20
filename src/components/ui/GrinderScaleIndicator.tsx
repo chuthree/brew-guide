@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useGrinderStore } from '@/lib/stores/grinderStore';
-import { useInputFocus } from '@/lib/hooks/useInputFocus';
+import { useLongPress } from '@/lib/hooks/useLongPress';
 import hapticsUtils from '@/lib/ui/haptics';
 import GrindSizeDrawer from './GrindSizeDrawer';
+import type { WheelPointer } from './GrinderScaleWheel';
 
 interface GrinderScaleIndicatorProps {
   /** 是否显示 */
@@ -51,7 +52,7 @@ const saveSelectedGrinderId = (grinderId: string | null) => {
 
 /**
  * 磨豆机刻度指示器
- * - 点击：打开研磨度抽屉
+ * 点击打开轮盘，长按可接着拖动。
  */
 const GrinderScaleIndicator: React.FC<GrinderScaleIndicatorProps> = ({
   visible = true,
@@ -65,7 +66,13 @@ const GrinderScaleIndicator: React.FC<GrinderScaleIndicatorProps> = ({
         : localStorage.getItem(SELECTED_GRINDER_STORAGE_KEY)
   );
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const { inputRef, activateAndFocus } = useInputFocus<HTMLInputElement>();
+  const [quickSession, setQuickSession] = useState(0);
+  const [openingPointer, setOpeningPointer] = useState<WheelPointer | null>(
+    null
+  );
+  const pressStart = useRef<(WheelPointer & { clientY: number }) | null>(null);
+  const longPressStarted = useRef(false);
+  const movedBeforeOpening = useRef(false);
 
   // 初始化 store
   useEffect(() => {
@@ -74,10 +81,14 @@ const GrinderScaleIndicator: React.FC<GrinderScaleIndicatorProps> = ({
 
   // 清理已经不存在的持久化选择，默认显示仍回退到第一台磨豆机
   useEffect(() => {
-    if (selectedGrinderId && !grinders.find(g => g.id === selectedGrinderId)) {
+    if (
+      initialized &&
+      selectedGrinderId &&
+      !grinders.some(grinder => grinder.id === selectedGrinderId)
+    ) {
       saveSelectedGrinderId(null);
     }
-  }, [grinders, selectedGrinderId]);
+  }, [grinders, initialized, selectedGrinderId]);
 
   // 当前选中的磨豆机
   const selectedGrinder = useMemo(
@@ -85,10 +96,25 @@ const GrinderScaleIndicator: React.FC<GrinderScaleIndicatorProps> = ({
     [grinders, selectedGrinderId]
   );
 
-  // 处理按钮点击
-  const handleClick = () => {
+  const openWheel = (pointer: WheelPointer | null = null) => {
     if (hapticFeedback) hapticsUtils.light();
-    activateAndFocus(() => setIsDrawerOpen(true));
+    setOpeningPointer(pointer);
+    setQuickSession(session => session + 1);
+    setIsDrawerOpen(true);
+  };
+
+  const pressHandlers = useLongPress({
+    onClick: () => openWheel(),
+    onLongPress: () => {
+      longPressStarted.current = true;
+      openWheel(pressStart.current);
+    },
+  });
+
+  const endPress = () => {
+    pressHandlers.onPointerUp();
+    pressStart.current = null;
+    setOpeningPointer(null);
   };
 
   // 关闭抽屉
@@ -111,8 +137,50 @@ const GrinderScaleIndicator: React.FC<GrinderScaleIndicatorProps> = ({
     <>
       {/* 刻度指示按钮 */}
       <motion.button
-        onClick={handleClick}
-        className={`${BUTTON_BASE_CLASS} flex h-12.5 w-12.5 cursor-pointer items-center justify-center font-medium text-neutral-800 dark:text-neutral-100`}
+        type="button"
+        aria-label={`${selectedGrinder.name} 研磨刻度 ${scaleText}`}
+        aria-haspopup="dialog"
+        onPointerDown={event => {
+          if (!event.isPrimary || event.button !== 0) return;
+          pressStart.current = {
+            pointerId: event.pointerId,
+            clientX: event.clientX,
+            clientY: event.clientY,
+          };
+          movedBeforeOpening.current = false;
+          longPressStarted.current = false;
+          event.currentTarget.setPointerCapture(event.pointerId);
+          pressHandlers.onPointerDown(event);
+        }}
+        onPointerMove={event => {
+          const start = pressStart.current;
+          if (start?.pointerId !== event.pointerId || longPressStarted.current)
+            return;
+          if (
+            Math.hypot(
+              event.clientX - start.clientX,
+              event.clientY - start.clientY
+            ) > 8
+          ) {
+            movedBeforeOpening.current = true;
+            endPress();
+          }
+        }}
+        onPointerUp={event => {
+          if (event.isPrimary) endPress();
+        }}
+        onPointerCancel={event => {
+          if (event.isPrimary) endPress();
+        }}
+        onLostPointerCapture={event => {
+          if (event.pointerId === pressStart.current?.pointerId) endPress();
+        }}
+        onContextMenu={event => event.preventDefault()}
+        onClick={event => {
+          if (event.detail === 0) openWheel();
+          else if (!movedBeforeOpening.current) pressHandlers.onClick(event);
+        }}
+        className={`${BUTTON_BASE_CLASS} flex h-12.5 w-12.5 cursor-pointer touch-none items-center justify-center font-medium text-neutral-800 select-none dark:text-neutral-100`}
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         transition={SPRING_TRANSITION}
@@ -130,7 +198,9 @@ const GrinderScaleIndicator: React.FC<GrinderScaleIndicatorProps> = ({
         onClose={handleCloseDrawer}
         initialGrinderId={selectedGrinder.id}
         onGrinderChange={handleGrinderChange}
-        inputRef={inputRef}
+        quickSession={quickSession}
+        openingPointer={openingPointer}
+        hapticFeedback={hapticFeedback}
       />
     </>
   );

@@ -336,11 +336,12 @@ describe('SQLite entity row codecs', () => {
     ).toEqual({ equipmentId: 'empty', methods: [] });
   });
 
-  it('round-trips Grinder float history, array order and unknown fields', () => {
+  it('round-trips Grinder history, quick adjustment and unknown fields', () => {
     const grinder: Grinder = {
       id: 'grinder-1',
       name: '手摇磨豆机',
       currentGrindSize: '中细',
+      quickAdjust: { step: '0.0.2', min: '1.0.0', max: '2.0.0' },
       grindSizeHistory: [
         { grindSize: '中粗', timestamp: 100, coffeeBeanName: 'Guji' },
         { grindSize: '中细', timestamp: 200, method: 'V60' },

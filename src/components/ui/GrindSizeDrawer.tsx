@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import ActionDrawer from '@/components/common/ui/ActionDrawer';
 import { useGrinderStore, type Grinder } from '@/lib/stores/grinderStore';
 import { ChevronDown } from 'lucide-react';
@@ -15,6 +15,8 @@ import {
   type RoasterSettings,
 } from '@/lib/utils/beanVarietyUtils';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
+import type { GrinderQuickAdjust } from '@/lib/data/models';
+import GrinderScaleWheel, { type WheelPointer } from './GrinderScaleWheel';
 
 interface GrindSizeDrawerProps {
   /** 是否打开抽屉 */
@@ -25,11 +27,9 @@ interface GrindSizeDrawerProps {
   initialGrinderId?: string;
   /** 磨豆机切换回调 */
   onGrinderChange?: (grinderId: string) => void;
-  /**
-   * 研磨度输入框的 ref
-   * 由触发方（如 GrinderScaleIndicator）持有，以便在点击手势内同步聚焦
-   */
-  inputRef?: React.RefObject<HTMLInputElement | null>;
+  quickSession: number;
+  openingPointer: WheelPointer | null;
+  hapticFeedback: boolean;
 }
 
 /**
@@ -45,9 +45,11 @@ const GrindSizeDrawer: React.FC<GrindSizeDrawerProps> = ({
   onClose,
   initialGrinderId,
   onGrinderChange,
-  inputRef: externalInputRef,
+  quickSession,
+  openingPointer,
+  hapticFeedback,
 }) => {
-  const { grinders, updateGrinder } = useGrinderStore();
+  const { grinders, saveGrinderScale } = useGrinderStore();
   const { equipments: customEquipments } = useCustomEquipmentStore();
   const { methodsByEquipment } = useCustomMethodStore();
   const roasterFieldEnabled = useSettingsStore(
@@ -59,17 +61,20 @@ const GrindSizeDrawer: React.FC<GrindSizeDrawerProps> = ({
   const [selectedGrinderId, setSelectedGrinderId] = useState<string | null>(
     initialGrinderId || null
   );
-  const [editValue, setEditValue] = useState('');
   const [showGrinderSelector, setShowGrinderSelector] = useState(false);
-  const localInputRef = useRef<HTMLInputElement>(null);
-  const inputRef = externalInputRef ?? localInputRef;
+  const [saving, setSaving] = useState(false);
+  const [saveFailed, setSaveFailed] = useState(false);
+  const saveInProgress = useRef(false);
   const roasterSettings: RoasterSettings = {
     roasterFieldEnabled,
     roasterSeparator,
   };
 
   // 选中的磨豆机
-  const selectedGrinder = grinders.find(g => g.id === selectedGrinderId);
+  const selectedGrinder =
+    grinders.find(g => g.id === selectedGrinderId) ??
+    grinders.find(g => g.id === initialGrinderId) ??
+    grinders[0];
 
   /**
    * 获取方案名称（支持系统预设和自定义方案）
@@ -110,145 +115,123 @@ const GrindSizeDrawer: React.FC<GrindSizeDrawerProps> = ({
     [methodsByEquipment]
   );
 
-  // 初始化选中的磨豆机
-  useEffect(() => {
-    if (!selectedGrinderId && grinders.length > 0) {
-      setSelectedGrinderId(grinders[0].id);
-    }
-  }, [grinders, selectedGrinderId]);
-
-  // 同步编辑值
-  useEffect(() => {
-    if (selectedGrinder) {
-      setEditValue(selectedGrinder.currentGrindSize || '');
-    }
-  }, [selectedGrinder]);
+  const handleCancel = () => {
+    setSaveFailed(false);
+    setShowGrinderSelector(false);
+    onClose();
+  };
 
   // 保存研磨度
-  const handleSave = useCallback(async () => {
-    if (!selectedGrinder || !editValue.trim()) return;
+  const handleSave = async (value: string, settings?: GrinderQuickAdjust) => {
+    const scale = value.trim();
+    if (!selectedGrinder || !scale || saveInProgress.current) return;
 
-    const newGrindSize = editValue.trim();
-    const oldGrindSize = selectedGrinder.currentGrindSize;
-
-    // 如果研磨度没有变化，直接关闭
-    if (newGrindSize === oldGrindSize) {
-      onClose();
-      return;
+    saveInProgress.current = true;
+    setSaving(true);
+    setSaveFailed(false);
+    try {
+      await saveGrinderScale(selectedGrinder.id, scale, settings);
+      if (hapticFeedback) hapticsUtils.light();
+      handleCancel();
+    } catch {
+      setSaveFailed(true);
+    } finally {
+      saveInProgress.current = false;
+      setSaving(false);
     }
-
-    // 更新历史记录
-    const history = selectedGrinder.grindSizeHistory || [];
-    const newHistory = [
-      { grindSize: newGrindSize, timestamp: Date.now() },
-      ...history.filter(h => h.grindSize !== newGrindSize), // 去重
-    ].slice(0, 3); // 最多保留3条
-
-    await updateGrinder(selectedGrinder.id, {
-      currentGrindSize: newGrindSize,
-      grindSizeHistory: newHistory,
-    });
-
-    hapticsUtils.light();
-    onClose();
-  }, [selectedGrinder, editValue, updateGrinder, onClose]);
+  };
 
   // 切换磨豆机
   const handleSelectGrinder = useCallback(
     (grinder: Grinder) => {
       setSelectedGrinderId(grinder.id);
       setShowGrinderSelector(false);
+      setSaveFailed(false);
       onGrinderChange?.(grinder.id);
-      hapticsUtils.light();
+      if (hapticFeedback) hapticsUtils.light();
     },
-    [onGrinderChange]
-  );
-
-  // 处理输入键盘事件
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key === 'Enter') {
-        handleSave();
-      }
-    },
-    [handleSave]
+    [hapticFeedback, onGrinderChange]
   );
 
   if (!selectedGrinder) return null;
 
   return (
-    <ActionDrawer isOpen={isOpen} onClose={onClose} repositionInputs={false}>
-      <ActionDrawer.Content>
-        {/* 磨豆机选择器 - 左上角紧凑布局 */}
-        <div>
-          <div className="flex items-start justify-between">
-            {/* 磨豆机名称按钮 */}
-            {grinders.length > 1 ? (
-              <button
-                type="button"
-                onClick={() => setShowGrinderSelector(!showGrinderSelector)}
-                className="inline-flex items-center gap-1 rounded-full bg-neutral-100 px-2.5 py-1.5 text-xs font-medium text-neutral-700 transition-colors active:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-300 dark:active:bg-neutral-700"
-              >
-                <span>{selectedGrinder.name}</span>
-                <ChevronDown
-                  className={`h-3.5 w-3.5 transition-transform ${
-                    showGrinderSelector ? 'rotate-180' : ''
-                  }`}
-                />
-              </button>
-            ) : (
-              <div className="inline-flex items-center rounded-full bg-neutral-100 px-2.5 py-1.5 text-xs font-medium text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300">
-                <span>{selectedGrinder.name}</span>
+    <ActionDrawer
+      title="研磨刻度"
+      isOpen={isOpen}
+      onClose={handleCancel}
+      autoFocus={false}
+      dismissible={!saving}
+      repositionInputs={false}
+    >
+      {/* 磨豆机选择器 - 左上角紧凑布局 */}
+      <div>
+        <div className="flex items-start justify-between">
+          {/* 磨豆机名称按钮 */}
+          {grinders.length > 1 ? (
+            <button
+              type="button"
+              disabled={saving}
+              onClick={() => setShowGrinderSelector(!showGrinderSelector)}
+              className="inline-flex items-center gap-1 rounded-full bg-neutral-100 px-2.5 py-1.5 text-xs font-medium text-neutral-700 transition-colors active:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-300 dark:active:bg-neutral-700"
+            >
+              <span>{selectedGrinder.name}</span>
+              <ChevronDown
+                className={`h-3.5 w-3.5 transition-transform ${
+                  showGrinderSelector ? 'rotate-180' : ''
+                }`}
+              />
+            </button>
+          ) : (
+            <div className="inline-flex items-center rounded-full bg-neutral-100 px-2.5 py-1.5 text-xs font-medium text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300">
+              <span>{selectedGrinder.name}</span>
+            </div>
+          )}
+        </div>
+
+        {/* 磨豆机列表 */}
+        <AnimatePresence>
+          {showGrinderSelector && grinders.length > 1 && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="overflow-hidden"
+            >
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {grinders
+                  .filter(g => g.id !== selectedGrinder.id)
+                  .map(grinder => (
+                    <button
+                      type="button"
+                      key={grinder.id}
+                      disabled={saving}
+                      onClick={() => handleSelectGrinder(grinder)}
+                      className="inline-flex items-center rounded-full bg-neutral-100 px-2.5 py-1.5 text-xs font-medium text-neutral-700 transition-colors active:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-300 dark:active:bg-neutral-700"
+                    >
+                      {grinder.name}
+                    </button>
+                  ))}
               </div>
-            )}
-          </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
 
-          {/* 磨豆机列表 */}
-          <AnimatePresence>
-            {showGrinderSelector && grinders.length > 1 && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                className="overflow-hidden"
-              >
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  {grinders
-                    .filter(g => g.id !== selectedGrinderId)
-                    .map(grinder => (
-                      <button
-                        type="button"
-                        key={grinder.id}
-                        onClick={() => handleSelectGrinder(grinder)}
-                        className="inline-flex items-center rounded-full bg-neutral-100 px-2.5 py-1.5 text-xs font-medium text-neutral-700 transition-colors active:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-300 dark:active:bg-neutral-700"
-                      >
-                        {grinder.name}
-                      </button>
-                    ))}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-
-        {/* 研磨度输入 */}
-        <div className="my-8 text-center">
-          <input
-            ref={inputRef}
-            type="text"
-            inputMode="decimal"
-            value={editValue}
-            onChange={e => setEditValue(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="输入研磨度"
-            style={{
-              fontFamily: 'ui-rounded, "SF Pro Rounded", system-ui, sans-serif',
-            }}
-            className="w-full bg-transparent text-center text-5xl font-bold text-neutral-800 outline-none placeholder:text-neutral-300 dark:text-neutral-100 dark:placeholder:text-neutral-700"
-          />
-        </div>
-
+      {saveFailed && (
+        <p role="alert" className="mt-3 text-sm text-red-600 dark:text-red-400">
+          刻度保存失败，请重试。
+        </p>
+      )}
+      <GrinderScaleWheel
+        key={`${selectedGrinder.id}:${quickSession}`}
+        grinder={selectedGrinder}
+        openingPointer={openingPointer}
+        saving={saving}
+        onCancel={handleCancel}
+        onSave={handleSave}
+      >
         {/* 最近使用 */}
         {selectedGrinder.grindSizeHistory &&
           selectedGrinder.grindSizeHistory.length > 0 && (
@@ -315,13 +298,7 @@ const GrindSizeDrawer: React.FC<GrindSizeDrawerProps> = ({
               </div>
             </div>
           )}
-      </ActionDrawer.Content>
-
-      <ActionDrawer.Actions>
-        <ActionDrawer.SecondaryButton onClick={handleSave}>
-          关闭
-        </ActionDrawer.SecondaryButton>
-      </ActionDrawer.Actions>
+      </GrinderScaleWheel>
     </ActionDrawer>
   );
 };
