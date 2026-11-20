@@ -32,13 +32,20 @@ export interface GrindSizeHistory {
   coffeeBeanRoaster?: string; // 烘焙商名称
 }
 
-/**
- * 磨豆机类型定义
- */
+/** 磨豆机轮盘使用的步长和范围，保留原刻度的数字格式。 */
+export interface GrinderQuickAdjust {
+  format?: string;
+  step?: string;
+  min?: string;
+  max?: string;
+}
+
+/** 磨豆机类型定义 */
 export interface Grinder {
   id: string;
   name: string;
   currentGrindSize?: string;
+  quickAdjust?: GrinderQuickAdjust;
   /** 研磨度历史记录（最多保留最近10条） */
   grindSizeHistory?: GrindSizeHistory[];
 }

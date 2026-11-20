@@ -13,7 +13,7 @@ import {
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { grinderRepository } from '@/lib/data/repositories';
-import type { Grinder } from '@/lib/data/models';
+import type { Grinder, GrinderQuickAdjust } from '@/lib/data/models';
 import { nanoid } from 'nanoid';
 import {
   applyBrewGrinderScale,
@@ -48,6 +48,11 @@ interface GrinderState {
   // CRUD 操作
   addGrinder: (grinder: Omit<Grinder, 'id'>) => Promise<Grinder>;
   updateGrinder: (id: string, updates: Partial<Grinder>) => Promise<void>;
+  saveGrinderScale: (
+    id: string,
+    scale: string,
+    quickAdjust?: GrinderQuickAdjust
+  ) => Promise<void>;
   deleteGrinder: (id: string) => Promise<void>;
 
   // 批量操作
@@ -153,6 +158,32 @@ export const useGrinderStore = create<GrinderState>()(
           }
         },
 
+        saveGrinderScale: async (id, scale, quickAdjust) => {
+          const existing = get().grinders.find(grinder => grinder.id === id);
+          if (!existing) return;
+
+          const updates: Partial<Grinder> = {};
+          if (scale !== existing.currentGrindSize) {
+            const { currentGrindSize, grindSizeHistory } =
+              applyBrewGrinderScale(existing, scale);
+            Object.assign(updates, { currentGrindSize, grindSizeHistory });
+          }
+          if (quickAdjust) {
+            const previous = existing.quickAdjust;
+            if (
+              quickAdjust.format !== previous?.format ||
+              quickAdjust.step !== previous?.step ||
+              quickAdjust.min !== previous?.min ||
+              quickAdjust.max !== previous?.max
+            ) {
+              updates.quickAdjust = quickAdjust;
+            }
+          }
+          if (Object.keys(updates).length > 0) {
+            await callStoreActionInMutation(get().updateGrinder, id, updates);
+          }
+        },
+
         deleteGrinder: async id => {
           try {
             await grinderRepository.delete(id);
@@ -224,6 +255,7 @@ export const useGrinderStore = create<GrinderState>()(
         'initialize',
         'addGrinder',
         'updateGrinder',
+        'saveGrinderScale',
         'deleteGrinder',
         'setGrinders',
         'updateGrinderScaleByName',
