@@ -132,7 +132,7 @@ export const getBottomInfoLine = (
     parts.push(c.roastLevel.trim());
   }
   if (isPrintFieldVisible('notes', config, c)) {
-    parts.push(c.notes.trim());
+    parts.push(c.notes);
   }
   return parts.join(' / ');
 };
@@ -291,69 +291,6 @@ const waitForImages = async (element: HTMLElement): Promise<void> => {
   );
 };
 
-// 将 Tailwind 类名转换为内联样式的映射表
-// 这确保了在所有设备上样式的一致性
-const inlineStylesFromClasses = (element: HTMLElement): void => {
-  const classMap: Record<string, Partial<CSSStyleDeclaration>> = {
-    // Flex 布局
-    flex: { display: 'flex' },
-    'flex-col': { flexDirection: 'column' },
-    'flex-1': { flex: '1 1 0%' },
-    'flex-wrap': { flexWrap: 'wrap' },
-    'content-start': { alignContent: 'flex-start' },
-    'justify-between': { justifyContent: 'space-between' },
-    'h-full': { height: '100%' },
-    'w-full': { width: '100%' },
-    // 间距
-    'space-y-1': { gap: '0.25rem' },
-    'gap-1': { gap: '0.25rem' },
-    'mb-1': { marginBottom: '0.25rem' },
-    'mb-1.5': { marginBottom: '0.375rem' },
-    'mt-1': { marginTop: '0.25rem' },
-    'pb-1': { paddingBottom: '0.25rem' },
-    // 文本
-    'text-center': { textAlign: 'center' },
-    'overflow-hidden': { overflow: 'hidden' },
-    'shrink-0': { flexShrink: '0' },
-  };
-
-  // 递归处理所有子元素
-  const processElement = (el: HTMLElement) => {
-    if (el.classList) {
-      el.classList.forEach(className => {
-        const styles = classMap[className];
-        if (styles) {
-          Object.assign(el.style, styles);
-        }
-      });
-    }
-    // 处理子元素
-    Array.from(el.children).forEach(child => {
-      if (child instanceof HTMLElement) {
-        processElement(child);
-      }
-    });
-  };
-
-  processElement(element);
-};
-
-// 归一化文本节点空白，避免导出时意外换行
-const normalizeTextNodes = (element: HTMLElement): void => {
-  if (typeof document === 'undefined') return;
-  const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
-  let node = walker.nextNode();
-  while (node) {
-    if (node.nodeValue) {
-      const normalized = node.nodeValue.replace(/[\t\r\n]+/g, ' ');
-      if (normalized !== node.nodeValue) {
-        node.nodeValue = normalized;
-      }
-    }
-    node = walker.nextNode();
-  }
-};
-
 // 保存预览为图片
 export async function savePreviewAsImage(
   elementId: string,
@@ -397,10 +334,7 @@ export async function savePreviewAsImage(
   // 3. 克隆元素以避免修改原始 DOM
   const clonedEl = el.cloneNode(true) as HTMLElement;
 
-  // 4. 将 Tailwind 类名转换为内联样式，确保跨设备一致性
-  inlineStylesFromClasses(clonedEl);
-
-  // 5. 复制原始元素的计算样式到克隆元素
+  // 4. 复制原始元素的计算样式到克隆元素
   const computedStyle = window.getComputedStyle(el);
   clonedEl.style.width = computedStyle.width;
   clonedEl.style.height = computedStyle.height;
@@ -410,15 +344,10 @@ export async function savePreviewAsImage(
   clonedEl.style.fontFamily = computedStyle.fontFamily;
   clonedEl.style.lineHeight = computedStyle.lineHeight;
   clonedEl.style.letterSpacing = computedStyle.letterSpacing;
-  clonedEl.style.wordBreak = computedStyle.wordBreak;
-  clonedEl.style.whiteSpace = 'normal';
   clonedEl.style.backgroundColor = '#ffffff';
   clonedEl.style.color = '#000000';
 
-  // 5.1 归一化文本节点空白，避免导出时因隐藏换行导致提前换行
-  normalizeTextNodes(clonedEl);
-
-  // 6. 创建离屏容器
+  // 5. 创建离屏容器
   const offscreenContainer = document.createElement('div');
   offscreenContainer.style.cssText = `
     position: fixed;
@@ -432,7 +361,7 @@ export async function savePreviewAsImage(
   document.body.appendChild(offscreenContainer);
   await waitForImages(clonedEl);
 
-  // 7. 再次等待渲染
+  // 6. 再次等待渲染
   await new Promise(resolve => requestAnimationFrame(resolve));
   await new Promise(resolve => setTimeout(resolve, 50));
 
