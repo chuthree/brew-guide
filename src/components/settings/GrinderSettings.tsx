@@ -6,6 +6,7 @@ import { useSettingsStore } from '@/lib/stores/settingsStore';
 import hapticsUtils from '@/lib/ui/haptics';
 import { useModalHistory, modalHistory } from '@/lib/hooks/useModalHistory';
 import { useGrinderStore } from '@/lib/stores/grinderStore';
+import { showToast } from '@/components/common/feedback/LightToast';
 import {
   SettingPage,
   SettingSection,
@@ -19,6 +20,66 @@ import {
 
 interface GrinderSettingsProps {
   onClose: () => void;
+}
+
+function GrinderField({
+  value,
+  label,
+  placeholder,
+  className = '',
+  onSave,
+}: {
+  value: string;
+  label: string;
+  placeholder: string;
+  className?: string;
+  onSave: (value: string) => Promise<void>;
+}) {
+  const [editing, setEditing] = useState(false);
+
+  if (!editing) {
+    return (
+      <button
+        type="button"
+        aria-label={`修改${label}`}
+        onClick={() => setEditing(true)}
+        className={`truncate-label min-w-0 text-left active:opacity-70 ${className}`}
+      >
+        {value || placeholder}
+      </button>
+    );
+  }
+
+  return (
+    <input
+      type="text"
+      defaultValue={value}
+      aria-label={label}
+      placeholder={placeholder}
+      autoFocus
+      onBlur={async e => {
+        const next = e.currentTarget.value.trim();
+        setEditing(false);
+        if (next === value) return;
+        try {
+          await onSave(next);
+        } catch {
+          showToast({ type: 'error', title: `保存${label}失败` });
+        }
+      }}
+      onKeyDown={e => {
+        if (e.nativeEvent.isComposing || e.nativeEvent.keyCode === 229) return;
+        if (e.key === 'Escape') {
+          e.stopPropagation();
+          e.currentTarget.value = value;
+          setEditing(false);
+        } else if (e.key === 'Enter') {
+          e.currentTarget.blur();
+        }
+      }}
+      className="setting-control min-w-0 flex-1 appearance-none bg-transparent p-0 text-sm leading-5 font-medium"
+    />
+  );
 }
 
 const GrinderSettings: React.FC<GrinderSettingsProps> = ({ onClose }) => {
@@ -67,16 +128,12 @@ const GrinderSettings: React.FC<GrinderSettingsProps> = ({ onClose }) => {
   }, []);
 
   // 编辑状态
-  const [editingId, setEditingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [addingStep, setAddingStep] = useState<'none' | 'name' | 'grindSize'>(
     'none'
   );
   const [newGrinderName, setNewGrinderName] = useState('');
   const [newGrindSize, setNewGrindSize] = useState('');
-
-  // 临时输入值存储
-  const tempGrindSizeRef = useRef<{ [key: string]: string }>({});
 
   // 使用 Zustand store 管理磨豆机数据
   const {
@@ -109,18 +166,6 @@ const GrinderSettings: React.FC<GrinderSettingsProps> = ({ onClose }) => {
     setNewGrindSize('');
     setAddingStep('none');
     settings.hapticFeedback && hapticsUtils.light();
-  };
-
-  const handleGrindSizeBlur = (grinderId: string) => {
-    const newSize = tempGrindSizeRef.current[grinderId];
-    if (newSize !== undefined) {
-      updateGrinder(grinderId, {
-        currentGrindSize: newSize.trim() || undefined,
-      });
-      delete tempGrindSizeRef.current[grinderId];
-      settings.hapticFeedback && hapticsUtils.light();
-    }
-    setEditingId(null);
   };
 
   const handleDeleteGrinder = (grinderId: string) => {
@@ -256,44 +301,29 @@ const GrinderSettings: React.FC<GrinderSettingsProps> = ({ onClose }) => {
           >
             <div className="setting-control flex min-w-0 items-center justify-between gap-3 text-sm leading-5 font-medium text-neutral-900 dark:text-neutral-100">
               <div className="flex min-w-0 flex-1 items-center gap-2">
-                <span className="truncate-label max-w-[50%]">
-                  {grinder.name}
-                </span>
+                <GrinderField
+                  value={grinder.name}
+                  label={`${grinder.name} 的名称`}
+                  placeholder="磨豆机名称"
+                  className="max-w-[50%]"
+                  onSave={async name => {
+                    if (!name) return;
+                    await updateGrinder(grinder.id, { name });
+                    settings.hapticFeedback && hapticsUtils.light();
+                  }}
+                />
                 <span>·</span>
-                {editingId === grinder.id ? (
-                  <input
-                    type="text"
-                    defaultValue={grinder.currentGrindSize || ''}
-                    onChange={e =>
-                      (tempGrindSizeRef.current[grinder.id] = e.target.value)
-                    }
-                    onBlur={() => handleGrindSizeBlur(grinder.id)}
-                    onKeyDown={e => {
-                      if (e.key === 'Enter') e.currentTarget.blur();
-                      if (e.key === 'Escape') {
-                        delete tempGrindSizeRef.current[grinder.id];
-                        setEditingId(null);
-                      }
-                    }}
-                    aria-label={`${grinder.name} 的当前刻度`}
-                    placeholder="当前刻度"
-                    autoFocus
-                    className="setting-control min-w-0 flex-1 appearance-none bg-transparent p-0 text-sm leading-5 font-medium text-neutral-900 placeholder:text-neutral-400 focus:outline-none dark:text-neutral-100 dark:placeholder:text-neutral-500"
-                  />
-                ) : (
-                  <button
-                    type="button"
-                    aria-label={`修改 ${grinder.name} 的当前刻度`}
-                    onClick={() => {
-                      setEditingId(grinder.id);
-                      tempGrindSizeRef.current[grinder.id] =
-                        grinder.currentGrindSize || '';
-                    }}
-                    className="truncate-label min-w-0 text-left active:opacity-70"
-                  >
-                    {grinder.currentGrindSize || '点击设置刻度'}
-                  </button>
-                )}
+                <GrinderField
+                  value={grinder.currentGrindSize || ''}
+                  label={`${grinder.name} 的当前刻度`}
+                  placeholder="点击设置刻度"
+                  onSave={async size => {
+                    await updateGrinder(grinder.id, {
+                      currentGrindSize: size || undefined,
+                    });
+                    settings.hapticFeedback && hapticsUtils.light();
+                  }}
+                />
               </div>
               <button
                 type="button"
