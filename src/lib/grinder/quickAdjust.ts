@@ -19,16 +19,16 @@ function parseScale(text?: string) {
 
 type ParsedScale = NonNullable<ReturnType<typeof parseScale>>;
 
+function hasMatchingFormat(scale: ParsedScale, parsed: ParsedScale) {
+  return (
+    parsed.widths.length === scale.widths.length &&
+    parsed.widths.every((width, index) => width === scale.widths[index])
+  );
+}
+
 function readMatchingTicks(scale: ParsedScale, text: string) {
   const parsed = parseScale(text);
-  if (
-    !parsed ||
-    parsed.widths.length !== scale.widths.length ||
-    !parsed.widths.every((width, index) => width === scale.widths[index])
-  ) {
-    return null;
-  }
-  return parsed.ticks;
+  return parsed && hasMatchingFormat(scale, parsed) ? parsed.ticks : null;
 }
 
 function formatTicks(scale: ParsedScale, ticks: bigint) {
@@ -145,31 +145,107 @@ export function getNextScaleExample(scale: GrinderScale) {
   return formatTicks(scale.base, scale.base.ticks + scale.step);
 }
 
+export interface GrinderScaleForm {
+  value: string;
+  next: string;
+  min: string;
+  max: string;
+}
+
+export type GrinderScaleFormErrors = Partial<
+  Record<keyof GrinderScaleForm, string>
+>;
+
 export function configureGrinderScale(
-  value: string,
-  next: string,
-  min: string,
-  max: string
-) {
-  const base = parseScale(value);
-  if (!base) return null;
+  form: GrinderScaleForm
+):
+  | { scale: GrinderScale; settings: GrinderQuickAdjust }
+  | { errors: GrinderScaleFormErrors } {
+  const start = parseScale(form.value);
+  if (!start) {
+    return {
+      errors: {
+        value: form.value.trim()
+          ? '请输入数字刻度，如 24、5.2 或 1.0.2'
+          : '请输入起始刻度',
+      },
+    };
+  }
 
-  const nextTicks = next ? readMatchingTicks(base, next) : base.ticks + ONE;
-  if (nextTicks === null || nextTicks <= base.ticks) return null;
+  const fields = (['next', 'min', 'max'] as const).map(key => ({
+    key,
+    text: form[key].trim(),
+    parsed: parseScale(form[key]),
+  }));
+  const decimal = start.widths.length <= 1;
+  const startPrecision = start.widths[0] ?? 0;
+  const precision = decimal
+    ? fields.reduce(
+        (width, { parsed }) =>
+          parsed?.widths.length === 1
+            ? Math.max(width, parsed.widths[0])
+            : width,
+        startPrecision
+      )
+    : startPrecision;
+  // A finer bound must not change the implicit step of the starting value.
+  const defaultStep = BigInt(10) ** BigInt(precision - startPrecision);
+  const base = decimal
+    ? {
+        ...start,
+        widths: precision ? [precision] : [],
+        ticks: start.ticks * defaultStep,
+      }
+    : start;
+  const format = formatTicks(base, ZERO);
+  const errors: GrinderScaleFormErrors = {};
+  const ticks: Partial<Record<(typeof fields)[number]['key'], bigint>> = {};
 
-  const delta = nextTicks - base.ticks;
+  if (formatTicks(base, base.ticks).length > 300) {
+    errors.value = '与小数位对齐后的刻度不能超过 300 个字符';
+  }
+  for (const { key, text, parsed } of fields) {
+    if (!text) continue;
+    if (decimal && parsed && parsed.widths.length <= 1) {
+      ticks[key] =
+        parsed.ticks *
+        BigInt(10) ** BigInt(precision - (parsed.widths[0] ?? 0));
+    } else if (parsed && hasMatchingFormat(base, parsed)) {
+      ticks[key] = parsed.ticks;
+    } else {
+      errors[key] = decimal
+        ? '请输入整数或小数'
+        : `请输入与起始刻度相同的分段格式，如 ${format}`;
+      continue;
+    }
+    if (formatTicks(base, ticks[key]).length > 300) {
+      errors[key] = '与小数位对齐后的刻度不能超过 300 个字符';
+    }
+  }
+  if (Object.keys(errors).length > 0) return { errors };
+
+  const { next, min, max } = ticks;
+  if (next !== undefined && next <= base.ticks) {
+    errors.next = '下一格必须大于起始刻度';
+  }
+  if (min !== undefined && max !== undefined && min > max) {
+    errors.max = '最大刻度不能小于最小刻度';
+  } else if (min !== undefined && base.ticks < min) {
+    errors.value = '起始刻度不能小于最小刻度';
+  } else if (max !== undefined && base.ticks > max) {
+    errors.value = '起始刻度不能大于最大刻度';
+  }
+  if (Object.keys(errors).length > 0) return { errors };
+
+  const step = next === undefined ? defaultStep : next - base.ticks;
   const settings: GrinderQuickAdjust = {
-    format: formatTicks(base, ZERO),
-    ...(delta !== ONE && { step: formatTicks(base, delta) }),
-    ...(min && { min }),
-    ...(max && { max }),
+    format,
+    ...(step !== ONE && { step: formatTicks(base, step) }),
+    ...(min !== undefined && { min: formatTicks(base, min) }),
+    ...(max !== undefined && { max: formatTicks(base, max) }),
   };
-  const range = readRange(base, settings);
-  if (
-    !range ||
-    base.ticks < range.min ||
-    (range.max !== null && base.ticks > range.max)
-  )
-    return null;
-  return { scale: makeScale(base, range), settings };
+  return {
+    scale: makeScale(base, { step, min: min ?? ZERO, max: max ?? null }),
+    settings,
+  };
 }
