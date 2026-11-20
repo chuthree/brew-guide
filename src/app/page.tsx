@@ -544,7 +544,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
   // 笔记编辑模态框状态
   const [brewingNoteEditOpen, setBrewingNoteEditOpen] = useState(false);
   const [brewingNoteEditData, setBrewingNoteEditData] =
-    useState<BrewingNoteData | null>(null);
+    useState<BrewingNote | null>(null);
 
   // 笔记详情状态
   const [noteDetailOpen, setNoteDetailOpen] = useState(false);
@@ -1683,47 +1683,17 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     [beanDetailOpen, openNoteDetailInNotes]
   );
 
-  const handleEditRelatedNoteFromBean = useCallback(
-    async (note: BrewingNote) => {
-      try {
-        const { getBrewingNoteById } = await import('@/lib/notes/relatedNotes');
-        const noteForEdit = (await getBrewingNoteById(note.id)) || note;
-
-        const noteToEdit: BrewingNoteData = {
-          id: noteForEdit.id,
-          timestamp: noteForEdit.timestamp,
-          updatedAt: noteForEdit.updatedAt,
-          equipment: noteForEdit.equipment,
-          method: noteForEdit.method,
-          equipmentId: noteForEdit.equipmentId,
-          equipmentName: noteForEdit.equipmentName,
-          methodId: noteForEdit.methodId,
-          methodName: noteForEdit.methodName,
-          params: noteForEdit.params,
-          coffeeBeanInfo: noteForEdit.coffeeBeanInfo || {
-            name: '',
-            roastLevel: '',
-          },
-          image: noteForEdit.image,
-          images: noteForEdit.images,
-          rating: noteForEdit.rating,
-          taste: noteForEdit.taste,
-          notes: noteForEdit.notes,
-          totalTime: noteForEdit.totalTime,
-          beanId: noteForEdit.beanId,
-          source: noteForEdit.source,
-          quickDecrementAmount: noteForEdit.quickDecrementAmount,
-          changeRecord: noteForEdit.changeRecord,
-        };
-
-        setBrewingNoteEditData(noteToEdit);
-        setBrewingNoteEditOpen(true);
-      } catch (error) {
-        showErrorReport({ title: '加载笔记失败', source: 'notes:load', error });
-      }
-    },
-    []
-  );
+  const openNoteEditor = useCallback(async (note: BrewingNote) => {
+    try {
+      const { getBrewingNoteById } = await import('@/lib/notes/relatedNotes');
+      const noteForEdit = note.id ? await getBrewingNoteById(note.id) : note;
+      if (!noteForEdit) throw new Error('记录已删除，无法编辑。');
+      setBrewingNoteEditData(noteForEdit);
+      setBrewingNoteEditOpen(true);
+    } catch (error) {
+      showErrorReport({ title: '加载笔记失败', source: 'notes:load', error });
+    }
+  }, []);
 
   // 点击外部关闭视图下拉菜单
   useEffect(() => {
@@ -3219,7 +3189,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         const { useBrewingNoteStore } =
           await import('@/lib/stores/brewingNoteStore');
 
-        const isNewNote = options?.expectedUpdatedAt === undefined;
+        const isNewNote = !options?.expectedRecord;
 
         // 构建保存数据
         let noteToSave: BrewingNote = note;
@@ -3617,14 +3587,13 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
   React.useEffect(() => {
     const handleBrewingNoteEditOpened = (e: Event) => {
       const customEvent = e as CustomEvent<{
-        data: BrewingNoteData;
+        data: BrewingNote;
       }>;
       if (!customEvent.detail || !customEvent.detail.data) {
         console.error('BrewingNoteEditModal: 打开事件缺少必要数据');
         return;
       }
-      setBrewingNoteEditData(customEvent.detail.data);
-      setBrewingNoteEditOpen(true);
+      void openNoteEditor(customEvent.detail.data);
     };
 
     const handleBrewingNoteEditClosing = () => {
@@ -3650,7 +3619,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         handleBrewingNoteEditClosing
       );
     };
-  }, []);
+  }, [openNoteEditor]);
 
   const renderNavigationBar = (
     key: string,
@@ -4139,7 +4108,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                     onCreateNoteFromBean={handleCreateNoteFromBean}
                     onOpenRelatedNote={handleOpenNoteDetailFromBean}
                     onOpenRelatedBean={handleOpenBeanDetailFromRelated}
-                    onEditRelatedNote={handleEditRelatedNoteFromBean}
+                    onEditRelatedNote={openNoteEditor}
                     mode={
                       beanDetailAddMode
                         ? 'add'
@@ -4314,15 +4283,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                     beanUnitPrice={noteDetailData.beanUnitPrice}
                     beanInfo={noteDetailData.beanInfo}
                     onOpenBeanDetail={handleOpenBeanDetailFromRelated}
-                    onEdit={async note => {
-                      const { getBrewingNoteById } =
-                        await import('@/lib/notes/relatedNotes');
-                      const fullNote = await getBrewingNoteById(note.id);
-                      if (fullNote) {
-                        setBrewingNoteEditData(fullNote as BrewingNoteData);
-                        setBrewingNoteEditOpen(true);
-                      }
-                    }}
+                    onEdit={openNoteEditor}
                     onDelete={async noteId => {
                       try {
                         const { getBrewingNoteById } =
@@ -4657,7 +4618,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         beanDetailAddBeanState={beanDetailAddBeanState}
         onCreateNoteFromBean={handleCreateNoteFromBean}
         onOpenNoteDetailFromBean={handleOpenNoteDetailFromBean}
-        onEditRelatedNoteFromBean={handleEditRelatedNoteFromBean}
+        onEditNote={openNoteEditor}
         // 咖啡豆导入
         showImportBeanForm={showImportBeanForm}
         setShowImportBeanForm={setShowImportBeanForm}

@@ -4,16 +4,78 @@ import {
   formatInventoryAmount,
   parseCoffeeBeanAmount,
 } from '@/lib/coffee-beans/amount';
-import { RecordConflictError } from '@/lib/data/recordConflict';
+import {
+  brewingNoteSnapshot,
+  RecordConflictError,
+} from '@/lib/data/recordConflict';
+import { renamedNoteBeanInfo } from '@/lib/data/roasterRename';
+import { getBrewingNoteImages } from './imageRecords';
 import { nanoid } from 'nanoid';
 import type { AppSettings } from '@/lib/data/models';
 import type { PendingOperation } from '@/lib/supabase/realtime/types';
 
 export interface BrewingNoteSaveOptions {
-  /** Omit for creation/retry with the same ID; editing requires the loaded version. */
-  expectedUpdatedAt?: number;
+  /** Full record as opened in the editor, including its original images. */
+  expectedRecord?: BrewingNote;
   newBean?: CoffeeBean;
   initializeBeanId?: string;
+}
+
+export class BrewingNoteEditConflict extends RecordConflictError {
+  readonly logs: string[];
+
+  constructor(expected: BrewingNote, current?: BrewingNote) {
+    super(current ? undefined : '记录已删除，无法保存。');
+    this.logs = [
+      `expectedUpdatedAt=${expected.updatedAt ?? expected.timestamp}`,
+      `actualUpdatedAt=${current ? (current.updatedAt ?? current.timestamp) : 'missing'}`,
+      `recordExists=${Boolean(current)}`,
+      `source=${expected.source ?? 'brewing'}`,
+    ];
+  }
+}
+
+function reconcileBrewingNoteEdit(
+  next: BrewingNote,
+  expected: BrewingNote,
+  current: BrewingNote | undefined
+): BrewingNote {
+  if (!current) throw new BrewingNoteEditConflict(expected);
+  const conflict = () => new BrewingNoteEditConflict(expected, current);
+  const images = getBrewingNoteImages(current);
+  const originalImages = getBrewingNoteImages(expected);
+  if (
+    images.length !== originalImages.length ||
+    images.some((image, index) => image !== originalImages[index])
+  )
+    throw conflict();
+
+  // A roaster rename can also remove the old roaster prefix from the bean name.
+  const baseline = { ...expected, updatedAt: current.updatedAt };
+  const before = expected.coffeeBeanInfo;
+  const after = current.coffeeBeanInfo;
+  if (before && after?.roaster && before.roaster !== after.roaster) {
+    baseline.coffeeBeanInfo = renamedNoteBeanInfo(before, after.roaster);
+    if (next.beanId === expected.beanId && next.coffeeBeanInfo) {
+      const info = next.coffeeBeanInfo;
+      for (const key of ['name', 'roaster'] as const) {
+        if (before[key] === after[key]) continue;
+        if (info[key] !== before[key] && info[key] !== after[key])
+          throw conflict();
+      }
+      next = {
+        ...next,
+        coffeeBeanInfo: {
+          ...info,
+          name: before.name === after.name ? info.name : after.name,
+          roaster: after.roaster,
+        },
+      };
+    }
+  }
+  if (brewingNoteSnapshot(baseline) !== brewingNoteSnapshot(current))
+    throw conflict();
+  return next;
 }
 
 export interface BrewingNoteInventoryChanges {
@@ -128,17 +190,12 @@ export async function prepareBrewingNoteInventory(
   getBean: (id: string) => Promise<CoffeeBean | undefined>,
   options: BrewingNoteSaveOptions = {}
 ): Promise<BrewingNoteInventoryChanges> {
-  if (next && previous && options.expectedUpdatedAt === undefined) {
+  if (next && previous && !options.expectedRecord) {
     // A create retry keeps its original ID and must never apply stock twice.
     return { note: previous, beans: [], created: false, unchanged: true };
   }
-  if (
-    options.expectedUpdatedAt !== undefined &&
-    (!previous ||
-      (previous.updatedAt ?? previous.timestamp) !== options.expectedUpdatedAt)
-  ) {
-    throw new RecordConflictError();
-  }
+  if (next && options.expectedRecord)
+    next = reconcileBrewingNoteEdit(next, options.expectedRecord, previous);
 
   const now = Date.now();
   let note = next

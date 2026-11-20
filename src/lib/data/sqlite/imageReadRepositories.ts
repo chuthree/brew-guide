@@ -126,7 +126,7 @@ async function reconstructBeanRecords(
   return Array.from(byOwner.values());
 }
 
-async function reconstructNoteRecords(
+export async function reconstructNoteRecords(
   rows: readonly BrewingNoteImageMetadata[],
   fileStore: NativeImageFileStore
 ): Promise<BrewingNoteImageRecord[]> {

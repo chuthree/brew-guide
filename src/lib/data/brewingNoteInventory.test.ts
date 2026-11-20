@@ -186,11 +186,11 @@ describe.each(['dexie', 'sqlite'] as const)(
       ).note!;
       const edited = { ...created, params: { coffee: '20g' } };
       await repositories.brewingNotePersistence.saveWithInventory(edited, {
-        expectedUpdatedAt: created.updatedAt,
+        expectedRecord: created,
       });
       await expect(
         repositories.brewingNotePersistence.saveWithInventory(edited, {
-          expectedUpdatedAt: created.updatedAt,
+          expectedRecord: created,
         })
       ).rejects.toThrow('记录已被其他操作更新');
       expect(
@@ -206,7 +206,7 @@ describe.each(['dexie', 'sqlite'] as const)(
       const moved = (
         await repositories.brewingNotePersistence.saveWithInventory(
           { ...created, beanId: 'other' },
-          { expectedUpdatedAt: created.updatedAt }
+          { expectedRecord: created }
         )
       ).note!;
       expect(
@@ -344,7 +344,7 @@ describe.each(['dexie', 'sqlite'] as const)(
         const edited = (
           await repositories.brewingNotePersistence.saveWithInventory(
             { ...created, params: { coffee: '0.009g' } },
-            { expectedUpdatedAt: created.updatedAt ?? created.timestamp }
+            { expectedRecord: created }
           )
         ).note!;
         expect(
@@ -354,7 +354,7 @@ describe.each(['dexie', 'sqlite'] as const)(
         const moved = (
           await repositories.brewingNotePersistence.saveWithInventory(
             { ...edited, beanId: 'other' },
-            { expectedUpdatedAt: edited.updatedAt ?? edited.timestamp }
+            { expectedRecord: edited }
           )
         ).note!;
         expect(

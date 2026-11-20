@@ -255,9 +255,16 @@ export function createDexieBrewingNotePersistence(
           database.pendingOperations,
         ],
         async () => {
+          let previous = await database.brewingNotes.get(note.id);
+          if (previous && options?.expectedRecord) {
+            previous = mergeBrewingNoteImages(
+              previous,
+              await database.brewingNoteImages.get(note.id)
+            );
+          }
           const changes = await prepareBrewingNoteInventory(
             note,
-            await database.brewingNotes.get(note.id),
+            previous,
             id => database.coffeeBeans.get(id),
             options
           );

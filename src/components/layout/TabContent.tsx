@@ -747,7 +747,6 @@ const TabContent: React.FC<TabContentProps> = ({
     return (
       <div className="pb-safe-bottom absolute inset-0 flex flex-col px-6 pt-6">
         <BrewingNoteForm
-          id={undefined}
           onClose={handleCloseNoteForm}
           onSave={handleSaveNote}
           methodSnapshot={{

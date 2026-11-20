@@ -8,6 +8,7 @@ import React, { useCallback, useId, useMemo, useState } from 'react';
 import { ArrowLeft, CornerDownRight } from 'lucide-react';
 import BrewingNoteForm from './BrewingNoteForm';
 import { BrewingNoteData } from '@/types/app';
+import type { BrewingNote } from '@/lib/core/config';
 import { SettingsOptions } from '@/components/settings/Settings';
 import AdaptiveModal from '@/components/common/ui/AdaptiveModal';
 import { deriveNavigationSettings } from '@/lib/navigation/navigationSettings';
@@ -17,7 +18,7 @@ import type { BrewingNoteSaveOptions } from '@/lib/notes/inventory';
 
 interface BrewingNoteEditModalProps {
   showModal: boolean;
-  initialData: BrewingNoteData | null;
+  initialData: BrewingNote | null;
   onSave: (
     data: BrewingNoteData,
     options?: BrewingNoteSaveOptions
@@ -156,7 +157,7 @@ const BrewingNoteEditModal: React.FC<BrewingNoteEditModalProps> = ({
           <div className="mt-6 min-h-0 flex-1 overflow-y-auto">
             {initialData && (
               <BrewingNoteForm
-                id={initialData.id}
+                expectedRecord={initialData.id ? initialData : undefined}
                 formId={formId}
                 showEquipmentMethodSelector
                 onClose={handleClose}

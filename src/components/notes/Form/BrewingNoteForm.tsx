@@ -4,7 +4,10 @@ import { callStoreActionInMutation } from '@/lib/data/storeMutationBoundary';
 import { nanoid } from 'nanoid';
 import { showToast } from '@/components/common/feedback/LightToast';
 import { showErrorReport } from '@/lib/feedback/errorReport';
-import type { BrewingNoteSaveOptions } from '@/lib/notes/inventory';
+import {
+  BrewingNoteEditConflict,
+  type BrewingNoteSaveOptions,
+} from '@/lib/notes/inventory';
 
 import React, {
   useState,
@@ -43,6 +46,7 @@ import {
 } from 'lucide-react';
 import {
   equipmentList,
+  type BrewingNote,
   type Method,
   type CustomEquipment,
 } from '@/lib/core/config';
@@ -122,7 +126,7 @@ const BREWING_NOTE_FORM_INTENTS = {
 
 interface BrewingNoteFormProps {
   /** Existing record identity, never a DOM-only form identifier. */
-  id?: string;
+  expectedRecord?: BrewingNote;
   formId?: string;
   showEquipmentMethodSelector?: boolean;
   onClose: () => void;
@@ -130,7 +134,7 @@ interface BrewingNoteFormProps {
     data: BrewingNoteData,
     options?: BrewingNoteSaveOptions
   ) => void | Promise<void>;
-  initialData: Partial<BrewingNoteData> & {
+  initialData: Partial<BrewingNote> & {
     coffeeBean?: SelectableCoffeeBean | null;
   };
   initialCoffeeBeanCreatedFromSearch?: boolean;
@@ -198,9 +202,9 @@ const validateNumericInput = (value: string): boolean => {
 };
 
 const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
-  id,
-  formId = id,
-  showEquipmentMethodSelector = !!id,
+  expectedRecord,
+  formId = expectedRecord?.id,
+  showEquipmentMethodSelector = !!expectedRecord,
   onClose: _onClose,
   onSave,
   initialData,
@@ -483,24 +487,12 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         String(input.amount)
       ) ?? []
     );
-  }, [id, initialData.changeRecord?.roastingRecord]);
+  }, [expectedRecord?.id, initialData.changeRecord?.roastingRecord]);
 
   const formRef = useRef<HTMLFormElement>(null);
   const [generatedNoteId] = useState(() => initialData.id || nanoid());
-  const initialNoteVersionRef = useRef({
-    id,
-    updatedAt: initialData.updatedAt ?? initialData.timestamp,
-  });
+  const id = expectedRecord?.id;
   const isSubmittingRef = useRef(false);
-
-  useEffect(() => {
-    if (initialNoteVersionRef.current.id !== id) {
-      initialNoteVersionRef.current = {
-        id,
-        updatedAt: initialData.updatedAt ?? initialData.timestamp,
-      };
-    }
-  }, [id, initialData.updatedAt, initialData.timestamp]);
 
   // 创建显示维度（包含历史维度）
   const displayDimensions = useMemo(() => {
@@ -1357,9 +1349,7 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
         }
 
         await callStoreActionInMutation(onSave, noteData, {
-          expectedUpdatedAt: id
-            ? initialNoteVersionRef.current.updatedAt
-            : undefined,
+          expectedRecord,
           newBean,
           initializeBeanId: initialCoffeeBeanCreatedFromSearch
             ? noteBeanId
@@ -1405,7 +1395,18 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
       // Dialogs and completion callbacks never retain the native mutation lease.
       if (onSaveSuccess) await Promise.resolve(onSaveSuccess());
     } catch (error) {
-      showErrorReport({ title: '保存笔记失败', source: 'notes:save', error });
+      showErrorReport({
+        title: '保存笔记失败',
+        source: 'notes:save',
+        error,
+        logs:
+          error instanceof BrewingNoteEditConflict
+            ? [
+                ...error.logs,
+                `supabaseSyncEnabled=${settings ? Boolean(settings.supabaseSync?.enabled && (!settings.activeSyncType || settings.activeSyncType === 'supabase')) : 'unknown'}`,
+              ]
+            : undefined,
+      });
     } finally {
       isSubmittingRef.current = false;
       onSubmitStateChange?.(false);

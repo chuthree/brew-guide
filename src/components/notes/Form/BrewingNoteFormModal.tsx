@@ -207,7 +207,6 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
   const historyCloseRequestRef = useRef<() => void>(() => {});
   const latestDraftSessionRef = useRef(draftSession);
   const latestHasDraftRecordContentRef = useRef(false);
-  const latestIsCreateModeRef = useRef(!initialNote?.id);
   const shouldAutoPersistRef = useRef(true);
   const didAutoAdvancePrefilledStepRef = useRef(false);
   const didInitializeOpenSessionRef = useRef(false);
@@ -255,7 +254,6 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
     () => hasBrewingNoteDraftRecordContent(draftSession, baselineSession),
     [baselineSession, draftSession]
   );
-  const isCreateMode = !initialNote?.id;
 
   useEffect(() => {
     if (canUseCoffeeBeanModule) return;
@@ -284,8 +282,7 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
   useEffect(() => {
     latestDraftSessionRef.current = draftSession;
     latestHasDraftRecordContentRef.current = hasDraftRecordContent;
-    latestIsCreateModeRef.current = isCreateMode;
-  }, [draftSession, hasDraftRecordContent, isCreateMode]);
+  }, [draftSession, hasDraftRecordContent]);
 
   useEffect(() => {
     if (showForm) {
@@ -318,7 +315,7 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
       baseSession.note.equipment || getInitialDraftEquipmentId()
     );
 
-    if (draftSource === 'blank' && !initialNote?.id) {
+    if (draftSource === 'blank') {
       const savedDraft = loadBrewingNoteDraftSession();
       if (savedDraft) {
         setMethodStepEquipmentId(
@@ -333,13 +330,7 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
     }
 
     setDraftSession(baseSession);
-  }, [
-    buildBaseSession,
-    draftSource,
-    getInitialDraftEquipmentId,
-    initialNote?.id,
-    showForm,
-  ]);
+  }, [buildBaseSession, draftSource, getInitialDraftEquipmentId, showForm]);
 
   useEffect(() => {
     if (
@@ -657,7 +648,6 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
   const persistDraftSnapshot = useCallback(() => {
     if (
       !shouldAutoPersistRef.current ||
-      !latestIsCreateModeRef.current ||
       !latestHasDraftRecordContentRef.current
     ) {
       return;
@@ -811,7 +801,6 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
         label: '冲煮笔记',
         content: (
           <BrewingNoteForm
-            id={initialNote?.id}
             onClose={() => {}}
             onSave={handleSaveNote}
             initialData={draftSession.note}
@@ -838,7 +827,6 @@ const BrewingNoteFormModal: React.FC<BrewingNoteFormModalProps> = ({
       handleEquipmentSelect,
       handleMethodParamsChange,
       handleSaveNote,
-      initialNote?.id,
       onSaveSuccess,
       selectedCoffeeBean,
       methodStepEquipmentId,

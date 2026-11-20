@@ -73,6 +73,20 @@ const renameRoasterConfigs = (
   };
 };
 
+export function renamedNoteBeanInfo(
+  info: NonNullable<BrewingNote['coffeeBeanInfo']>,
+  targetRoaster: string
+) {
+  const roaster = getBeanRoasterName(info);
+  return {
+    ...info,
+    name: roaster
+      ? getBeanNameWithoutRoaster({ name: info.name, roaster })
+      : info.name,
+    roaster: targetRoaster,
+  };
+}
+
 /** Pure record transformation shared by persistence adapters and unit tests. */
 export function transformRoasterRenameRecords(input: {
   beans: CoffeeBean[];
@@ -128,16 +142,7 @@ export function transformRoasterRenameRecords(input: {
 
     const updatedNote: BrewingNote = {
       ...note,
-      coffeeBeanInfo: {
-        ...coffeeBeanInfo,
-        name: noteRoaster
-          ? getBeanNameWithoutRoaster({
-              name: coffeeBeanInfo.name,
-              roaster: noteRoaster,
-            })
-          : coffeeBeanInfo.name,
-        roaster: targetRoaster,
-      },
+      coffeeBeanInfo: renamedNoteBeanInfo(coffeeBeanInfo, targetRoaster),
       updatedAt: now,
     };
 

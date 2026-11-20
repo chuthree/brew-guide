@@ -621,53 +621,9 @@ const BrewingHistory: React.FC<BrewingHistoryProps> = ({
   };
 
   // 处理笔记点击 - 统一使用 BrewingNoteForm 组件
-  const handleNoteClick = async (note: BrewingNote) => {
-    let noteForEdit: BrewingNote;
-
-    try {
-      const { getBrewingNoteById } = await import('@/lib/notes/relatedNotes');
-      noteForEdit = (await getBrewingNoteById(note.id)) || note;
-    } catch (error) {
-      console.error('加载完整笔记失败:', error);
-      showToastMessage('加载笔记失败，请稍后重试', 'error');
-      return;
-    }
-
-    // 准备要编辑的笔记数据（包括快捷扣除记录和普通笔记）
-    const noteToEdit = {
-      id: noteForEdit.id,
-      timestamp: noteForEdit.timestamp,
-      updatedAt: noteForEdit.updatedAt,
-      equipment: noteForEdit.equipment,
-      method: noteForEdit.method,
-      equipmentId: noteForEdit.equipmentId,
-      equipmentName: noteForEdit.equipmentName,
-      methodId: noteForEdit.methodId,
-      methodName: noteForEdit.methodName,
-      params: noteForEdit.params,
-      coffeeBeanInfo: noteForEdit.coffeeBeanInfo || {
-        name: '', // 提供默认值
-        roastLevel: '',
-      },
-      image: noteForEdit.image,
-      images: noteForEdit.images,
-      rating: noteForEdit.rating,
-      taste: noteForEdit.taste,
-      notes: noteForEdit.notes,
-      totalTime: noteForEdit.totalTime,
-      // 确保包含beanId字段，这是咖啡豆容量同步的关键
-      beanId: noteForEdit.beanId,
-      // 保留快捷扣除和容量调整的特殊字段
-      source: noteForEdit.source,
-      quickDecrementAmount: noteForEdit.quickDecrementAmount,
-      changeRecord: noteForEdit.changeRecord,
-    };
-
-    // 通过事件触发模态框打开
+  const handleNoteClick = (note: BrewingNote) => {
     window.dispatchEvent(
-      new CustomEvent('brewingNoteEditOpened', {
-        detail: { data: noteToEdit },
-      })
+      new CustomEvent('brewingNoteEditOpened', { detail: { data: note } })
     );
   };
 

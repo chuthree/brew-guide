@@ -142,7 +142,7 @@ export interface AppModalsProps {
     beanUnitPrice: number;
     beanInfo?: CoffeeBean | null;
   }) => void;
-  onEditRelatedNoteFromBean: (note: BrewingNote) => void;
+  onEditNote: (note: BrewingNote) => void;
 
   // 咖啡豆导入
   showImportBeanForm: boolean;
@@ -155,8 +155,8 @@ export interface AppModalsProps {
   // 笔记编辑
   brewingNoteEditOpen: boolean;
   setBrewingNoteEditOpen: (open: boolean) => void;
-  brewingNoteEditData: BrewingNoteData | null;
-  setBrewingNoteEditData: (data: BrewingNoteData | null) => void;
+  brewingNoteEditData: BrewingNote | null;
+  setBrewingNoteEditData: (data: BrewingNote | null) => void;
   handleSaveBrewingNoteEdit: (
     note: BrewingNoteData,
     options?: BrewingNoteSaveOptions
@@ -327,7 +327,7 @@ const AppModals: React.FC<AppModalsProps> = ({
   beanDetailAddBeanState,
   onCreateNoteFromBean,
   onOpenNoteDetailFromBean,
-  onEditRelatedNoteFromBean,
+  onEditNote,
 
   // 咖啡豆导入
   showImportBeanForm,
@@ -822,7 +822,7 @@ const AppModals: React.FC<AppModalsProps> = ({
           onCreateNoteFromBean={onCreateNoteFromBean}
           onOpenRelatedNote={onOpenNoteDetailFromBean}
           onOpenRelatedBean={onOpenBeanDetailFromRelated}
-          onEditRelatedNote={onEditRelatedNoteFromBean}
+          onEditRelatedNote={onEditNote}
           mode={
             beanDetailAddMode ? 'add' : beanDetailEditMode ? 'edit' : 'view'
           }
@@ -1018,15 +1018,7 @@ const AppModals: React.FC<AppModalsProps> = ({
           beanUnitPrice={noteDetailData.beanUnitPrice}
           beanInfo={noteDetailData.beanInfo}
           onOpenBeanDetail={onOpenBeanDetailFromRelated}
-          onEdit={async note => {
-            const { getBrewingNoteById } =
-              await import('@/lib/notes/relatedNotes');
-            const fullNote = await getBrewingNoteById(note.id);
-            if (fullNote) {
-              setBrewingNoteEditData(fullNote as BrewingNoteData);
-              setBrewingNoteEditOpen(true);
-            }
-          }}
+          onEdit={onEditNote}
           onDelete={async noteId => {
             try {
               const { getBrewingNoteById } =

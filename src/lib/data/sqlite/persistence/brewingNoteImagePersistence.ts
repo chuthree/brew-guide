@@ -22,10 +22,12 @@ import {
 import { classifyPersistentImageString } from '@/lib/data/images/persistentImageSource';
 import {
   getBrewingNoteImages,
+  mergeBrewingNoteImages,
   stripBrewingNoteImages,
 } from '@/lib/notes/imageRecords';
 import type { BrewingNote } from '@/lib/core/config';
 import { encodeBrewingNote } from '../codecs';
+import { reconstructNoteRecords } from '../imageReadRepositories';
 import {
   decodeBrewingNoteImageMetadata,
   encodeBrewingNoteImageMetadata,
@@ -887,9 +889,17 @@ export function createSqliteBrewingNotePersistence(
           : undefined;
         try {
           const changes = await driver.transaction(async tx => {
+            let previous = await getBrewingNote(tx, note.id);
+            if (previous && saveOptions?.expectedRecord) {
+              const [images] = await reconstructNoteRecords(
+                await listBrewingNoteImageMetadata(tx, note.id),
+                fileStore
+              );
+              previous = mergeBrewingNoteImages(previous, images);
+            }
             const changes = await prepareBrewingNoteInventory(
               note,
-              await getBrewingNote(tx, note.id),
+              previous,
               id => getCoffeeBean(tx, id),
               saveOptions
             );

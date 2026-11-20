@@ -6,8 +6,8 @@ import { normalizeCoffeeBean } from '@/lib/utils/coffeeBeanUtils';
 import { normalizeBrewingNote } from '@/lib/notes/cleanup';
 
 export class RecordConflictError extends Error {
-  constructor() {
-    super('记录已被其他操作更新，请重新打开后再保存。');
+  constructor(message = '记录已被其他操作更新，请重新打开后再保存。') {
+    super(message);
     this.name = 'RecordConflictError';
   }
 }
