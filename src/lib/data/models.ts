@@ -117,6 +117,8 @@ export interface AppSettings {
   textZoomLevel: number;
   showFlowRate: boolean;
   username: string;
+  /** 用户在微信赞赏码页面主动确认已赞赏。 */
+  hasSupportedAuthor?: boolean;
 
   // 布局设置
   layoutSettings?: {

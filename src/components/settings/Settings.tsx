@@ -21,7 +21,10 @@ import {
 } from '@/lib/utils/downloadUrls';
 import { Capacitor } from '@capacitor/core';
 import UpdateDrawer from './UpdateDrawer';
-import { hasViewedSupportCode } from '@/components/common/modals/SupportDrawer';
+import {
+  ConfirmSupportButton,
+  hasViewedSupportCode,
+} from '@/components/common/modals/SupportDrawer';
 import { useProviderAccessState, refreshProviderAccessState } from '@/lib/android-provider/accessState';
 import SettingGroup, { type SettingItemData } from './SettingItem';
 import SettingsSearchBar from './SettingsSearchBar';
@@ -958,7 +961,10 @@ const Settings: React.FC<SettingsProps> = ({
                         label: '赞赏码',
                         isExpanded: qrCodeType === 'appreciation',
                         onClick: () => {
-                          if (hasViewedSupportCode()) {
+                          if (
+                            settings.hasSupportedAuthor ||
+                            hasViewedSupportCode()
+                          ) {
                             setQrCodeType(
                               qrCodeType === 'appreciation' ? null : 'appreciation'
                             );
@@ -983,6 +989,15 @@ const Settings: React.FC<SettingsProps> = ({
                             <p className="mt-3 text-xs text-neutral-500 dark:text-neutral-400">
                               微信赞赏码（开发不易，要是能支持一下就太好了 www）
                             </p>
+                            {settings.hasSupportedAuthor ? (
+                              <p className="mt-3 text-xs">已赞赏，感谢你的支持！</p>
+                            ) : (
+                              qrCodeType === 'appreciation' && (
+                                <div className="mt-3">
+                                  <ConfirmSupportButton />
+                                </div>
+                              )
+                            )}
                           </div>
                         ),
                       },

@@ -900,6 +900,9 @@ export async function uploadSettingsData(
       if (localSettings || remoteSettings) {
         mergedData.appSettings = {
           ...(localSettings ?? remoteSettings),
+          ...(remoteSettings?.hasSupportedAuthor === true && {
+            hasSupportedAuthor: true,
+          }),
           ...(localSettings?.roasterConfigs || remoteSettings?.roasterConfigs
             ? {
                 roasterConfigs: mergeRoasterLogos(
@@ -1058,6 +1061,9 @@ export async function downloadSettingsData(
 
         mergedSettings = {
           ...mergedSettings,
+          ...(localSettings.hasSupportedAuthor === true && {
+            hasSupportedAuthor: true,
+          }),
           roasterConfigs: mergeRoasterLogos(
             cloudAppSettings.roasterConfigs,
             localSettings.roasterConfigs

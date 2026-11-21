@@ -3276,6 +3276,8 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
 
   const tryShowSupport = useEffectEvent((tab: '咖啡豆' | '笔记') => {
     if (
+      !storeInitialized ||
+      settings.hasSupportedAuthor ||
       document.visibilityState !== 'visible' ||
       activeMainTab !== tab ||
       hasAnyModalOpen ||
