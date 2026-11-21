@@ -35,14 +35,16 @@ function GrinderField({
   className?: string;
   onSave: (value: string) => Promise<void>;
 }) {
-  const [editing, setEditing] = useState(false);
+  const [editingWidth, setEditingWidth] = useState<number | null>(null);
 
-  if (!editing) {
+  if (editingWidth === null) {
     return (
       <button
         type="button"
         aria-label={`修改${label}`}
-        onClick={() => setEditing(true)}
+        onClick={e =>
+          setEditingWidth(e.currentTarget.getBoundingClientRect().width)
+        }
         className={`truncate-label min-w-0 text-left active:opacity-70 ${className}`}
       >
         {value || placeholder}
@@ -59,7 +61,7 @@ function GrinderField({
       autoFocus
       onBlur={async e => {
         const next = e.currentTarget.value.trim();
-        setEditing(false);
+        setEditingWidth(null);
         if (next === value) return;
         try {
           await onSave(next);
@@ -72,12 +74,13 @@ function GrinderField({
         if (e.key === 'Escape') {
           e.stopPropagation();
           e.currentTarget.value = value;
-          setEditing(false);
+          setEditingWidth(null);
         } else if (e.key === 'Enter') {
           e.currentTarget.blur();
         }
       }}
-      className="setting-control min-w-0 flex-1 appearance-none bg-transparent p-0 text-sm leading-5 font-medium"
+      style={{ width: editingWidth }}
+      className={`setting-control min-w-0 appearance-none bg-transparent p-0 text-sm leading-5 font-medium ${className}`}
     />
   );
 }
