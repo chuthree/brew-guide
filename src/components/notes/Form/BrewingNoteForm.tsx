@@ -1118,12 +1118,14 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
           isPendingCoffeeBean(selectedCoffeeBean)
         ) {
           finalBeanId = nanoid();
+          const createdAt = Date.now();
           newBean = {
             id: finalBeanId,
             name: selectedCoffeeBean.name,
             capacity: currentCoffeeAmount > 0 ? `${currentCoffeeAmount}g` : '',
             remaining: String(currentCoffeeAmount),
-            timestamp: Date.now(),
+            timestamp: createdAt,
+            createdAt,
           };
         } else if (
           canUseCoffeeBeanModule &&

@@ -1,0 +1,154 @@
+.message {
+  --bubble-color: #e9e9ea;
+  --bubble-shape: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='48' viewBox='0 0 64 48'%3E%3Cpath fill='%23e9e9ea' d='M20 0H44A20 20 0 0 1 64 20V21A20 20 0 0 1 44 41H22.333C18.232 41 15.366 46.774 8.433 47.433C7.257 46.028 10.333 44.923 10.333 41.5C10.333 37 6 35.5 3 31.167C.5 28 0 24 0 21V20A20 20 0 0 1 20 0Z'/%3E%3C/svg%3E");
+  position: relative;
+  isolation: isolate;
+  max-width: 100%;
+  padding: 9px 14px;
+  border-radius: calc(0.5lh + 9px);
+  overflow-wrap: anywhere;
+}
+
+.message::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: var(--bubble-color);
+}
+
+/* Both tails extend 7px below the bubble's layout box. */
+.message:nth-of-type(2),
+.reply {
+  margin-bottom: 7px;
+}
+
+:global(.dark) p.message {
+  --bubble-color: #2c2c2c;
+}
+
+.reply {
+  --bubble-color: #2fa4fb;
+  --reply-highlight: #4dbdfb;
+}
+
+:global(.dark) .reply {
+  --bubble-color: #2295fe;
+  --reply-highlight: #42adff;
+}
+
+.message:nth-of-type(2)::after,
+.reply::after {
+  content: '';
+  position: absolute;
+  bottom: -7px;
+  width: 23px;
+  height: 27px;
+  z-index: -1;
+  background: var(--bubble-color);
+  mask: var(--bubble-shape) left bottom / 64px 48px no-repeat;
+}
+
+.message:nth-of-type(2)::after {
+  left: 0;
+}
+
+.reply::after {
+  right: 0;
+  transform: scaleX(-1);
+}
+
+.artwork {
+  display: grid;
+  place-items: center;
+}
+
+.illustration {
+  grid-area: 1 / 1;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.illustration[data-active='true'] {
+  z-index: 0;
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .reply::before,
+  .reply::after {
+    animation: reply-breathe 1.4s ease-in-out 200ms infinite;
+  }
+
+  .message {
+    animation: message-in 200ms ease-out backwards;
+  }
+
+  .revealedCharacter {
+    display: inline-block;
+    animation: character-in 300ms ease-in-out;
+  }
+
+  .artwork {
+    animation: artwork-in 420ms ease-out 120ms both;
+  }
+
+  .illustration {
+    transform: scale(0.92);
+    filter: blur(2px);
+    transition:
+      opacity 130ms ease-out,
+      transform 160ms ease-in,
+      filter 130ms ease-out;
+  }
+
+  .illustration[data-active='true'] {
+    transform: none;
+    filter: none;
+    transition:
+      opacity 170ms ease-out 45ms,
+      transform 360ms cubic-bezier(0.2, 1.55, 0.36, 1) 35ms,
+      filter 200ms ease-out 45ms;
+  }
+
+  .character {
+    display: inline-block;
+    animation: character-pulse 360ms ease-in-out;
+  }
+}
+
+@keyframes character-in {
+  from {
+    opacity: 0.55;
+    transform: scale(1.04);
+  }
+}
+
+@keyframes message-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+@keyframes reply-breathe {
+  50% {
+    background-color: var(--reply-highlight);
+  }
+}
+
+@keyframes artwork-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+
+@keyframes character-pulse {
+  45% {
+    color: #e34d79;
+    transform: scale(1.08);
+  }
+}

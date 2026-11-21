@@ -204,11 +204,13 @@ export const useCoffeeBeanStore = create<CoffeeBeanStore>()(
         },
 
         addBean: async beanData => {
+          const now = Date.now();
           const newBean = normalizeCoffeeBean(
             {
               ...beanData,
               id: nanoid(),
-              timestamp: Date.now(),
+              timestamp: now,
+              createdAt: now,
             } as CoffeeBean,
             { ensureFlavorArray: true }
           );

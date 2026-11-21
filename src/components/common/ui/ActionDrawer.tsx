@@ -171,27 +171,14 @@ const HeightAnimator: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const contentRef = useRef<HTMLDivElement>(null);
   const [height, setHeight] = useState<number | 'auto'>('auto');
-  const isFirstRender = useRef(true);
 
   useEffect(() => {
     const element = contentRef.current;
     if (!element) return;
 
-    // 监听高度变化
-    const resizeObserver = new ResizeObserver(entries => {
-      for (const entry of entries) {
-        // 获取元素的实际高度（包括 padding）
-        const newHeight = entry.target.scrollHeight;
-
-        // 首次渲染时直接设置高度，不播放动画
-        if (isFirstRender.current) {
-          isFirstRender.current = false;
-          setHeight(newHeight);
-          return;
-        }
-
-        setHeight(newHeight);
-      }
+    const resizeObserver = new ResizeObserver(([entry]) => {
+      // 退出中的页面已脱离文档流，但仍会撑大 scrollHeight。
+      setHeight(entry.contentRect.height);
     });
 
     resizeObserver.observe(element);

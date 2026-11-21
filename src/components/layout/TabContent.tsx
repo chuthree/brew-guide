@@ -115,6 +115,7 @@ interface TabContentProps {
   onDeleteMethod: (method: Method) => void;
   onHideMethod?: (method: Method) => Promise<void>; // 新增隐藏方案的回调
   setActiveMainTab?: (tab: MainTabType) => void;
+  onNewBrewingNote: () => void;
   resetBrewingState?: (shouldReset: boolean) => void;
   expandedStages?: {
     type: 'pour' | 'wait';
@@ -159,6 +160,7 @@ const TabContent: React.FC<TabContentProps> = ({
   onDeleteMethod,
   onHideMethod,
   setActiveMainTab,
+  onNewBrewingNote,
   resetBrewingState,
   expandedStages,
   customEquipments,
@@ -292,6 +294,7 @@ const TabContent: React.FC<TabContentProps> = ({
         if (setActiveMainTab) {
           saveMainTabPreference('笔记');
           setActiveMainTab('笔记');
+          if (!options?.expectedRecord && !note.source) onNewBrewingNote();
         }
 
         if (resetBrewingState) {

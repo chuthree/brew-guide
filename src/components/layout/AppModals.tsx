@@ -51,10 +51,7 @@ import DeleteConfirmDrawer from '@/components/common/ui/DeleteConfirmDrawer';
 import ConfirmDrawer from '@/components/common/ui/ConfirmDrawer';
 import ImageViewer from '@/components/common/ui/ImageViewer';
 import type { ImageViewerPayload } from '@/lib/ui/imageViewer';
-import {
-  addBeanWithInitialCapacityAdjustmentRecord,
-  updateBeanWithCapacityAdjustmentRecord,
-} from '@/lib/coffee-beans/capacityAdjustment';
+import { updateBeanWithCapacityAdjustmentRecord } from '@/lib/coffee-beans/capacityAdjustment';
 
 type ExtendedCoffeeBean = CoffeeBean;
 
@@ -123,6 +120,9 @@ export interface AppModalsProps {
     bean: Omit<ExtendedCoffeeBean, 'id' | 'timestamp'>
   ) => Promise<boolean>;
   handleBeanListChange: () => void;
+  handleSaveNewBeanDetail: (
+    bean: Omit<CoffeeBean, 'id' | 'timestamp'>
+  ) => Promise<void>;
   handleRepurchaseBean: (bean: CoffeeBean) => Promise<void>;
 
   // 咖啡豆详情（非大屏幕）
@@ -312,6 +312,7 @@ const AppModals: React.FC<AppModalsProps> = ({
   recognitionImageBeanId,
   setRecognitionImageBeanId,
   handleSaveBean,
+  handleSaveNewBeanDetail,
   handleBeanListChange,
   handleRepurchaseBean,
 
@@ -827,16 +828,7 @@ const AppModals: React.FC<AppModalsProps> = ({
             beanDetailAddMode ? 'add' : beanDetailEditMode ? 'edit' : 'view'
           }
           initialBeanState={beanDetailAddBeanState}
-          onSaveNew={async newBean => {
-            try {
-              await addBeanWithInitialCapacityAdjustmentRecord(newBean);
-              handleBeanListChange();
-              setBeanDetailAddMode(false);
-            } catch (error) {
-              console.error('添加咖啡豆失败:', error);
-              throw error;
-            }
-          }}
+          onSaveNew={handleSaveNewBeanDetail}
           onSaveEdit={async (bean, updates) => {
             try {
               await updateBeanWithCapacityAdjustmentRecord(bean.id, updates);

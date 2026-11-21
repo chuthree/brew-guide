@@ -9,6 +9,7 @@ import { callStoreActionInMutation } from '@/lib/data/storeMutationBoundary';
 import React, {
   useState,
   useEffect,
+  useEffectEvent,
   useCallback,
   useRef,
   useLayoutEffect,
@@ -118,6 +119,7 @@ import { showToast } from '@/components/common/feedback/LightToast';
 import { showErrorReport } from '@/lib/feedback/errorReport';
 import BackupReminderModal from '@/components/common/modals/BackupReminderModal';
 import BeanReadyReminderDrawer from '@/components/common/modals/BeanReadyReminderDrawer';
+import SupportDrawer from '@/components/common/modals/SupportDrawer';
 import {
   BackupReminderUtils,
   BackupReminderType,
@@ -393,6 +395,21 @@ const AppContainer = () => {
   // 应用准备好后，渲染主组件，传入初始咖啡豆状态
   return <PourOverRecipes initialHasBeans={initialHasBeans} />;
 };
+
+const supportShownKey = 'supportDrawerAutoShown';
+
+function meetsSupportThreshold(dates: (number | undefined)[]) {
+  if (dates.length < 5) return false;
+  const days = new Set<string>();
+  for (const timestamp of dates) {
+    if (timestamp === undefined) continue;
+    const date = new Date(timestamp);
+    if (!Number.isFinite(date.getTime())) continue;
+    days.add(date.toDateString());
+    if (days.size >= 3) return true;
+  }
+  return false;
+}
 
 const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
   const [pullSyncIndicatorHost, setPullSyncIndicatorHost] =
@@ -1001,6 +1018,15 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
   const [showLegacyDataNotice, setShowLegacyDataNotice] = useState(false);
   const [hasLegacyDataNotice, setHasLegacyDataNotice] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showSupport, setShowSupport] = useState(false);
+  const [supportAfterAdd, setSupportAfterAdd] = useState<
+    '咖啡豆' | '笔记' | null
+  >(null);
+  const handleNewBrewingNote = useCallback(
+    () => setSupportAfterAdd('笔记'),
+    []
+  );
+  const closeSupport = useCallback(() => setShowSupport(false), []);
 
   // 备份提醒状态
   const [showBackupReminder, setShowBackupReminder] = useState(false);
@@ -2739,6 +2765,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
       } else {
         // 普通新增操作
         await addBeanWithInitialCapacityAdjustmentRecord(bean);
+        setSupportAfterAdd('咖啡豆');
       }
 
       setShowBeanForm(false);
@@ -2776,6 +2803,16 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
       return false;
     }
   };
+
+  const handleSaveNewBeanDetail = useCallback(
+    async (bean: Omit<CoffeeBean, 'id' | 'timestamp'>) => {
+      await addBeanWithInitialCapacityAdjustmentRecord(bean);
+      handleBeanListChange();
+      setBeanDetailAddMode(false);
+      setSupportAfterAdd('咖啡豆');
+    },
+    [handleBeanListChange]
+  );
 
   const handleEquipmentSelectWithName = useCallback(
     (equipmentIdOrName: string) => {
@@ -3174,6 +3211,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         // 事件触发已在 store 中自动完成
         saveMainTabPreference('笔记');
         setActiveMainTab('笔记');
+        if (!options?.expectedRecord && !note.source) handleNewBrewingNote();
       } catch (_error) {
         // 保存冲煮笔记失败
         throw _error;
@@ -3222,6 +3260,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         }
         setBrewingNoteEditOpen(false);
         setBrewingNoteEditData(null);
+        if (isNewNote && !noteToSave.source) handleNewBrewingNote();
 
         // 显示成功提示（事件触发已在 store 中自动完成）
         showToast({
@@ -3233,6 +3272,72 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
       }
     }
   );
+
+  const tryShowSupport = useEffectEvent((tab: '咖啡豆' | '笔记') => {
+    if (
+      document.visibilityState !== 'visible' ||
+      activeMainTab !== tab ||
+      hasAnyModalOpen ||
+      showOnboarding ||
+      showLegacyDataNotice ||
+      showBackupReminder ||
+      showBeanReadyReminder ||
+      modalHistory.getStackLength() > 0 ||
+      document.querySelector('[role="dialog"][data-state="open"]')
+    )
+      return;
+
+    try {
+      if (localStorage.getItem(supportShownKey)) return;
+      if (
+        !meetsSupportThreshold(
+          useCoffeeBeanStore.getState().beans.map(bean => bean.createdAt)
+        ) &&
+        !meetsSupportThreshold(
+          useBrewingNoteStore
+            .getState()
+            .notes.filter(note => !note.source)
+            .map(note => note.timestamp)
+        )
+      )
+        return;
+      localStorage.setItem(supportShownKey, '1');
+      setShowSupport(true);
+    } catch {
+      // 无法持久化时跳过，避免重复打扰。
+    }
+  });
+
+  useEffect(() => {
+    if (!supportAfterAdd) return;
+    let cancelled = false;
+    const present = () => {
+      if (!cancelled) tryShowSupport(supportAfterAdd);
+    };
+    const frame = requestAnimationFrame(async () => {
+      try {
+        if (navigator.locks) {
+          await navigator.locks.request(
+            supportShownKey,
+            { ifAvailable: true },
+            lock => {
+              if (lock) present();
+            }
+          );
+        } else {
+          present();
+        }
+      } catch {
+        // 当前环境无法取得跨标签页锁时，留到下次新增。
+      } finally {
+        if (!cancelled) setSupportAfterAdd(null);
+      }
+    });
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(frame);
+    };
+  }, [supportAfterAdd]);
 
   const handleSaveEquipment = async (
     equipment: CustomEquipment,
@@ -3907,6 +4012,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                   onDeleteMethod={handleDeleteCustomMethod}
                   onHideMethod={handleHideMethod}
                   setActiveMainTab={setActiveMainTab}
+                  onNewBrewingNote={handleNewBrewingNote}
                   resetBrewingState={resetBrewingState}
                   customEquipments={customEquipments}
                   expandedStages={expandedStagesRef.current}
@@ -4117,18 +4223,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
                           : 'view'
                     }
                     initialBeanState={beanDetailAddBeanState}
-                    onSaveNew={async newBean => {
-                      try {
-                        await addBeanWithInitialCapacityAdjustmentRecord(
-                          newBean
-                        );
-                        handleBeanListChange();
-                        setBeanDetailAddMode(false);
-                      } catch (error) {
-                        console.error('添加咖啡豆失败:', error);
-                        throw error;
-                      }
-                    }}
+                    onSaveNew={handleSaveNewBeanDetail}
                     onSaveEdit={async (bean, updates) => {
                       try {
                         await updateBeanWithCapacityAdjustmentRecord(
@@ -4351,6 +4446,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
           onClose={() => setShowBeanReadyReminder(false)}
           onBeanClick={handleBeanReadyReminderBeanClick}
         />
+        <SupportDrawer isOpen={showSupport} onClose={closeSupport} />
       </div>
 
       {/* 页面级别的视图选择覆盖层 - 独立渲染，不受父容器转场影响 */}
@@ -4604,6 +4700,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
         recognitionImageBeanId={recognitionImageBeanId}
         setRecognitionImageBeanId={setRecognitionImageBeanId}
         handleSaveBean={handleSaveBean}
+        handleSaveNewBeanDetail={handleSaveNewBeanDetail}
         handleRepurchaseBean={handleRepurchaseBean}
         handleBeanListChange={handleBeanListChange}
         // 咖啡豆详情（非大屏幕）

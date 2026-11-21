@@ -38,6 +38,7 @@ export interface CoffeeBean {
   // 核心标识
   id: string; // 唯一标识
   timestamp: number; // 时间戳
+  createdAt?: number; // 添加时间，旧数据可能缺失
   name: string; // 咖啡豆名称
 
   // 基本信息
