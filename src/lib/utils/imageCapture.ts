@@ -188,13 +188,8 @@ function captureImageWithHtmlInput(
         }
       };
 
-      // 触发文件选择器
-      // 使用 setTimeout 确保在下一个事件循环中执行，提高兼容性
-      setTimeout(() => {
-        if (!isResolved) {
-          fileInput.click();
-        }
-      }, 100);
+      // 保留打开系统相机所需的用户点击上下文。
+      fileInput.click();
     } catch (error) {
       reject(
         new Error(

@@ -31,6 +31,7 @@ import {
 } from '@/lib/api/shared/recognitionUpload.js';
 import { STILL_IMAGE_ACCEPT } from '@/lib/images/stillImageUpload.js';
 import {
+  captureImage,
   isImageSelectionCancelled,
   pickNativeGalleryImageFiles,
   shouldUseNativeGalleryPicker,
@@ -200,8 +201,10 @@ function getCameraErrorMessage(error: unknown) {
         return '当前摄像头不支持预览参数';
       case 'SecurityError':
         return '当前环境无法使用应用内相机';
+      case 'AbortError':
+        return '相机预览启动被中断';
       default:
-        return '无法打开摄像头';
+        return `无法打开摄像头（${error.name}）`;
     }
   }
 
@@ -308,6 +311,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
   const [isMultiRecognizing, setIsMultiRecognizing] = useState(false);
   // 应用内相机状态
   const [cameraStatus, setCameraStatus] = useState<CameraStatus>('idle');
+  const [cameraAttempt, setCameraAttempt] = useState(0);
   const [cameraError, setCameraError] = useState('');
   const [isCameraCapturing, setIsCameraCapturing] = useState(false);
   const [isTorchSupported, setIsTorchSupported] = useState(false);
@@ -445,24 +449,45 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
 
     let cancelled = false;
     let requestedStream: MediaStream | null = null;
+    let startupTimeout: number;
+    let cancelFrame: (() => void) | undefined;
+    const fail = (message: string, retryable = false) => {
+      if (cancelled) return;
+      cancelled = true;
+      window.clearTimeout(startupTimeout);
+      cancelFrame?.();
+      stopCamera();
+      if (retryable && cameraAttempt === 0) {
+        setCameraAttempt(1);
+        return;
+      }
+      setCameraStatus('error');
+      setCameraError(message);
+    };
 
     const startCamera = async () => {
       setCameraStatus('starting');
       setCameraError('');
 
       if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
-        setCameraStatus('error');
-        setCameraError('当前环境无法使用应用内相机');
+        fail('当前环境无法使用应用内相机');
         return;
       }
 
       try {
+        startupTimeout = window.setTimeout(
+          () => fail('等待摄像头授权或启动超时'),
+          15000
+        );
         requestedStream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: { ideal: 'environment' },
-            width: { ideal: 1920 },
-            height: { ideal: 1080 },
-          },
+          video:
+            cameraAttempt > 0
+              ? { facingMode: 'environment' }
+              : {
+                  facingMode: { ideal: 'environment' },
+                  width: { ideal: 1920 },
+                  height: { ideal: 1080 },
+                },
           audio: false,
         });
 
@@ -473,6 +498,22 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
 
         cameraStreamRef.current = requestedStream;
         const [videoTrack] = requestedStream.getVideoTracks();
+        if (!videoTrack || videoTrack.readyState === 'ended') {
+          fail('摄像头没有返回可用的视频轨道', true);
+          return;
+        }
+        videoTrack.onended = () => fail('摄像头视频轨道已中断', true);
+        window.clearTimeout(startupTimeout);
+        startupTimeout = window.setTimeout(
+          () =>
+            fail(
+              videoTrack.muted
+                ? '摄像头已打开，但视频轨道没有输出画面'
+                : '摄像头已打开，但预览未收到首帧',
+              true
+            ),
+          5000
+        );
         const capabilities =
           videoTrack?.getCapabilities?.() as ZoomMediaTrackCapabilities;
         setIsTorchSupported(Boolean(capabilities?.torch));
@@ -511,37 +552,62 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
 
         video.srcObject = requestedStream;
         await video.play();
+        if (cancelled) return;
         if (hasHardwareZoom) {
           void videoTrack
             ?.applyConstraints({
               advanced: [{ zoom: initialZoom } as ZoomMediaTrackConstraintSet],
             })
             .catch(() => {
-              setIsHardwareZoomSupported(false);
+              if (!cancelled) setIsHardwareZoomSupported(false);
             });
         }
 
-        if (!cancelled) {
-          setCameraStatus('ready');
-        }
+        const waitForFrame = () => {
+          const onFrame = () => {
+            if (cancelled) return;
+            if (
+              videoTrack.muted ||
+              !video.videoWidth ||
+              !video.videoHeight ||
+              video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA
+            ) {
+              waitForFrame();
+              return;
+            }
+            window.clearTimeout(startupTimeout);
+            setCameraStatus('ready');
+          };
+          if (typeof video.requestVideoFrameCallback === 'function') {
+            const id = video.requestVideoFrameCallback(onFrame);
+            cancelFrame = () => video.cancelVideoFrameCallback(id);
+          } else {
+            const id = requestAnimationFrame(onFrame);
+            cancelFrame = () => cancelAnimationFrame(id);
+          }
+        };
+        waitForFrame();
       } catch (error) {
-        requestedStream?.getTracks().forEach(track => track.stop());
-
-        if (cancelled) return;
-
-        cameraStreamRef.current = null;
-        setCameraStatus('error');
-        setCameraError(getCameraErrorMessage(error));
+        const stage = requestedStream ? '启动预览' : '获取摄像头';
+        fail(
+          `${stage}失败：${getCameraErrorMessage(error)}`,
+          error instanceof DOMException &&
+            ['AbortError', 'NotReadableError', 'OverconstrainedError'].includes(
+              error.name
+            )
+        );
       }
     };
 
     void startCamera();
 
     return () => {
+      window.clearTimeout(startupTimeout);
       cancelled = true;
+      cancelFrame?.();
       stopCamera();
     };
-  }, [showForm, currentStep, stopCamera]);
+  }, [showForm, currentStep, stopCamera, cameraAttempt]);
 
   // 确保字段为字符串类型
   const ensureStringFields = useCallback((item: ImportedBean): ImportedBean => {
@@ -995,8 +1061,14 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
   }, []);
 
   const handleOpenCamera = useCallback(() => {
+    setCameraAttempt(0);
     setCurrentStep('camera-preview');
   }, []);
+
+  const retryCamera = useCallback(
+    () => setCameraAttempt(attempt => attempt + 1),
+    []
+  );
 
   const handleToggleTorch = useCallback(async () => {
     if (!isTorchSupported) return;
@@ -1139,7 +1211,11 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
   }, [cameraZoom, isHardwareZoomSupported]);
 
   const handleCaptureCameraPhoto = useCallback(async () => {
-    if (cameraStatus !== 'ready' || isCameraCapturing || isMultiRecognizing) {
+    if (
+      (cameraStatus !== 'ready' && cameraStatus !== 'error') ||
+      isCameraCapturing ||
+      isMultiRecognizing
+    ) {
       return;
     }
 
@@ -1149,11 +1225,15 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
     }
 
     setIsCameraCapturing(true);
+    const preview = videoRef.current;
 
     try {
       const file = await readRecognitionSourceImage(
-        await captureCameraPhotoFile()
+        cameraStatus === 'error'
+          ? await captureImage('camera')
+          : await captureCameraPhotoFile()
       );
+      if (!preview || preview !== videoRef.current) return;
       const previewUrl = URL.createObjectURL(file);
 
       setSelectedImages(prev => [
@@ -1166,6 +1246,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
         },
       ]);
     } catch (error) {
+      if (isImageSelectionCancelled(error)) return;
       showToast({
         type: 'error',
         title: error instanceof Error ? error.message : '拍照失败',
@@ -1370,14 +1451,9 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
         >
           <video
             ref={videoRef}
-            autoPlay
             muted
             playsInline
-            className={`h-full w-full object-cover transition-[opacity,filter] duration-300 ease-out ${
-              cameraStatus === 'ready'
-                ? 'blur-0 opacity-100'
-                : 'opacity-0 blur-sm'
-            }`}
+            className="h-full w-full object-cover"
             style={{
               transform: isHardwareZoomSupported
                 ? undefined
@@ -1395,10 +1471,28 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
           )}
 
           {cameraStatus === 'error' && (
-            <div className="absolute inset-0 flex items-center justify-center px-8 text-center">
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-neutral-950 px-8 text-center">
               <p className="text-sm leading-relaxed text-white/70">
                 {cameraError || '无法打开摄像头'}
               </p>
+              <button
+                type="button"
+                onClick={retryCamera}
+                disabled={isCameraCapturing || isMultiRecognizing}
+                className="px-3 py-2 text-sm text-white underline"
+              >
+                重试应用内预览
+              </button>
+              {selectedImages.length === 0 && (
+                <button
+                  type="button"
+                  onClick={handleUploadImageClick}
+                  disabled={isCameraCapturing}
+                  className="px-3 py-2 text-sm text-white underline"
+                >
+                  选择图片
+                </button>
+              )}
             </div>
           )}
 
@@ -1549,70 +1643,44 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
         </div>
       </div>
 
-      {cameraStatus === 'error' ? (
-        <div className="flex gap-2">
-          <motion.button
-            whileTap={{ scale: 0.98 }}
-            onClick={goBackToMain}
-            className="flex-1 rounded-full bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-800 dark:bg-neutral-800 dark:text-white"
+      <div className="flex gap-2">
+        <motion.button
+          whileTap={isMultiRecognizing ? undefined : { scale: 0.98 }}
+          onClick={goBackToMain}
+          disabled={isMultiRecognizing}
+          className="flex-1 rounded-full bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-800 dark:bg-neutral-800 dark:text-white"
+        >
+          取消
+        </motion.button>
+        <div className="flex flex-[1.45] overflow-hidden rounded-full bg-neutral-100 text-sm font-medium text-neutral-800 dark:bg-neutral-800 dark:text-white">
+          <button
+            type="button"
+            onClick={handleCaptureCameraPhoto}
+            disabled={
+              (cameraStatus !== 'ready' && cameraStatus !== 'error') ||
+              isCameraCapturing ||
+              isMultiRecognizing ||
+              selectedImages.length >= MAX_IMAGES
+            }
+            className="min-w-0 flex-1 px-4 py-3 transition-opacity active:scale-[0.98] disabled:opacity-40 disabled:active:scale-100"
           >
-            取消
-          </motion.button>
-          <motion.button
-            whileTap={{ scale: 0.98 }}
-            onClick={handleUploadImageClick}
-            className="flex-1 rounded-full bg-neutral-900 px-4 py-3 text-sm font-medium text-white dark:bg-white dark:text-neutral-900"
+            {cameraStatus === 'error' ? '系统相机' : '拍照'}
+          </button>
+          <div className="my-3 w-px bg-neutral-300 dark:bg-neutral-700" />
+          <button
+            type="button"
+            onClick={handleRecognizeCameraImages}
+            disabled={selectedImages.length === 0 || isMultiRecognizing}
+            className={`min-w-0 flex-1 px-4 py-3 transition-opacity active:scale-[0.98] disabled:active:scale-100 ${
+              selectedImages.length > 0 && !isMultiRecognizing
+                ? ''
+                : 'opacity-40'
+            }`}
           >
-            选择图片
-          </motion.button>
+            入库
+          </button>
         </div>
-      ) : (
-        <div className="flex gap-2">
-          <motion.button
-            whileTap={isMultiRecognizing ? undefined : { scale: 0.98 }}
-            onClick={goBackToMain}
-            disabled={isMultiRecognizing}
-            className="flex-1 rounded-full bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-800 dark:bg-neutral-800 dark:text-white"
-          >
-            取消
-          </motion.button>
-          <div className="flex flex-[1.45] overflow-hidden rounded-full bg-neutral-100 text-sm font-medium text-neutral-800 dark:bg-neutral-800 dark:text-white">
-            <button
-              type="button"
-              onClick={handleCaptureCameraPhoto}
-              disabled={
-                cameraStatus !== 'ready' ||
-                isCameraCapturing ||
-                isMultiRecognizing ||
-                selectedImages.length >= MAX_IMAGES
-              }
-              className={`min-w-0 flex-1 px-4 py-3 transition-opacity active:scale-[0.98] disabled:active:scale-100 ${
-                cameraStatus === 'ready' &&
-                !isCameraCapturing &&
-                !isMultiRecognizing &&
-                selectedImages.length < MAX_IMAGES
-                  ? ''
-                  : 'opacity-40'
-              }`}
-            >
-              拍照
-            </button>
-            <div className="my-3 w-px bg-neutral-300 dark:bg-neutral-700" />
-            <button
-              type="button"
-              onClick={handleRecognizeCameraImages}
-              disabled={selectedImages.length === 0 || isMultiRecognizing}
-              className={`min-w-0 flex-1 px-4 py-3 transition-opacity active:scale-[0.98] disabled:active:scale-100 ${
-                selectedImages.length > 0 && !isMultiRecognizing
-                  ? ''
-                  : 'opacity-40'
-              }`}
-            >
-              入库
-            </button>
-          </div>
-        </div>
-      )}
+      </div>
     </>
   );
 
