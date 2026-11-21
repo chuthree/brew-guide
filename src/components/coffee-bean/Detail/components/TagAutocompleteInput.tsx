@@ -35,12 +35,7 @@ interface TagAutocompleteInputProps {
   onRemovePreset?: (value: string) => void;
 }
 
-const COMMIT_KEYS = new Set(['Enter', ',', '，', '、', ';', '；']);
-
-const getActiveSuggestionQuery = (value: string) => {
-  const segments = value.split(/[,，、;；]/);
-  return (segments[segments.length - 1] || '').trim();
-};
+const TAG_SEPARATOR = /[,，、;；]/;
 
 const TagAutocompleteInput = React.forwardRef<
   HTMLInputElement,
@@ -96,7 +91,7 @@ const TagAutocompleteInput = React.forwardRef<
     );
 
     const filteredSuggestions = useMemo(() => {
-      const query = getActiveSuggestionQuery(inputValue).toLowerCase();
+      const query = inputValue.trim().toLowerCase();
       const visibleSuggestions = suggestions.filter(
         suggestion => !removedSuggestions.has(suggestion)
       );
@@ -141,6 +136,23 @@ const TagAutocompleteInput = React.forwardRef<
       }
     };
 
+    const handleInputValue = (value: string) => {
+      const parts = value.split(TAG_SEPARATOR);
+      const draft = parts.pop() ?? '';
+      if (parts.length) {
+        const completed = parts.map(part => part.trim()).filter(Boolean);
+        if (completed.length) commitValue(completed.join(','));
+      }
+      setInputValue(draft);
+      setIsOpen(
+        draft.trim() !== '' || (!parts.length && suggestions.length > 0)
+      );
+    };
+
+    const handleCompositionEnd = (
+      event: React.CompositionEvent<HTMLInputElement>
+    ) => handleInputValue(event.currentTarget.value);
+
     const handleBlur = () => {
       closeTimerRef.current = window.setTimeout(() => {
         commitValue(inputValue);
@@ -157,22 +169,21 @@ const TagAutocompleteInput = React.forwardRef<
           value={inputValue}
           placeholder={placeholder}
           onChange={event => {
-            const nextValue = event.currentTarget.value;
-            setInputValue(nextValue);
-            setIsOpen(
-              filteredSuggestions.length > 0 || nextValue.trim() !== ''
-            );
+            if ((event.nativeEvent as InputEvent).isComposing) {
+              setInputValue(event.currentTarget.value);
+              return;
+            }
+            handleInputValue(event.currentTarget.value);
           }}
+          onCompositionEnd={handleCompositionEnd}
           onFocus={handleFocus}
           onBlur={handleBlur}
           onKeyDown={event => {
-            if (event.nativeEvent.isComposing) return;
+            if (event.nativeEvent.isComposing || event.keyCode === 229) return;
 
-            if (COMMIT_KEYS.has(event.key)) {
-              if (inputValue.trim()) {
-                event.preventDefault();
-                commitValue(inputValue);
-              }
+            if (event.key === 'Enter' && inputValue.trim()) {
+              event.preventDefault();
+              commitValue(inputValue);
             }
 
             if (
