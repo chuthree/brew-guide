@@ -25,11 +25,11 @@ import {
 } from '@/lib/api/beanRecognition';
 import { normalizeCoffeeBeanPayloadForFieldConfig } from '@/lib/coffee-beans/beanFields';
 import { prepareRecognizedBeanImages } from '@/lib/coffee-beans/beanImportImage';
-import { readRecognitionImageFile } from '@/lib/api/shared/recognitionUpload.js';
 import {
-  MAX_STILL_IMAGE_BYTES,
-  STILL_IMAGE_ACCEPT,
-} from '@/lib/images/stillImageUpload.js';
+  MAX_RECOGNITION_SOURCE_BYTES,
+  readRecognitionSourceImage,
+} from '@/lib/api/shared/recognitionUpload.js';
+import { STILL_IMAGE_ACCEPT } from '@/lib/images/stillImageUpload.js';
 import {
   isImageSelectionCancelled,
   pickNativeGalleryImageFiles,
@@ -712,7 +712,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
       const rejected: string[] = [];
       for (const file of files.slice(0, MAX_IMAGES)) {
         try {
-          validFiles.push(await readRecognitionImageFile(file));
+          validFiles.push(await readRecognitionSourceImage(file));
         } catch (error) {
           rejected.push(
             `${file.name}：${error instanceof Error ? error.message : '图片读取失败'}`
@@ -974,10 +974,11 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
     }
 
     try {
-      const files = await pickNativeGalleryImageFiles({
+      const { files, errors } = await pickNativeGalleryImageFiles({
         limit: MAX_IMAGES,
-        maxFileSizeBytes: MAX_STILL_IMAGE_BYTES,
+        maxFileSizeBytes: MAX_RECOGNITION_SOURCE_BYTES,
       });
+      if (errors.length) showToast({ type: 'error', title: errors.join('\n') });
       await processImageFiles(files);
     } catch (error) {
       if (isImageSelectionCancelled(error)) return;
@@ -1150,7 +1151,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
     setIsCameraCapturing(true);
 
     try {
-      const file = await readRecognitionImageFile(
+      const file = await readRecognitionSourceImage(
         await captureCameraPhotoFile()
       );
       const previewUrl = URL.createObjectURL(file);

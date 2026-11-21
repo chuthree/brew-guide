@@ -31,22 +31,34 @@ describe('pickNativeGalleryImageFiles', () => {
     vi.unstubAllGlobals();
   });
 
-  it('reads native gallery photos from path instead of fetching webPath', async () => {
+  it('reads valid photos from path and skips oversized or excess selections', async () => {
     const fetchSpy = vi.fn(async () => new Response(null, { status: 404 }));
     vi.stubGlobal('fetch', fetchSpy);
     mocks.pickImages.mockResolvedValue({
       files: [
+        { name: 'large.jpg', size: 12, path: 'file:///cache/large.jpg' },
         {
           name: 'photo.jpg',
           size: 11,
           mimeType: 'image/jpeg',
           path: 'file:///cache/photo.jpg',
         },
+        { name: 'extra.jpg', size: 11, path: 'file:///cache/extra.jpg' },
       ],
     });
     mocks.readFile.mockResolvedValue({ data: 'aW1hZ2UtYnl0ZXM=' });
 
-    const [file] = await pickNativeGalleryImageFiles({ limit: 1 });
+    const { files, errors } = await pickNativeGalleryImageFiles({
+      limit: 1,
+      maxFileSizeBytes: 11,
+    });
+    const [file] = files;
+    expect(files).toHaveLength(1);
+    expect(errors).toEqual([
+      expect.stringContaining('large.jpg'),
+      '最多选择 1 张图片',
+    ]);
+    expect(mocks.readFile).toHaveBeenCalledTimes(1);
 
     expect(mocks.pickImages).toHaveBeenCalledWith({
       limit: 1,

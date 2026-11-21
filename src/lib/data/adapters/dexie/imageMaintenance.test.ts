@@ -161,13 +161,12 @@ describe('Dexie image maintenance', () => {
     ]);
     mocks.compressBase64Image
       .mockResolvedValueOnce(compressedFrontImage)
-      .mockResolvedValueOnce(compressedBackImage)
-      .mockResolvedValueOnce(compressedFrontImage);
+      .mockResolvedValueOnce(compressedBackImage);
 
     const stats =
       await createDexieImageMaintenance(database).recompressCoffeeBeanImages();
 
-    expect(mocks.compressBase64Image).toHaveBeenCalledTimes(3);
+    expect(mocks.compressBase64Image).toHaveBeenCalledTimes(2);
     expect(await database.coffeeBeanImages.get(bean.id)).toMatchObject({
       image: compressedFrontImage,
       backImage: smallImage,
@@ -198,9 +197,9 @@ describe('Dexie image maintenance', () => {
     expect(await database.coffeeBeanImages.get(beanSmallImage.id)).toEqual(
       smallImageRecord
     );
-    expect(await database.coffeeBeanImages.get(beanGifImage.id)).toMatchObject({
-      image: compressedFrontImage,
-    });
+    expect(await database.coffeeBeanImages.get(beanGifImage.id)).toEqual(
+      gifImageRecord
+    );
     expect(
       await database.coffeeBeanImageThumbnails.get(beanSmallImage.id)
     ).toEqual({
@@ -210,12 +209,16 @@ describe('Dexie image maintenance', () => {
     });
     expect(
       await database.coffeeBeanImageThumbnails.get(beanGifImage.id)
-    ).toBeUndefined();
+    ).toEqual({
+      beanId: beanGifImage.id,
+      imageThumbnail: 'gif-thumbnail',
+      updatedAt: 5,
+    });
     expect(await database.coffeeBeans.get(bean.id)).toEqual(bean);
     expect(stats).toMatchObject({
       scannedCount: 5,
-      candidateCount: 3,
-      compressedCount: 3,
+      candidateCount: 2,
+      compressedCount: 2,
       failedCount: 0,
     });
     expect(stats.savedBytes).toBeGreaterThan(0);

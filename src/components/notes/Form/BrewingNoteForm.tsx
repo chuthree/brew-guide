@@ -963,7 +963,10 @@ const BrewingNoteForm: React.FC<BrewingNoteFormProps> = ({
     const remainCount = 9 - formData.images.length;
 
     try {
-      const files = await pickNativeGalleryImageFiles({ limit: remainCount });
+      const { files, errors } = await pickNativeGalleryImageFiles({
+        limit: remainCount,
+      });
+      if (errors.length) showToast({ type: 'error', title: errors.join('\n') });
       if (files.length === 0) return;
 
       await appendSelectedImages(files, remainCount);

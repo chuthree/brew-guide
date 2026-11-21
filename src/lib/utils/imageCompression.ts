@@ -2,7 +2,7 @@ import {
   APP_IMAGE_MIME_TYPE,
   JPEG_IMAGE_MIME_TYPE,
 } from '@/lib/images/imageFormat';
-import { readRecognitionImageFile } from '@/lib/api/shared/recognitionUpload.js';
+import { readRecognitionSourceImage } from '@/lib/api/shared/recognitionUpload.js';
 import { getImageFileNameForMimeType } from '@/lib/images/stillImageUpload.js';
 
 async function encodeImage(
@@ -120,7 +120,7 @@ export function readFileAsDataUrl(file: Blob): Promise<string> {
  * @returns 压缩后的文件
  */
 export async function smartCompress(file: File): Promise<File> {
-  const sourceFile = await readRecognitionImageFile(file);
+  const sourceFile = await readRecognitionSourceImage(file);
   const fileSizeKB = file.size / 1024;
 
   // 小图或文字截图很容易被过度压缩后影响 OCR，保留原图更稳

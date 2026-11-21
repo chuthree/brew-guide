@@ -60,7 +60,9 @@ export const shouldRecompressStoredImage = (
   image: string,
   profile: ImageRecompressionProfile
 ): boolean => {
-  if (!image.startsWith('data:image/')) return false;
+  if (!image.startsWith('data:image/') || /^data:image\/gif[;,]/i.test(image)) {
+    return false;
+  }
 
   const bytes = getDataUrlBytes(image);
   return bytes !== null && bytes > profile.maxSizeBytes;

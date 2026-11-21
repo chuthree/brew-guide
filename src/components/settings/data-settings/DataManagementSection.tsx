@@ -383,7 +383,7 @@ export const DataManagementSection: React.FC<DataManagementSectionProps> = ({
           footer={
             status.scope === 'image'
               ? statusMessage
-              : '补压超出保存上限的图片，动图将保存为静态图。'
+              : '补压超出保存上限的图片，跳过 GIF。'
           }
         >
           <SettingRow

@@ -10,10 +10,13 @@ import { METHOD_RECOGNITION_PROMPT } from '@/lib/constants/methodRecognitionProm
 import AddCircleIcon from '@public/images/icons/ui/add-circle.svg';
 import AddBoxIcon from '@public/images/icons/ui/add-box.svg';
 import { type Method, type CustomEquipment } from '@/lib/core/config';
-import { readRecognitionImageFile } from '@/lib/api/shared/recognitionUpload.js';
+import {
+  MAX_RECOGNITION_SOURCE_BYTES,
+  readRecognitionSourceImage,
+} from '@/lib/api/shared/recognitionUpload.js';
 import {
   STILL_IMAGE_ACCEPT,
-  STILL_IMAGE_HINT,
+  stillImageHint,
 } from '@/lib/images/stillImageUpload.js';
 import { transferMethodToEquipment } from '@/lib/brewing/methodTransfer';
 import {
@@ -411,7 +414,7 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
       event.target.value = '';
       let file: File;
       try {
-        file = await readRecognitionImageFile(selected);
+        file = await readRecognitionSourceImage(selected);
       } catch (error) {
         showToast({
           type: 'error',
@@ -515,7 +518,9 @@ const MethodImportModal: React.FC<MethodImportModalProps> = ({
           className="w-full rounded-full bg-neutral-100 px-4 py-3 text-left text-sm font-medium text-neutral-800 dark:bg-neutral-800 dark:text-white"
         >
           图片识别方案
-          <span className="block text-xs font-normal">{STILL_IMAGE_HINT}</span>
+          <span className="block text-xs font-normal">
+            {stillImageHint(MAX_RECOGNITION_SOURCE_BYTES)}
+          </span>
         </motion.button>
         <motion.button
           whileTap={{ scale: 0.98 }}

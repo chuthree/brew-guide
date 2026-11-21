@@ -50,14 +50,26 @@ export async function pickNativeGalleryImageFiles({
 }) {
   const pickerLimit =
     Capacitor.getPlatform() === 'android' && limit > 1 ? 0 : limit;
-  const { files } = await FilePicker.pickImages({
+  const { files: selected } = await FilePicker.pickImages({
     limit: pickerLimit,
     skipTranscoding: true,
   });
-  if (files.length > limit) throw new Error(`最多选择 ${limit} 张图片`);
-  return Promise.all(
-    files.map(photo => galleryPhotoToFile(photo, maxFileSizeBytes))
-  );
+  const files: File[] = [];
+  const errors: string[] = [];
+  for (const photo of selected) {
+    if (files.length >= limit) {
+      errors.push(`最多选择 ${limit} 张图片`);
+      break;
+    }
+    try {
+      files.push(await galleryPhotoToFile(photo, maxFileSizeBytes));
+    } catch (error) {
+      errors.push(
+        `${photo.name}：${error instanceof Error ? error.message : '图片读取失败'}`
+      );
+    }
+  }
+  return { files, errors };
 }
 
 export async function captureImage(
@@ -65,9 +77,9 @@ export async function captureImage(
 ): Promise<File> {
   if (!Capacitor.isNativePlatform()) return captureImageWithHtmlInput(source);
   if (source === 'gallery') {
-    const [file] = await pickNativeGalleryImageFiles({ limit: 1 });
-    if (!file) throw new Error('未选择图片');
-    return file;
+    const { files, errors } = await pickNativeGalleryImageFiles({ limit: 1 });
+    if (!files.length) throw new Error(errors[0] || '未选择图片');
+    return files[0];
   }
   try {
     const image = await Camera.getPhoto({
@@ -113,17 +125,8 @@ function captureImageWithHtmlInput(
 
       let isResolved = false;
 
-      // 设置超时处理，防止用户长时间不选择
-      const timeout = setTimeout(() => {
-        if (!isResolved) {
-          cleanup();
-          reject(new Error('图片选择超时，请重试'));
-        }
-      }, 60000); // 60秒超时
-
       // 清理函数
       let cleanup = () => {
-        clearTimeout(timeout);
         if (fileInput.parentNode) {
           document.body.removeChild(fileInput);
         }
@@ -160,7 +163,7 @@ function captureImageWithHtmlInput(
             // 用户可能取消了选择
             isResolved = true;
             cleanup();
-            reject(new Error('图片选择被取消'));
+            reject(new Error('用户取消了图片选择'));
           }
         }, 1000);
       };

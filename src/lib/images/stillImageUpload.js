@@ -8,9 +8,9 @@ export const STILL_IMAGE_TYPES = [
   'image/heif-sequence',
 ];
 export const STILL_IMAGE_ACCEPT = STILL_IMAGE_TYPES.join(',');
-const MAX_STILL_IMAGE_MIB = 5;
-export const MAX_STILL_IMAGE_BYTES = MAX_STILL_IMAGE_MIB * 1024 * 1024;
-export const STILL_IMAGE_HINT = `JPG、PNG、WebP、HEIC 或 HEIF，每张最多 ${MAX_STILL_IMAGE_MIB} MiB`;
+const MAX_STILL_IMAGE_BYTES = 5 * 1024 * 1024;
+export const stillImageHint = maxBytes =>
+  `JPG、PNG、WebP、HEIC 或 HEIF，每张最多 ${maxBytes / (1024 * 1024)} MiB`;
 
 function startsWithBytes(bytes, signature, offset = 0) {
   if (bytes.length < offset + signature.length) return false;
@@ -104,9 +104,12 @@ function withDetectedImageMimeType(file, mimeType) {
 }
 
 /** @param {File} file */
-export async function readStillImageFile(file) {
-  if (file.size > MAX_STILL_IMAGE_BYTES) {
-    throw new Error(`文件过大，请选择 ${STILL_IMAGE_HINT}`);
+export async function readStillImageFile(
+  file,
+  maxBytes = MAX_STILL_IMAGE_BYTES
+) {
+  if (file.size > maxBytes) {
+    throw new Error(`文件过大，请选择 ${stillImageHint(maxBytes)}`);
   }
   const header = new Uint8Array(await file.slice(0, 64).arrayBuffer());
   const mimeType = detectImageMimeTypeFromBytes(header);
@@ -114,7 +117,7 @@ export async function readStillImageFile(file) {
     throw new Error('文件内容与声明的类型不匹配，请上传有效图片');
   }
   if (!STILL_IMAGE_TYPES.includes(mimeType)) {
-    throw new Error(`不支持的文件类型，请选择 ${STILL_IMAGE_HINT}`);
+    throw new Error(`不支持的文件类型，请选择 ${stillImageHint(maxBytes)}`);
   }
   return withDetectedImageMimeType(file, mimeType);
 }
