@@ -119,7 +119,9 @@ import { showToast } from '@/components/common/feedback/LightToast';
 import { showErrorReport } from '@/lib/feedback/errorReport';
 import BackupReminderModal from '@/components/common/modals/BackupReminderModal';
 import BeanReadyReminderDrawer from '@/components/common/modals/BeanReadyReminderDrawer';
-import SupportDrawer from '@/components/common/modals/SupportDrawer';
+import SupportDrawer, {
+  supportShownKey,
+} from '@/components/common/modals/SupportDrawer';
 import {
   BackupReminderUtils,
   BackupReminderType,
@@ -395,8 +397,6 @@ const AppContainer = () => {
   // 应用准备好后，渲染主组件，传入初始咖啡豆状态
   return <PourOverRecipes initialHasBeans={initialHasBeans} />;
 };
-
-const supportShownKey = 'supportDrawerAutoShown';
 
 function meetsSupportThreshold(dates: (number | undefined)[]) {
   if (dates.length < 5) return false;
@@ -1027,6 +1027,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
     []
   );
   const closeSupport = useCallback(() => setShowSupport(false), []);
+  const openSupport = useCallback(() => setShowSupport(true), []);
 
   // 备份提醒状态
   const [showBackupReminder, setShowBackupReminder] = useState(false);
@@ -4643,6 +4644,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
       <AppModals
         // Settings 相关
         isSettingsOpen={isSettingsOpen}
+        onOpenSupport={openSupport}
         setIsSettingsOpen={setIsSettingsOpen}
         hasSubSettingsOpen={hasSubSettingsOpen}
         handleDataChange={handleDataChange}

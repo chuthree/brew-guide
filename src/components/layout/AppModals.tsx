@@ -58,6 +58,7 @@ type ExtendedCoffeeBean = CoffeeBean;
 export interface AppModalsProps {
   // Settings 相关
   isSettingsOpen: boolean;
+  onOpenSupport: () => void;
   setIsSettingsOpen: (open: boolean) => void;
   hasSubSettingsOpen: boolean;
   handleDataChange: () => Promise<void>;
@@ -253,6 +254,7 @@ export interface AppModalsProps {
 const AppModals: React.FC<AppModalsProps> = ({
   // Settings 相关
   isSettingsOpen,
+  onOpenSupport,
   setIsSettingsOpen,
   hasSubSettingsOpen,
   handleDataChange,
@@ -697,6 +699,7 @@ const AppModals: React.FC<AppModalsProps> = ({
       {/* Settings 组件独立渲染 */}
       <Settings
         isOpen={isSettingsOpen}
+        onOpenSupport={onOpenSupport}
         onClose={handleSettingsClose}
         onDataChange={handleDataChange}
         hasSubSettingsOpen={hasSubSettingsOpen || showProviderSettings}

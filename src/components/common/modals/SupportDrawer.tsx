@@ -14,6 +14,24 @@ import { useSettingsStore } from '@/lib/stores/settingsStore';
 import ActionDrawer from '@/components/common/ui/ActionDrawer';
 import styles from './SupportDrawer.module.css';
 
+export const supportShownKey = 'supportDrawerAutoShown';
+
+export function hasViewedSupportCode() {
+  try {
+    return localStorage.getItem(supportShownKey) === 'code-viewed';
+  } catch {
+    return false;
+  }
+}
+
+function markSupportCodeViewed() {
+  try {
+    localStorage.setItem(supportShownKey, 'code-viewed');
+  } catch {
+    // 本地存储不可用时仍可正常查看赞赏码。
+  }
+}
+
 const supportLines = ['如果觉得这个小工具好用，', '可以支持作者一下嘛～'];
 const thanksText = '超级无敌感谢你的支持！';
 const coffeeWish = '你真的是很好很好的人！祝你天天喝到好喝的咖啡～';
@@ -95,6 +113,7 @@ function SupportContent({ onClose }: { onClose: () => void }) {
               <Image
                 src="/images/content/appreciation-code.jpg"
                 alt="微信赞赏码"
+                onLoad={markSupportCodeViewed}
                 width={200}
                 height={200}
                 className="h-auto w-44 rounded-xl"

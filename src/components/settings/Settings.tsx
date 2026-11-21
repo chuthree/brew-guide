@@ -21,6 +21,7 @@ import {
 } from '@/lib/utils/downloadUrls';
 import { Capacitor } from '@capacitor/core';
 import UpdateDrawer from './UpdateDrawer';
+import { hasViewedSupportCode } from '@/components/common/modals/SupportDrawer';
 import { useProviderAccessState, refreshProviderAccessState } from '@/lib/android-provider/accessState';
 import SettingGroup, { type SettingItemData } from './SettingItem';
 import SettingsSearchBar from './SettingsSearchBar';
@@ -105,6 +106,7 @@ export interface SubSettingsHandlers {
 }
 
 interface SettingsProps {
+  onOpenSupport: () => void;
   isOpen: boolean;
   onClose: () => void;
   onDataChange?: () => void;
@@ -220,6 +222,7 @@ const Settings: React.FC<SettingsProps> = ({
   onDataChange: _onDataChange,
   subSettingsHandlers,
   hasSubSettingsOpen,
+  onOpenSupport,
   isLargeScreen = false,
   activeSubSettingId = null,
   subSettingsContent = null,
@@ -328,7 +331,6 @@ const Settings: React.FC<SettingsProps> = ({
     setIsSubSettingsClosing(false);
   }
 
-  // 添加显示哪种二维码的状态
   const [qrCodeType, setQrCodeType] = useState<'appreciation' | 'group' | null>(
     null
   );
@@ -929,9 +931,7 @@ const Settings: React.FC<SettingsProps> = ({
                         label: '交流群',
                         isExpanded: qrCodeType === 'group',
                         onClick: () => {
-                          setQrCodeType(
-                            qrCodeType === 'group' ? null : 'group'
-                          );
+                          setQrCodeType(qrCodeType === 'group' ? null : 'group');
                           if (settings.hapticFeedback) {
                             hapticsUtils.light();
                           }
@@ -958,11 +958,13 @@ const Settings: React.FC<SettingsProps> = ({
                         label: '赞赏码',
                         isExpanded: qrCodeType === 'appreciation',
                         onClick: () => {
-                          setQrCodeType(
-                            qrCodeType === 'appreciation'
-                              ? null
-                              : 'appreciation'
-                          );
+                          if (hasViewedSupportCode()) {
+                            setQrCodeType(
+                              qrCodeType === 'appreciation' ? null : 'appreciation'
+                            );
+                          } else {
+                            onOpenSupport();
+                          }
                           if (settings.hapticFeedback) {
                             hapticsUtils.light();
                           }
@@ -972,14 +974,14 @@ const Settings: React.FC<SettingsProps> = ({
                             <div className="overflow-hidden rounded-lg border border-neutral-400/10 bg-white p-2">
                               <Image
                                 src="/images/content/appreciation-code.jpg"
-                                alt="赞赏码"
+                                alt="微信赞赏码"
                                 width={200}
                                 height={200}
                                 className="h-auto w-50"
                               />
                             </div>
                             <p className="mt-3 text-xs text-neutral-500 dark:text-neutral-400">
-                              赞赏码（开发不易，要是能支持一下就太好了 www）
+                              微信赞赏码（开发不易，要是能支持一下就太好了 www）
                             </p>
                           </div>
                         ),
