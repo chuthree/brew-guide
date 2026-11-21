@@ -31,7 +31,6 @@ import {
 } from '@/lib/api/shared/recognitionUpload.js';
 import { STILL_IMAGE_ACCEPT } from '@/lib/images/stillImageUpload.js';
 import {
-  captureImage,
   isImageSelectionCancelled,
   pickNativeGalleryImageFiles,
   shouldUseNativeGalleryPicker,
@@ -502,7 +501,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
           fail('摄像头没有返回可用的视频轨道', true);
           return;
         }
-        videoTrack.onended = () => fail('摄像头视频轨道已中断', true);
+        videoTrack.onended = () => fail('相机连接已中断', true);
         window.clearTimeout(startupTimeout);
         startupTimeout = window.setTimeout(
           () =>
@@ -1211,11 +1210,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
   }, [cameraZoom, isHardwareZoomSupported]);
 
   const handleCaptureCameraPhoto = useCallback(async () => {
-    if (
-      (cameraStatus !== 'ready' && cameraStatus !== 'error') ||
-      isCameraCapturing ||
-      isMultiRecognizing
-    ) {
+    if (cameraStatus !== 'ready' || isCameraCapturing || isMultiRecognizing) {
       return;
     }
 
@@ -1229,9 +1224,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
 
     try {
       const file = await readRecognitionSourceImage(
-        cameraStatus === 'error'
-          ? await captureImage('camera')
-          : await captureCameraPhotoFile()
+        await captureCameraPhotoFile()
       );
       if (!preview || preview !== videoRef.current) return;
       const previewUrl = URL.createObjectURL(file);
@@ -1246,7 +1239,6 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
         },
       ]);
     } catch (error) {
-      if (isImageSelectionCancelled(error)) return;
       showToast({
         type: 'error',
         title: error instanceof Error ? error.message : '拍照失败',
@@ -1438,6 +1430,10 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
     </>
   );
 
+  const hasSecondCameraAction =
+    cameraStatus === 'error' || selectedImages.length > 0;
+  const cameraActionClass =
+    'min-w-0 flex-1 px-3 py-3 focus-visible:outline-offset-[-3px] disabled:opacity-40';
   const cameraPreviewContent = (
     <>
       <div className="mb-4">
@@ -1471,28 +1467,13 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
           )}
 
           {cameraStatus === 'error' && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-neutral-950 px-8 text-center">
+            <div
+              role="status"
+              className="absolute inset-0 flex items-center justify-center bg-neutral-950 px-8 text-center"
+            >
               <p className="text-sm leading-relaxed text-white/70">
                 {cameraError || '无法打开摄像头'}
               </p>
-              <button
-                type="button"
-                onClick={retryCamera}
-                disabled={isCameraCapturing || isMultiRecognizing}
-                className="px-3 py-2 text-sm text-white underline"
-              >
-                重试应用内预览
-              </button>
-              {selectedImages.length === 0 && (
-                <button
-                  type="button"
-                  onClick={handleUploadImageClick}
-                  disabled={isCameraCapturing}
-                  className="px-3 py-2 text-sm text-white underline"
-                >
-                  选择图片
-                </button>
-              )}
             </div>
           )}
 
@@ -1536,7 +1517,10 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
         </div>
       </div>
 
-      <div className="relative mb-5 h-16">
+      <div
+        hidden={cameraStatus === 'error' && selectedImages.length === 0}
+        className="relative mb-5 h-16"
+      >
         <div
           className={`absolute inset-0 flex items-center transition-opacity duration-200 ease-out ${
             selectedImages.length > 0
@@ -1643,44 +1627,56 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
         </div>
       </div>
 
-      <div className="flex gap-2">
-        <motion.button
-          whileTap={isMultiRecognizing ? undefined : { scale: 0.98 }}
+      <ActionDrawer.Actions>
+        <ActionDrawer.SecondaryButton
           onClick={goBackToMain}
           disabled={isMultiRecognizing}
-          className="flex-1 rounded-full bg-neutral-100 px-4 py-3 text-sm font-medium text-neutral-800 dark:bg-neutral-800 dark:text-white"
         >
           取消
-        </motion.button>
-        <div className="flex flex-[1.45] overflow-hidden rounded-full bg-neutral-100 text-sm font-medium text-neutral-800 dark:bg-neutral-800 dark:text-white">
+        </ActionDrawer.SecondaryButton>
+        <div
+          role="group"
+          aria-label="相机操作"
+          className={`flex overflow-hidden rounded-full bg-neutral-100 text-sm font-medium text-neutral-800 dark:bg-neutral-800 dark:text-white ${hasSecondCameraAction ? 'flex-[1.45]' : 'flex-1'}`}
+        >
           <button
             type="button"
-            onClick={handleCaptureCameraPhoto}
-            disabled={
-              (cameraStatus !== 'ready' && cameraStatus !== 'error') ||
-              isCameraCapturing ||
-              isMultiRecognizing ||
-              selectedImages.length >= MAX_IMAGES
+            className={cameraActionClass}
+            onClick={
+              cameraStatus === 'error' ? retryCamera : handleCaptureCameraPhoto
             }
-            className="min-w-0 flex-1 px-4 py-3 transition-opacity active:scale-[0.98] disabled:opacity-40 disabled:active:scale-100"
+            disabled={
+              isMultiRecognizing ||
+              isCameraCapturing ||
+              (cameraStatus !== 'error' &&
+                (cameraStatus !== 'ready' ||
+                  selectedImages.length >= MAX_IMAGES))
+            }
           >
-            {cameraStatus === 'error' ? '系统相机' : '拍照'}
+            {cameraStatus === 'error' ? '重试' : '拍照'}
           </button>
-          <div className="my-3 w-px bg-neutral-300 dark:bg-neutral-700" />
-          <button
-            type="button"
-            onClick={handleRecognizeCameraImages}
-            disabled={selectedImages.length === 0 || isMultiRecognizing}
-            className={`min-w-0 flex-1 px-4 py-3 transition-opacity active:scale-[0.98] disabled:active:scale-100 ${
-              selectedImages.length > 0 && !isMultiRecognizing
-                ? ''
-                : 'opacity-40'
-            }`}
-          >
-            入库
-          </button>
+          {hasSecondCameraAction && (
+            <>
+              <span
+                aria-hidden="true"
+                className="my-3 w-px bg-neutral-300 dark:bg-neutral-700"
+              />
+              <button
+                type="button"
+                className={cameraActionClass}
+                onClick={
+                  selectedImages.length
+                    ? handleRecognizeCameraImages
+                    : handleUploadImageClick
+                }
+                disabled={isMultiRecognizing}
+              >
+                {selectedImages.length ? '入库' : '选择图片'}
+              </button>
+            </>
+          )}
         </div>
-      </div>
+      </ActionDrawer.Actions>
     </>
   );
 
