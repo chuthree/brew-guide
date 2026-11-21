@@ -11,7 +11,7 @@
 [![最近提交](https://img.shields.io/github/last-commit/chuthree/brew-guide?label=Updated&color=525252)](https://github.com/chuthree/brew-guide/commits/main)
 [![License: GPL-3.0-only](https://img.shields.io/badge/License-GPL--3.0--only-525252)](LICENSE)
 
-[官网](https://chu3.top/brewguide) · [下载](#使用) · [使用教程](https://chu3.top/brewguide-help) · [更新日志](https://chu3.top/brewguide/changelog) · [网页版](https://coffee.chu3.top/)
+[官网](https://chu3.top/brewguide) · [下载](#使用) · [使用教程](https://chu3.top/brewguide-help) · [更新日志](https://chu3.top/brewguide/changelog) · [网页版](https://coffee.chu3.top/) · [支持项目](#支持项目)
 
 </div>
 
@@ -92,6 +92,14 @@ Android 版提供 ContentProvider 接口，供其他应用经用户授权后查�
 - [brew-guide-cli](https://github.com/swiftwind0405/brew-guide-cli)：社区维护的命令行工具，用于管理 Brew Guide 的 Supabase 同步数据。
   - [brew-cli](https://github.com/FabianActor/brew-cli)：较新的分支。
 - [bookoo-brew](https://github.com/iamzzz774/bookoo-brew)：支持蓝牙连接 BOOKOO 咖啡秤和可选的 MT80 磨豆参数，配合 Brew Guide 管理笔记与库存。
+
+## 支持项目
+
+如果对你有所帮助，可以点的 Star 支持一下！要是能打赏一下就太好了ww (*^▽^*)
+
+| 微信赞赏 | 支付宝 |
+| :---: | :---: |
+| <a href=".github/support/wechat-appreciation.webp"><img src=".github/support/wechat-appreciation.webp" alt="微信赞赏码，点击查看大图" width="240" height="240" /></a> | <a href=".github/support/alipay-support.webp"><img src=".github/support/alipay-support.webp" alt="支付宝收款码，点击查看大图" width="240" height="240" /></a> |
 
 ## 许可证
 
