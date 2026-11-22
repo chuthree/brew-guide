@@ -45,6 +45,7 @@ import { deriveNavigationSettings } from '@/lib/navigation/navigationSettings';
 import { buildSettingsFeatureGroups } from './settingsFeatureRegistry';
 import { getNotificationSettingsVisibility } from './notificationSettingsVisibility';
 import { useSponsorsList } from '@/lib/sponsors/useSponsorsList';
+import GroupQrContent from './GroupQrContent';
 import { openExternalUrl } from '@/lib/utils/openExternalUrl';
 
 import { useTheme } from 'next-themes';
@@ -936,22 +937,10 @@ const Settings: React.FC<SettingsProps> = ({
                             hapticsUtils.light();
                           }
                         },
-                        expandedContent: (
-                          <div className="flex flex-col items-start justify-center pb-3.5 pl-10.5">
-                            <div className="overflow-hidden rounded-lg border border-neutral-400/10 bg-white p-2">
-                              <Image
-                                src="/images/content/group-code.jpg"
-                                alt="交流群二维码"
-                                width={200}
-                                height={200}
-                                className="h-auto w-50"
-                              />
-                            </div>
-                            <p className="mt-3 text-xs text-neutral-500 dark:text-neutral-400">
-                              群满 200 人了，加开发者小号拉你进群吧
-                            </p>
-                          </div>
-                        ),
+                        expandedContent:
+                          isOpen && qrCodeType === 'group' ? (
+                            <GroupQrContent />
+                          ) : null,
                       },
                       {
                         icon: ThumbsUp,
