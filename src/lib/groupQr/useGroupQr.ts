@@ -14,7 +14,7 @@ interface GroupQr {
 async function fetchGroupQr(signal: AbortSignal): Promise<GroupQr | null> {
   const response = await fetch(
     `${API_CONFIG.baseURL}/api/group-qr?fresh=${Date.now()}`,
-    { signal, cache: 'no-store', credentials: 'omit' }
+    { signal, cache: 'no-store', credentials: 'same-origin' }
   );
   if (!response.ok) return null;
   const code = await response.json();

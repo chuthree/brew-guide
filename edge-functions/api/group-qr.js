@@ -56,6 +56,11 @@ export default async function onRequest({ request }) {
     // An unavailable or invalid record must never hide the offline fallback.
   }
   return code
-    ? Response.json(code, { headers })
+    ? new Response(JSON.stringify(code), {
+        headers: {
+          ...headers,
+          'Content-Type': 'application/json; charset=utf-8',
+        },
+      })
     : new Response(null, { status: 404, headers });
 }

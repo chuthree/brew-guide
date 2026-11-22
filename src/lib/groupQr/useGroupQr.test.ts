@@ -59,7 +59,10 @@ describe('group QR client refresh', () => {
     await tick(60_000);
     expect(host.textContent).toBe(secondImage);
     expect(fetchMock.mock.calls[0]?.[0]).not.toBe(fetchMock.mock.calls[1]?.[0]);
-    expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({ cache: 'no-store' });
+    expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({
+      cache: 'no-store',
+      credentials: 'same-origin',
+    });
     act(() => root.render(null));
     render();
     expect(host.textContent).toBe('fallback');

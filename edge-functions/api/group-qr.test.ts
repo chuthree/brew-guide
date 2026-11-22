@@ -27,6 +27,10 @@ describe('group QR edge function', () => {
         JSON.stringify({ imageDataUrl: jpeg, expiresAt: expiresAt + 30_000 })
       );
     vi.stubGlobal('GROUP_QR_KV', { get });
+    // Exercise runtimes that only provide the Response constructor.
+    vi.spyOn(Response, 'json').mockImplementation(() => {
+      throw new TypeError('Response.json is not available');
+    });
     const first = await call();
     expect(first.status).toBe(200);
     expect(first.headers.get('cache-control')).toBe('no-store');
