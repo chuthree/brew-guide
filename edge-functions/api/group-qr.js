@@ -1,8 +1,8 @@
 /* global GROUP_QR_KV */
 
-export const GROUP_QR_KEY = 'current_group_qr';
+const GROUP_QR_KEY = 'current_group_qr';
 export const MAX_QR_DATA_URL_LENGTH = 1_400_000;
-export const MAX_QR_LIFETIME_MS = 7 * 24 * 60 * 60 * 1000;
+const MAX_QR_LIFETIME_MS = 7 * 24 * 60 * 60 * 1000;
 
 const headers = {
   'Access-Control-Allow-Origin': '*',
@@ -47,10 +47,7 @@ export default async function onRequest({ request }) {
 
   let code = null;
   try {
-    const kv =
-      globalThis.GROUP_QR_KV ||
-      (typeof GROUP_QR_KV !== 'undefined' ? GROUP_QR_KV : null);
-    const raw = await kv?.get(GROUP_QR_KEY);
+    const raw = await GROUP_QR_KV.get(GROUP_QR_KEY);
     if (raw) code = validateGroupQr(JSON.parse(raw));
   } catch {
     // An unavailable or invalid record must never hide the offline fallback.

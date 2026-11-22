@@ -12,8 +12,9 @@ const response = (imageDataUrl: string, validFor: number) =>
 const fetchMock = vi.fn();
 const decode = vi.fn();
 
-function Panel() {
-  return createElement('div', null, useGroupQr()?.imageDataUrl ?? 'fallback');
+function Panel({ active }: { active: boolean }) {
+  const code = useGroupQr(active);
+  return createElement('div', null, code?.imageDataUrl ?? 'fallback');
 }
 
 describe('group QR client refresh', () => {
@@ -30,7 +31,6 @@ describe('group QR client refresh', () => {
         decode = decode;
       }
     );
-    vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('visible');
     fetchMock.mockReset();
     decode.mockReset().mockResolvedValue(undefined);
     host = document.createElement('div');
@@ -44,42 +44,50 @@ describe('group QR client refresh', () => {
     vi.unstubAllGlobals();
   });
 
-  const render = () => act(() => root.render(createElement(Panel)));
+  const render = (active = true) =>
+    act(() => root.render(createElement(Panel, { active })));
   const tick = (ms: number) => act(() => vi.advanceTimersByTimeAsync(ms));
 
-  it('loads only when mounted, switches images while open, and reloads on reopening', async () => {
+  it('loads while expanded, retains the closing image, and refreshes on reopening', async () => {
     fetchMock.mockImplementationOnce(() => response(firstImage, 120_000));
     fetchMock.mockImplementationOnce(() => response(secondImage, 120_000));
-    fetchMock.mockResolvedValueOnce(new Response(null, { status: 404 }));
+    render(false);
+    await tick(60_000);
     expect(fetchMock).not.toHaveBeenCalled();
     render();
     expect(host.textContent).toBe('fallback');
     await tick(1);
     expect(host.textContent).toBe(firstImage);
     await tick(60_000);
-    expect(host.textContent).toBe(secondImage);
-    expect(fetchMock.mock.calls[0]?.[0]).not.toBe(fetchMock.mock.calls[1]?.[0]);
-    expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({
-      cache: 'no-store',
-      credentials: 'same-origin',
+    act(() => {
+      document.dispatchEvent(new Event('visibilitychange'));
     });
-    act(() => root.render(null));
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(host.textContent).toBe(firstImage);
+    render(false);
+    expect(host.textContent).toBe(firstImage);
     render();
-    expect(host.textContent).toBe('fallback');
     await tick(1);
-    expect(host.textContent).toBe('fallback');
-    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(host.textContent).toBe(secondImage);
+    for (const [url, options] of fetchMock.mock.calls) {
+      expect(new URL(url).pathname).toBe('/api/group-qr');
+      expect(new URL(url).search).toBe('');
+      expect(options.cache).toBe('no-store');
+    }
+    render(false);
+    await tick(60_000);
+    expect(host.textContent).toBe(secondImage);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
   it('stops showing an expired image even while the panel stays open', async () => {
     fetchMock.mockImplementationOnce(() => response(firstImage, 4_000));
-    fetchMock.mockResolvedValueOnce(new Response(null, { status: 404 }));
     render();
     await tick(1);
     expect(host.textContent).toBe(firstImage);
     await tick(4_000);
     expect(host.textContent).toBe('fallback');
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it('keeps the fallback if an image cannot be decoded', async () => {

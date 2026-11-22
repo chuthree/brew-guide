@@ -142,6 +142,7 @@ const SettingGroup: React.FC<SettingGroupProps> = ({
 
               {/* 展开内容区域 */}
               <div
+                inert={!isExpanded}
                 className={`grid transition-all duration-300 ease-in-out ${
                   isExpanded
                     ? 'grid-rows-[1fr] opacity-100'
