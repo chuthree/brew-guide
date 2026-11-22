@@ -4,10 +4,12 @@ import {
   useCallback,
   useEffect,
   useId,
+  useImperativeHandle,
   useMemo,
   useRef,
   useState,
   type ReactNode,
+  type Ref,
 } from 'react';
 import {
   animate,
@@ -15,7 +17,9 @@ import {
   useMotionValueEvent,
   useReducedMotion,
 } from 'framer-motion';
+import { Minus, Plus } from 'lucide-react';
 import ActionDrawer from '@/components/common/ui/ActionDrawer';
+import { useModalHistory } from '@/lib/hooks/useModalHistory';
 import type { Grinder, GrinderQuickAdjust } from '@/lib/data/models';
 import {
   configureGrinderScale,
@@ -34,50 +38,66 @@ export interface WheelPointer {
   clientX: number;
 }
 
+export interface GrinderScaleWheelHandle {
+  readChanges: () =>
+    { value: string; settings?: GrinderQuickAdjust } | false | null;
+}
+
 interface GrinderScaleWheelProps {
+  ref: Ref<GrinderScaleWheelHandle>;
   grinder: Grinder;
   openingPointer: WheelPointer | null;
   saving: boolean;
   children: ReactNode;
-  onCancel: () => void;
-  onSave: (value: string, settings?: GrinderQuickAdjust) => void;
+  onClose: () => void;
+  onRestore: () => void;
 }
 
 const PIXELS_PER_STEP = 22;
 const MARKS = [-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5];
 const STEP_BUTTON =
-  'size-11 shrink-0 cursor-pointer rounded-full bg-neutral-100 text-xl text-neutral-800 disabled:cursor-default disabled:opacity-40 dark:bg-neutral-800 dark:text-neutral-100';
+  'grid size-11 shrink-0 cursor-pointer touch-manipulation place-items-center rounded-full bg-neutral-100 text-neutral-800 transition-[background-color,scale] duration-150 ease-out enabled:hover:bg-neutral-200 enabled:active:bg-neutral-300 focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-default disabled:opacity-40 motion-safe:enabled:active:scale-[0.96] dark:bg-neutral-800 dark:text-neutral-100 dark:enabled:hover:bg-neutral-700 dark:enabled:active:bg-neutral-600';
 const INPUT =
   'min-w-0 w-full rounded-lg bg-neutral-100 px-2.5 py-2 text-base text-neutral-900 focus-visible:outline-2 dark:bg-neutral-800 dark:text-neutral-100';
 
 export default function GrinderScaleWheel({
+  ref,
   grinder,
   openingPointer,
   saving,
   children,
-  onCancel,
-  onSave,
+  onClose,
+  onRestore,
 }: GrinderScaleWheelProps) {
-  const [base, setBase] = useState(grinder.currentGrindSize ?? '');
+  const [initial] = useState(() => ({
+    value: grinder.currentGrindSize ?? '',
+    settings: grinder.quickAdjust,
+  }));
+  const [base, setBase] = useState(initial.value);
   const [draft, setDraft] = useState<string | null>(null);
-  const [preview, setPreview] = useState<{
-    form: GrinderScaleForm;
-    settings: GrinderQuickAdjust;
-  }>();
+  const [preview, setPreview] = useState<GrinderQuickAdjust>();
+  const [openedForm, setOpenedForm] = useState<GrinderScaleForm>();
   const [form, setForm] = useState<GrinderScaleForm | null>(null);
   const [formErrors, setFormErrors] = useState<GrinderScaleFormErrors>();
   const formId = useId();
+  const cancelSettings = () => setForm(null);
+  useModalHistory({
+    id: `grinder-scale-settings-${formId}`,
+    isOpen: form !== null,
+    dismissible: !saving,
+    onClose: cancelSettings,
+  });
   const [invalidInput, setInvalidInput] = useState(false);
   const inputErrorId = useId();
   const [position, setPosition] = useState(0);
   const travel = useMotionValue(0);
-  const target = useRef(0);
+  const [settledOffset, setSettledOffset] = useState(0);
   const reduceMotion = useReducedMotion();
   useMotionValueEvent(travel, 'change', setPosition);
   useEffect(() => () => travel.stop(), [travel]);
 
   const drag = useRef<(WheelPointer & { offset: number }) | null>(null);
-  const activeSettings = preview?.settings ?? grinder.quickAdjust;
+  const activeSettings = preview ?? initial.settings;
   const configured = useMemo(
     () => getConfiguredGrinderScale(activeSettings),
     [activeSettings]
@@ -87,7 +107,9 @@ export default function GrinderScaleWheel({
     [base, activeSettings]
   );
   const offset = Math.round(position);
-  const value = (scale && getScaleAt(scale, offset)) ?? base;
+  const valueAt = (at: number) =>
+    at === 0 || !scale ? base : (getScaleAt(scale, at) ?? base);
+  const value = valueAt(offset);
   const editValue = draft ?? value;
   const invalidDraft =
     draft !== null && normalizeScaleInput(draft, configured) === null;
@@ -99,7 +121,7 @@ export default function GrinderScaleWheel({
         scale.minOffset,
         Math.min(scale.maxOffset, newOffset)
       );
-      target.current = next;
+      if (settle) setSettledOffset(next);
       if (settle && !reduceMotion) {
         animate(travel, next, { duration: 0.18, ease: 'easeOut' });
       } else {
@@ -110,30 +132,55 @@ export default function GrinderScaleWheel({
     [reduceMotion, scale, travel]
   );
   const step = (direction: number) =>
-    move(Math.round(target.current) + direction, true);
+    move(settledOffset + direction, true);
 
   const setCurrentValue = (nextValue: string) => {
-    target.current = 0;
+    setSettledOffset(0);
     travel.jump(0);
     setBase(nextValue);
     setDraft(null);
     setInvalidInput(false);
   };
 
-  const save = () => {
-    const settled = scale && getScaleAt(scale, Math.round(target.current));
-    const nextValue = normalizeScaleInput(draft ?? settled ?? base, configured);
-    if (nextValue === null) {
-      setInvalidInput(true);
-      return;
-    }
-    if (nextValue) onSave(nextValue, preview?.settings);
-  };
+  const formChanged =
+    form !== null &&
+    (['value', 'next', 'min', 'max'] as const).some(
+      key => form[key] !== openedForm?.[key]
+    );
+  const settingsChanged = (['format', 'step', 'min', 'max'] as const).some(
+    key => activeSettings?.[key] !== initial.settings?.[key]
+  );
+  const settledValue = draft ?? valueAt(settledOffset);
+  const changed = settledValue !== initial.value || settingsChanged;
+
+  useImperativeHandle(ref, () => ({
+    readChanges() {
+      if (form && formChanged) {
+        const result = configureGrinderScale(form);
+        if ('errors' in result) {
+          setFormErrors(result.errors);
+          return false;
+        }
+        return {
+          value: getScaleAt(result.scale, 0) ?? form.value.trim(),
+          settings: result.settings,
+        };
+      }
+      const raw = settledValue;
+      if (raw === initial.value && !settingsChanged) return null;
+      const nextValue = normalizeScaleInput(raw, configured);
+      if (!nextValue) {
+        setInvalidInput(true);
+        return false;
+      }
+      return { value: nextValue, settings: preview };
+    },
+  }));
 
   useEffect(() => {
     if (!openingPointer || !scale) return;
     const controller = new AbortController();
-    const options = { signal: controller.signal };
+    const options = { signal: controller.signal, capture: true };
     const movePointer = (event: PointerEvent) => {
       if (event.pointerId === openingPointer.pointerId) {
         move((openingPointer.clientX - event.clientX) / PIXELS_PER_STEP);
@@ -147,9 +194,25 @@ export default function GrinderScaleWheel({
     window.addEventListener('pointermove', movePointer, options);
     window.addEventListener('pointerup', finish, options);
     window.addEventListener('pointercancel', finish, options);
+    window.addEventListener('lostpointercapture', finish, options);
     return () => controller.abort();
   }, [openingPointer, scale, move, travel]);
 
+  const restore = () => {
+    setPreview(undefined);
+    setCurrentValue(initial.value);
+    onRestore();
+  };
+  const restoreButton = changed && (
+    <button
+      type="button"
+      disabled={saving}
+      className="absolute top-0 right-0 cursor-pointer rounded-full bg-neutral-100 px-2.5 py-1.5 text-xs font-medium text-neutral-700 transition-colors before:absolute before:-inset-y-2 before:inset-x-0 enabled:hover:bg-neutral-200 enabled:active:bg-neutral-300 focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-default disabled:opacity-40 dark:bg-neutral-800 dark:text-neutral-300 dark:enabled:hover:bg-neutral-700 dark:enabled:active:bg-neutral-600"
+      onClick={restore}
+    >
+      还原
+    </button>
+  );
   if (form) {
     const fields = [
       { key: 'value', label: '起始刻度', placeholder: '如 24、5.2 或 1.0.2' },
@@ -167,8 +230,8 @@ export default function GrinderScaleWheel({
             setFormErrors(result.errors);
             return;
           }
-          setPreview({ form, settings: result.settings });
-          setCurrentValue(form.value.trim());
+          setPreview(result.settings);
+          setCurrentValue(getScaleAt(result.scale, 0) ?? form.value.trim());
           setForm(null);
         }}
       >
@@ -194,6 +257,7 @@ export default function GrinderScaleWheel({
                   maxLength={300}
                   placeholder={placeholder}
                   value={form[key]}
+                  disabled={saving}
                   onChange={event => {
                     const nextForm = { ...form, [key]: event.target.value };
                     setForm(nextForm);
@@ -219,11 +283,15 @@ export default function GrinderScaleWheel({
           })}
         </ActionDrawer.Content>
         <ActionDrawer.Actions>
-          <ActionDrawer.SecondaryButton onClick={() => setForm(null)}>
+          <ActionDrawer.SecondaryButton
+            type="button"
+            disabled={saving}
+            onClick={cancelSettings}
+          >
             取消
           </ActionDrawer.SecondaryButton>
-          <ActionDrawer.PrimaryButton type="submit">
-            预览轮盘
+          <ActionDrawer.PrimaryButton type="submit" disabled={saving}>
+            应用
           </ActionDrawer.PrimaryButton>
         </ActionDrawer.Actions>
       </form>
@@ -232,6 +300,7 @@ export default function GrinderScaleWheel({
 
   return (
     <>
+      {restoreButton}
       <ActionDrawer.Content className="mb-4!">
         <input
           type="text"
@@ -255,7 +324,8 @@ export default function GrinderScaleWheel({
             else setCurrentValue(normalized);
           }}
           onKeyDown={event => {
-            if (event.key === 'Enter' && !event.nativeEvent.isComposing) save();
+            if (event.key === 'Enter' && !event.nativeEvent.isComposing)
+              onClose();
           }}
           style={{
             fontFamily: 'ui-rounded, "SF Pro Rounded", system-ui, sans-serif',
@@ -268,12 +338,18 @@ export default function GrinderScaleWheel({
             role="alert"
             className="text-center text-xs text-red-600 dark:text-red-400"
           >
-            请输入符合设置的刻度格式，如{' '}
-            {activeSettings?.format ??
-              activeSettings?.min ??
-              activeSettings?.max ??
-              activeSettings?.step}
-            。
+            {editValue.trim() ? (
+              <>
+                请输入符合设置的刻度格式，如{' '}
+                {activeSettings?.format ??
+                  activeSettings?.min ??
+                  activeSettings?.max ??
+                  activeSettings?.step}
+                。
+              </>
+            ) : (
+              '请输入研磨度，或还原本次修改。'
+            )}
           </p>
         )}
         <div
@@ -326,8 +402,8 @@ export default function GrinderScaleWheel({
                 drag.current = null;
               }}
               onPointerCancel={event => {
-                if (drag.current?.pointerId === event.pointerId)
-                  move(Math.round(drag.current.offset), true);
+                if (drag.current?.pointerId !== event.pointerId) return;
+                move(settledOffset, true);
                 drag.current = null;
               }}
               onLostPointerCapture={() => {
@@ -383,26 +459,28 @@ export default function GrinderScaleWheel({
               }
               onClick={() => step(-1)}
             >
-              −
+              <Minus className="size-5" aria-hidden="true" />
             </button>
             <button
               type="button"
               className="cursor-pointer rounded-full px-3 py-2 text-sm text-neutral-600 dark:text-neutral-300"
               disabled={saving}
               onClick={() => {
-                const current = getGrinderScale(value, activeSettings);
+                const latest = settledValue;
+                const current = getGrinderScale(latest, activeSettings);
+                const fields = {
+                  value: current ? latest : '',
+                  next:
+                    current && activeSettings?.step
+                      ? getNextScaleExample(current)
+                      : '',
+                  min: activeSettings?.min ?? '',
+                  max: activeSettings?.max ?? '',
+                };
+                setCurrentValue(latest);
                 setFormErrors(undefined);
-                setForm(
-                  preview?.form ?? {
-                    value: current ? value : '',
-                    next:
-                      current && activeSettings?.step
-                        ? getNextScaleExample(current)
-                        : '',
-                    min: activeSettings?.min ?? '',
-                    max: activeSettings?.max ?? '',
-                  }
-                );
+                setOpenedForm(fields);
+                setForm(fields);
               }}
             >
               设置刻度
@@ -416,23 +494,12 @@ export default function GrinderScaleWheel({
               }
               onClick={() => step(1)}
             >
-              +
+              <Plus className="size-5" aria-hidden="true" />
             </button>
           </div>
         </div>
       </ActionDrawer.Content>
-      {children && <div className="mb-4">{children}</div>}
-      <ActionDrawer.Actions>
-        <ActionDrawer.SecondaryButton onClick={onCancel} disabled={saving}>
-          取消
-        </ActionDrawer.SecondaryButton>
-        <ActionDrawer.PrimaryButton
-          onClick={save}
-          disabled={saving || !editValue.trim()}
-        >
-          {saving ? '保存中…' : '保存'}
-        </ActionDrawer.PrimaryButton>
-      </ActionDrawer.Actions>
+      {children}
     </>
   );
 }

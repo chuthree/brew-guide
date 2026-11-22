@@ -947,7 +947,10 @@ const Settings: React.FC<SettingsProps> = ({
                         label: '赞赏码',
                         isExpanded: qrCodeType === 'appreciation',
                         onClick: () => {
-                          if (hasViewedSupportCode()) {
+                          if (
+                            settings.hasSupportedAuthor ||
+                            hasViewedSupportCode()
+                          ) {
                             setQrCodeType(
                               qrCodeType === 'appreciation' ? null : 'appreciation'
                             );

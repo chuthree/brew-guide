@@ -15,8 +15,10 @@ import {
   type RoasterSettings,
 } from '@/lib/utils/beanVarietyUtils';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
-import type { GrinderQuickAdjust } from '@/lib/data/models';
-import GrinderScaleWheel, { type WheelPointer } from './GrinderScaleWheel';
+import GrinderScaleWheel, {
+  type GrinderScaleWheelHandle,
+  type WheelPointer,
+} from './GrinderScaleWheel';
 
 interface GrindSizeDrawerProps {
   /** 是否打开抽屉 */
@@ -65,6 +67,7 @@ const GrindSizeDrawer: React.FC<GrindSizeDrawerProps> = ({
   const [saving, setSaving] = useState(false);
   const [saveFailed, setSaveFailed] = useState(false);
   const saveInProgress = useRef(false);
+  const wheel = useRef<GrinderScaleWheelHandle>(null);
   const roasterSettings: RoasterSettings = {
     roasterFieldEnabled,
     roasterSeparator,
@@ -115,24 +118,28 @@ const GrindSizeDrawer: React.FC<GrindSizeDrawerProps> = ({
     [methodsByEquipment]
   );
 
-  const handleCancel = () => {
+  const close = () => {
     setSaveFailed(false);
     setShowGrinderSelector(false);
     onClose();
   };
 
-  // 保存研磨度
-  const handleSave = async (value: string, settings?: GrinderQuickAdjust) => {
-    const scale = value.trim();
-    if (!selectedGrinder || !scale || saveInProgress.current) return;
+  const leaveGrinder = async (afterSave: () => void) => {
+    if (!selectedGrinder || saveInProgress.current || !wheel.current) return;
+    const change = wheel.current.readChanges();
+    if (change === false) return;
+    if (!change) {
+      afterSave();
+      return;
+    }
 
     saveInProgress.current = true;
     setSaving(true);
     setSaveFailed(false);
     try {
-      await saveGrinderScale(selectedGrinder.id, scale, settings);
+      await saveGrinderScale(selectedGrinder.id, change.value, change.settings);
       if (hapticFeedback) hapticsUtils.light();
-      handleCancel();
+      afterSave();
     } catch {
       setSaveFailed(true);
     } finally {
@@ -140,6 +147,9 @@ const GrindSizeDrawer: React.FC<GrindSizeDrawerProps> = ({
       setSaving(false);
     }
   };
+
+  const requestClose = () => void leaveGrinder(close);
+  const clearSaveError = () => setSaveFailed(false);
 
   // 切换磨豆机
   const handleSelectGrinder = useCallback(
@@ -159,146 +169,157 @@ const GrindSizeDrawer: React.FC<GrindSizeDrawerProps> = ({
     <ActionDrawer
       title="研磨刻度"
       isOpen={isOpen}
-      onClose={handleCancel}
+      onClose={requestClose}
       autoFocus={false}
       dismissible={!saving}
       repositionInputs={false}
     >
       {/* 磨豆机选择器 - 左上角紧凑布局 */}
-      <div>
-        <div className="flex items-start justify-between">
-          {/* 磨豆机名称按钮 */}
-          {grinders.length > 1 ? (
-            <button
-              type="button"
-              disabled={saving}
-              onClick={() => setShowGrinderSelector(!showGrinderSelector)}
-              className="inline-flex items-center gap-1 rounded-full bg-neutral-100 px-2.5 py-1.5 text-xs font-medium text-neutral-700 transition-colors active:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-300 dark:active:bg-neutral-700"
-            >
-              <span>{selectedGrinder.name}</span>
-              <ChevronDown
-                className={`h-3.5 w-3.5 transition-transform ${
-                  showGrinderSelector ? 'rotate-180' : ''
-                }`}
-              />
-            </button>
-          ) : (
-            <div className="inline-flex items-center rounded-full bg-neutral-100 px-2.5 py-1.5 text-xs font-medium text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300">
-              <span>{selectedGrinder.name}</span>
-            </div>
-          )}
+      <div className="relative">
+        <div>
+          <div className="flex items-start justify-between pr-16">
+            {/* 磨豆机名称按钮 */}
+            {grinders.length > 1 ? (
+              <button
+                type="button"
+                disabled={saving}
+                onClick={() => setShowGrinderSelector(!showGrinderSelector)}
+                className="inline-flex items-center gap-1 rounded-full bg-neutral-100 px-2.5 py-1.5 text-xs font-medium text-neutral-700 transition-colors active:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-300 dark:active:bg-neutral-700"
+              >
+                <span>{selectedGrinder.name}</span>
+                <ChevronDown
+                  className={`h-3.5 w-3.5 transition-transform ${
+                    showGrinderSelector ? 'rotate-180' : ''
+                  }`}
+                />
+              </button>
+            ) : (
+              <div className="inline-flex items-center rounded-full bg-neutral-100 px-2.5 py-1.5 text-xs font-medium text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300">
+                <span>{selectedGrinder.name}</span>
+              </div>
+            )}
+          </div>
+
+          {/* 磨豆机列表 */}
+          <AnimatePresence>
+            {showGrinderSelector && grinders.length > 1 && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="overflow-hidden"
+              >
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {grinders
+                    .filter(g => g.id !== selectedGrinder.id)
+                    .map(grinder => (
+                      <button
+                        type="button"
+                        key={grinder.id}
+                        disabled={saving}
+                        onClick={() =>
+                          void leaveGrinder(() => handleSelectGrinder(grinder))
+                        }
+                        className="inline-flex items-center rounded-full bg-neutral-100 px-2.5 py-1.5 text-xs font-medium text-neutral-700 transition-colors active:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-300 dark:active:bg-neutral-700"
+                      >
+                        {grinder.name}
+                      </button>
+                    ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
-        {/* 磨豆机列表 */}
-        <AnimatePresence>
-          {showGrinderSelector && grinders.length > 1 && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="overflow-hidden"
-            >
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                {grinders
-                  .filter(g => g.id !== selectedGrinder.id)
-                  .map(grinder => (
-                    <button
-                      type="button"
-                      key={grinder.id}
-                      disabled={saving}
-                      onClick={() => handleSelectGrinder(grinder)}
-                      className="inline-flex items-center rounded-full bg-neutral-100 px-2.5 py-1.5 text-xs font-medium text-neutral-700 transition-colors active:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-300 dark:active:bg-neutral-700"
-                    >
-                      {grinder.name}
-                    </button>
-                  ))}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+        {saveFailed && (
+          <p
+            role="alert"
+            className="mt-3 text-sm text-red-600 dark:text-red-400"
+          >
+            刻度保存失败，请再次关闭抽屉以重试。
+          </p>
+        )}
+        <GrinderScaleWheel
+          ref={wheel}
+          key={`${selectedGrinder.id}:${quickSession}`}
+          grinder={selectedGrinder}
+          openingPointer={openingPointer}
+          saving={saving}
+          onClose={requestClose}
+          onRestore={clearSaveError}
+        >
+          {/* 最近使用 */}
+          {selectedGrinder.grindSizeHistory &&
+            selectedGrinder.grindSizeHistory.length > 0 && (
+              <div>
+                <p className="mb-2 text-xs font-medium text-neutral-500 dark:text-neutral-400">
+                  最近使用
+                </p>
+                <div className="flex flex-col gap-1.5">
+                  {selectedGrinder.grindSizeHistory
+                    .slice(0, 3)
+                    .map((item, index) => {
+                      // 获取器具名称
+                      const equipmentName = item.equipment
+                        ? getEquipmentNameById(item.equipment, customEquipments)
+                        : '';
 
-      {saveFailed && (
-        <p role="alert" className="mt-3 text-sm text-red-600 dark:text-red-400">
-          刻度保存失败，请重试。
-        </p>
-      )}
-      <GrinderScaleWheel
-        key={`${selectedGrinder.id}:${quickSession}`}
-        grinder={selectedGrinder}
-        openingPointer={openingPointer}
-        saving={saving}
-        onCancel={handleCancel}
-        onSave={handleSave}
-      >
-        {/* 最近使用 */}
-        {selectedGrinder.grindSizeHistory &&
-          selectedGrinder.grindSizeHistory.length > 0 && (
-            <div>
-              <p className="mb-2 text-xs font-medium text-neutral-500 dark:text-neutral-400">
-                最近使用
-              </p>
-              <div className="flex flex-col gap-1.5">
-                {selectedGrinder.grindSizeHistory
-                  .slice(0, 3)
-                  .map((item, index) => {
-                    // 获取器具名称
-                    const equipmentName = item.equipment
-                      ? getEquipmentNameById(item.equipment, customEquipments)
-                      : '';
+                      // 获取方案名称
+                      const methodName = item.method
+                        ? getMethodName(item.method, item.equipment)
+                        : '';
 
-                    // 获取方案名称
-                    const methodName = item.method
-                      ? getMethodName(item.method, item.equipment)
-                      : '';
+                      const coffeeBeanName = formatNoteBeanDisplayName(
+                        {
+                          name: item.coffeeBeanName || item.coffeeBean || '',
+                          roaster: item.coffeeBeanRoaster,
+                        },
+                        roasterSettings
+                      );
 
-                    const coffeeBeanName = formatNoteBeanDisplayName(
-                      {
-                        name: item.coffeeBeanName || item.coffeeBean || '',
-                        roaster: item.coffeeBeanRoaster,
-                      },
-                      roasterSettings
-                    );
+                      // 智能截断：限制每个字段的最大长度，确保所有字段都能显示
+                      const truncateText = (
+                        text: string,
+                        maxLength: number
+                      ) => {
+                        if (text.length <= maxLength) return text;
+                        return text.slice(0, maxLength) + '…';
+                      };
 
-                    // 智能截断：限制每个字段的最大长度，确保所有字段都能显示
-                    const truncateText = (text: string, maxLength: number) => {
-                      if (text.length <= maxLength) return text;
-                      return text.slice(0, maxLength) + '…';
-                    };
+                      // 构建左侧信息（咖啡豆 · 器具 · 方案），每个字段限制长度
+                      const leftParts = [
+                        coffeeBeanName ? truncateText(coffeeBeanName, 8) : '',
+                        equipmentName ? truncateText(equipmentName, 6) : '',
+                        methodName ? truncateText(methodName, 6) : '',
+                      ].filter(Boolean);
 
-                    // 构建左侧信息（咖啡豆 · 器具 · 方案），每个字段限制长度
-                    const leftParts = [
-                      coffeeBeanName ? truncateText(coffeeBeanName, 8) : '',
-                      equipmentName ? truncateText(equipmentName, 6) : '',
-                      methodName ? truncateText(methodName, 6) : '',
-                    ].filter(Boolean);
-
-                    return (
-                      <div
-                        key={index}
-                        className="flex w-full items-center justify-between gap-2 rounded-full bg-neutral-100 px-3 py-1.5 text-xs dark:bg-neutral-800"
-                      >
-                        <span className="min-w-0 flex-1">
-                          <span className="font-medium text-neutral-800 dark:text-neutral-100">
-                            {item.grindSize}
-                          </span>
-                          {leftParts.length > 0 && (
-                            <span className="text-neutral-500 dark:text-neutral-500">
-                              {' · ' + leftParts.join(' · ')}
+                      return (
+                        <div
+                          key={index}
+                          className="flex w-full items-center justify-between gap-2 rounded-full bg-neutral-100 px-3 py-1.5 text-xs dark:bg-neutral-800"
+                        >
+                          <span className="min-w-0 flex-1 truncate">
+                            <span className="font-medium text-neutral-800 dark:text-neutral-100">
+                              {item.grindSize}
                             </span>
-                          )}
-                        </span>
-                        <span className="shrink-0 text-neutral-500 dark:text-neutral-500">
-                          {formatTimestamp(item.timestamp)}
-                        </span>
-                      </div>
-                    );
-                  })}
+                            {leftParts.length > 0 && (
+                              <span className="text-neutral-500 dark:text-neutral-500">
+                                {' · ' + leftParts.join(' · ')}
+                              </span>
+                            )}
+                          </span>
+                          <span className="shrink-0 text-neutral-500 dark:text-neutral-500">
+                            {formatTimestamp(item.timestamp)}
+                          </span>
+                        </div>
+                      );
+                    })}
+                </div>
               </div>
-            </div>
-          )}
-      </GrinderScaleWheel>
+            )}
+        </GrinderScaleWheel>
+      </div>
     </ActionDrawer>
   );
 };
