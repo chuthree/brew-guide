@@ -12,7 +12,6 @@ import Image from 'next/image';
 import { X } from 'lucide-react';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
 import ActionDrawer from '@/components/common/ui/ActionDrawer';
-import { showToast } from '@/components/common/feedback/LightToast';
 import styles from './SupportDrawer.module.css';
 
 export const supportShownKey = 'supportDrawerAutoShown';
@@ -37,37 +36,6 @@ const supportLines = ['如果觉得这个小工具好用，', '可以支持作�
 const thanksText = '超级无敌感谢你的支持！';
 const coffeeWish = '你真的是很好很好的人！祝你天天喝到好喝的咖啡～';
 const characterInterval = 55;
-
-export function ConfirmSupportButton({
-  onConfirmed,
-}: {
-  onConfirmed?: () => void;
-}) {
-  const [saving, setSaving] = useState(false);
-  const updateSettings = useSettingsStore(state => state.updateSettings);
-
-  const confirmSupport = useCallback(async () => {
-    setSaving(true);
-    try {
-      await updateSettings({ hasSupportedAuthor: true });
-      onConfirmed?.();
-    } catch {
-      showToast({ type: 'error', title: '赞赏状态保存失败，请重试' });
-    } finally {
-      setSaving(false);
-    }
-  }, [updateSettings, onConfirmed]);
-
-  return (
-    <ActionDrawer.PrimaryButton
-      className="rounded-xl!"
-      disabled={saving}
-      onClick={confirmSupport}
-    >
-      我已赞赏
-    </ActionDrawer.PrimaryButton>
-  );
-}
 
 const illustrations = [
   { file: 'watercolor-heart.webp', name: '水彩爱心' },
@@ -102,8 +70,9 @@ function SupportContent({ onClose }: { onClose: () => void }) {
     Math.floor(Math.random() * illustrations.length)
   );
   const illustration = illustrations[index];
-  const showCode = useCallback(() => setStep('code'), []);
-  const showThanks = useCallback(() => setStep('thanks'), []);
+  const advance = useCallback(() => {
+    setStep(current => (current === 'intro' ? 'code' : 'thanks'));
+  }, []);
   const nextIllustration = useCallback(() => {
     setIndex(current => (current + 1) % illustrations.length);
   }, []);
@@ -245,16 +214,12 @@ function SupportContent({ onClose }: { onClose: () => void }) {
           )}
           {step !== 'thanks' && (
             <ActionDrawer.Actions>
-              {step === 'code' ? (
-                <ConfirmSupportButton onConfirmed={showThanks} />
-              ) : (
-                <ActionDrawer.PrimaryButton
-                  className="rounded-xl!"
-                  onClick={showCode}
-                >
-                  支持一下
-                </ActionDrawer.PrimaryButton>
-              )}
+              <ActionDrawer.PrimaryButton
+                className="rounded-xl!"
+                onClick={advance}
+              >
+                {step === 'intro' ? '支持一下' : '好啦'}
+              </ActionDrawer.PrimaryButton>
             </ActionDrawer.Actions>
           )}
         </ActionDrawer.Switcher>
