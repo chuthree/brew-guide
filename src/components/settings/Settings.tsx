@@ -45,7 +45,7 @@ import { deriveNavigationSettings } from '@/lib/navigation/navigationSettings';
 import { buildSettingsFeatureGroups } from './settingsFeatureRegistry';
 import { getNotificationSettingsVisibility } from './notificationSettingsVisibility';
 import { useSponsorsList } from '@/lib/sponsors/useSponsorsList';
-import GroupQrContent from './GroupQrContent';
+import { GroupQrContent, SettingsQrCode } from './SettingsQrCode';
 import { openExternalUrl } from '@/lib/utils/openExternalUrl';
 
 import { useTheme } from 'next-themes';
@@ -69,7 +69,6 @@ import {
 } from 'lucide-react';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 
-import Image from 'next/image';
 import {
   getChildPageStyle,
   getParentPageStyle,
@@ -937,10 +936,11 @@ const Settings: React.FC<SettingsProps> = ({
                             hapticsUtils.light();
                           }
                         },
-                        expandedContent:
-                          isOpen && qrCodeType === 'group' ? (
-                            <GroupQrContent />
-                          ) : null,
+                        expandedContent: (
+                          <GroupQrContent
+                            active={isOpen && qrCodeType === 'group'}
+                          />
+                        ),
                       },
                       {
                         icon: ThumbsUp,
@@ -959,20 +959,11 @@ const Settings: React.FC<SettingsProps> = ({
                           }
                         },
                         expandedContent: (
-                          <div className="flex flex-col items-start justify-center pb-3.5 pl-10.5">
-                            <div className="overflow-hidden rounded-lg border border-neutral-400/10 bg-white p-2">
-                              <Image
-                                src="/images/content/appreciation-code.jpg"
-                                alt="微信赞赏码"
-                                width={200}
-                                height={200}
-                                className="h-auto w-50"
-                              />
-                            </div>
-                            <p className="mt-3 text-xs text-neutral-500 dark:text-neutral-400">
-                              微信赞赏码（开发不易，要是能支持一下就太好了 www）
-                            </p>
-                          </div>
+                          <SettingsQrCode
+                            src="/images/content/appreciation-code.jpg"
+                            alt="微信赞赏码"
+                            caption="微信赞赏码（开发不易，要是能支持一下就太好了 www）"
+                          />
                         ),
                       },
                     ]}

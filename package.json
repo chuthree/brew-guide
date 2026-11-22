@@ -116,6 +116,7 @@
     "prettier-plugin-tailwindcss": "^0.8.0",
     "react-doctor": "^0.2.11",
     "serve": "^14.2.5",
+    "sharp": "0.34.5",
     "tailwindcss": "^4.3.0",
     "typescript": "^5.9.3",
     "vitest": "3.2.6",

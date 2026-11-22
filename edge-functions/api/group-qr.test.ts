@@ -7,7 +7,7 @@ const now = new Date('2026-11-22T08:00:00Z').getTime();
 const expiresAt = now + 60_000;
 const call = (method = 'GET') =>
   onRequest({
-    request: new Request('https://example.com/api/group-qr?fresh=1', {
+    request: new Request('https://example.com/api/group-qr', {
       method,
     }),
   });
