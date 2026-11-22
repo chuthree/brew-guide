@@ -72,6 +72,11 @@ async function buildSW() {
       // 运行时缓存策略
       // 运行时缓存 = 用户访问时才缓存的资源
       runtimeCaching: [
+        // 群码可能失效，不使用本地缓存（包括原生客户端使用的跨域地址）。
+        {
+          urlPattern: ({ url }) => url.pathname === '/api/group-qr',
+          handler: 'NetworkOnly',
+        },
         // ============================================
         // 页面导航 - NetworkFirst（网络优先）
         // 确保用户总是获得最新内容，离线时使用缓存
