@@ -5,6 +5,7 @@ import React, {
   useCallback,
   useRef,
   useEffect,
+  useEffectEvent,
   useMemo,
 } from 'react';
 import { motion } from 'framer-motion';
@@ -31,6 +32,7 @@ import {
 } from '@/lib/api/shared/recognitionUpload.js';
 import { STILL_IMAGE_ACCEPT } from '@/lib/images/stillImageUpload.js';
 import {
+  captureImage,
   isImageSelectionCancelled,
   pickNativeGalleryImageFiles,
   shouldUseNativeGalleryPicker,
@@ -83,11 +85,13 @@ type ImportStep =
   | 'main'
   | 'json-input'
   | 'camera-preview'
+  | 'system-camera'
   | 'recognizing'
   | 'multi-preview';
 
 // 最大同时选择图片数
 const MAX_IMAGES = 5;
+const SYSTEM_CAMERA_KEY = 'beanImportUseSystemCamera';
 // 最大并发识别数（服务器已优化并发控制，可提高到 5）
 const MAX_CONCURRENT = 5;
 const BEAN_PACKAGE_FILE_ACCEPT =
@@ -119,7 +123,7 @@ interface ImageRecognitionState {
   error?: string;
 }
 
-type CameraStatus = 'idle' | 'starting' | 'ready' | 'error';
+type CameraStatus = 'idle' | 'starting' | 'ready';
 type TorchMediaTrackCapabilities = MediaTrackCapabilities & {
   torch?: boolean;
 };
@@ -293,6 +297,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
   // 摄像头预览 ref
   const videoRef = useRef<HTMLVideoElement>(null);
   const cameraStreamRef = useRef<MediaStream | null>(null);
+  const cameraCaptureRef = useRef<symbol | null>(null);
   const activeCameraPointersRef = useRef(
     new Map<number, { x: number; y: number }>()
   );
@@ -311,7 +316,16 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
   // 应用内相机状态
   const [cameraStatus, setCameraStatus] = useState<CameraStatus>('idle');
   const [cameraAttempt, setCameraAttempt] = useState(0);
-  const [cameraError, setCameraError] = useState('');
+  const [useSystemCamera, setUseSystemCamera] = useState(() => {
+    try {
+      return (
+        typeof window !== 'undefined' &&
+        localStorage.getItem(SYSTEM_CAMERA_KEY) === '1'
+      );
+    } catch {
+      return false;
+    }
+  });
   const [isCameraCapturing, setIsCameraCapturing] = useState(false);
   const [isTorchSupported, setIsTorchSupported] = useState(false);
   const [isTorchOn, setIsTorchOn] = useState(false);
@@ -368,6 +382,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
     currentStep !== 'camera-preview' && currentStep !== 'recognizing';
 
   const stopCamera = useCallback(() => {
+    cameraCaptureRef.current = null;
     activeCameraPointersRef.current.clear();
     pinchStartRef.current = null;
     cameraStreamRef.current?.getTracks().forEach(track => track.stop());
@@ -378,7 +393,6 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
     }
 
     setCameraStatus('idle');
-    setCameraError('');
     setIsCameraCapturing(false);
     setIsTorchSupported(false);
     setIsTorchOn(false);
@@ -422,7 +436,9 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
   // 使用 modalHistory 管理多图预览步骤的返回行为
   useModalHistory({
     id: 'bean-import-multi-preview',
-    isOpen: showForm && currentStep === 'multi-preview',
+    isOpen:
+      showForm &&
+      (currentStep === 'multi-preview' || currentStep === 'system-camera'),
     onClose: goBackToMain,
   });
 
@@ -440,10 +456,21 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
     setSelectedImages([]);
   }, [recognizingImageUrl, selectedImages, stopCamera]);
 
+  const switchToSystemCamera = useEffectEvent((message: string) => {
+    setUseSystemCamera(true);
+    try {
+      localStorage.setItem(SYSTEM_CAMERA_KEY, '1');
+    } catch {
+      // 存储不可用时，本次使用期间仍走系统相机。
+    }
+    setCurrentStep(selectedImages.length ? 'system-camera' : 'main');
+    showToast({ type: 'info', title: `${message}，已切换到系统相机` });
+  });
+
   useEffect(() => {
     if (!showForm || currentStep !== 'camera-preview') {
       stopCamera();
-      return;
+      return stopCamera;
     }
 
     let cancelled = false;
@@ -460,13 +487,11 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
         setCameraAttempt(1);
         return;
       }
-      setCameraStatus('error');
-      setCameraError(message);
+      switchToSystemCamera(message);
     };
 
     const startCamera = async () => {
       setCameraStatus('starting');
-      setCameraError('');
 
       if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
         fail('当前环境无法使用应用内相机');
@@ -1059,16 +1084,6 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
     fileInputRef.current?.click();
   }, []);
 
-  const handleOpenCamera = useCallback(() => {
-    setCameraAttempt(0);
-    setCurrentStep('camera-preview');
-  }, []);
-
-  const retryCamera = useCallback(
-    () => setCameraAttempt(attempt => attempt + 1),
-    []
-  );
-
   const handleToggleTorch = useCallback(async () => {
     if (!isTorchSupported) return;
 
@@ -1210,7 +1225,11 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
   }, [cameraZoom, isHardwareZoomSupported]);
 
   const handleCaptureCameraPhoto = useCallback(async () => {
-    if (cameraStatus !== 'ready' || isCameraCapturing || isMultiRecognizing) {
+    if (
+      (!useSystemCamera && cameraStatus !== 'ready') ||
+      cameraCaptureRef.current ||
+      isMultiRecognizing
+    ) {
       return;
     }
 
@@ -1219,14 +1238,17 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
       return;
     }
 
+    const capture = Symbol();
+    cameraCaptureRef.current = capture;
     setIsCameraCapturing(true);
-    const preview = videoRef.current;
 
     try {
       const file = await readRecognitionSourceImage(
-        await captureCameraPhotoFile()
+        useSystemCamera
+          ? await captureImage('camera')
+          : await captureCameraPhotoFile()
       );
-      if (!preview || preview !== videoRef.current) return;
+      if (cameraCaptureRef.current !== capture) return;
       const previewUrl = URL.createObjectURL(file);
 
       setSelectedImages(prev => [
@@ -1238,21 +1260,37 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
           status: 'pending',
         },
       ]);
+      if (useSystemCamera) setCurrentStep('system-camera');
     } catch (error) {
+      if (
+        cameraCaptureRef.current !== capture ||
+        isImageSelectionCancelled(error)
+      ) {
+        return;
+      }
       showToast({
         type: 'error',
         title: error instanceof Error ? error.message : '拍照失败',
       });
     } finally {
-      setIsCameraCapturing(false);
+      if (cameraCaptureRef.current === capture) {
+        cameraCaptureRef.current = null;
+        setIsCameraCapturing(false);
+      }
     }
   }, [
     captureCameraPhotoFile,
     cameraStatus,
-    isCameraCapturing,
+    useSystemCamera,
     isMultiRecognizing,
     selectedImages.length,
   ]);
+
+  const handleOpenCamera = useCallback(() => {
+    if (useSystemCamera) return handleCaptureCameraPhoto();
+    setCameraAttempt(0);
+    setCurrentStep('camera-preview');
+  }, [useSystemCamera, handleCaptureCameraPhoto]);
 
   const handleRecognizeCameraImages = useCallback(async () => {
     if (selectedImages.length === 0 || isMultiRecognizing) return;
@@ -1342,6 +1380,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
         <motion.button
           whileTap={{ scale: 0.98 }}
           onClick={handleOpenCamera}
+          disabled={isCameraCapturing}
           className="w-full rounded-full bg-neutral-100 px-4 py-3 text-left text-sm font-medium text-neutral-800 dark:bg-neutral-800 dark:text-white"
         >
           拍照识别咖啡豆
@@ -1349,6 +1388,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
         <motion.button
           whileTap={{ scale: 0.98 }}
           onClick={handleUploadImageClick}
+          disabled={isCameraCapturing}
           className="w-full rounded-full bg-neutral-100 px-4 py-3 text-left text-sm font-medium text-neutral-800 dark:bg-neutral-800 dark:text-white"
         >
           图片识别咖啡豆
@@ -1356,6 +1396,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
         <motion.button
           whileTap={{ scale: 0.98 }}
           onClick={handleInputJSON}
+          disabled={isCameraCapturing}
           className="w-full rounded-full bg-neutral-100 px-4 py-3 text-left text-sm font-medium text-neutral-800 dark:bg-neutral-800 dark:text-white"
         >
           输入 JSON
@@ -1366,6 +1407,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
             <motion.button
               whileTap={{ scale: 0.98 }}
               onClick={handleUploadPackageClick}
+              disabled={isCameraCapturing}
               className="w-full rounded-full bg-neutral-100 px-4 py-3 text-left text-sm font-medium text-neutral-800 dark:bg-neutral-800 dark:text-white"
             >
               选择压缩包
@@ -1430,8 +1472,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
     </>
   );
 
-  const hasSecondCameraAction =
-    cameraStatus === 'error' || selectedImages.length > 0;
+  const hasSecondCameraAction = selectedImages.length > 0;
   const cameraActionClass =
     'min-w-0 flex-1 px-3 py-3 focus-visible:outline-offset-[-3px] disabled:opacity-40';
   const cameraPreviewContent = (
@@ -1463,17 +1504,6 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
               <CornerBorder position="top-right" />
               <CornerBorder position="bottom-left" />
               <CornerBorder position="bottom-right" />
-            </div>
-          )}
-
-          {cameraStatus === 'error' && (
-            <div
-              role="status"
-              className="absolute inset-0 flex items-center justify-center bg-neutral-950 px-8 text-center"
-            >
-              <p className="text-sm leading-relaxed text-white/70">
-                {cameraError || '无法打开摄像头'}
-              </p>
             </div>
           )}
 
@@ -1517,10 +1547,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
         </div>
       </div>
 
-      <div
-        hidden={cameraStatus === 'error' && selectedImages.length === 0}
-        className="relative mb-5 h-16"
-      >
+      <div className="relative mb-5 h-16">
         <div
           className={`absolute inset-0 flex items-center transition-opacity duration-200 ease-out ${
             selectedImages.length > 0
@@ -1642,18 +1669,15 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
           <button
             type="button"
             className={cameraActionClass}
-            onClick={
-              cameraStatus === 'error' ? retryCamera : handleCaptureCameraPhoto
-            }
+            onClick={handleCaptureCameraPhoto}
             disabled={
               isMultiRecognizing ||
               isCameraCapturing ||
-              (cameraStatus !== 'error' &&
-                (cameraStatus !== 'ready' ||
-                  selectedImages.length >= MAX_IMAGES))
+              cameraStatus !== 'ready' ||
+              selectedImages.length >= MAX_IMAGES
             }
           >
-            {cameraStatus === 'error' ? '重试' : '拍照'}
+            拍照
           </button>
           {hasSecondCameraAction && (
             <>
@@ -1664,14 +1688,10 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
               <button
                 type="button"
                 className={cameraActionClass}
-                onClick={
-                  selectedImages.length
-                    ? handleRecognizeCameraImages
-                    : handleUploadImageClick
-                }
-                disabled={isMultiRecognizing}
+                onClick={handleRecognizeCameraImages}
+                disabled={isCameraCapturing || isMultiRecognizing}
               >
-                {selectedImages.length ? '入库' : '选择图片'}
+                入库
               </button>
             </>
           )}
@@ -1793,6 +1813,18 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
               )}
             </div>
           ))}
+          {currentStep === 'system-camera' &&
+            !isMultiRecognizing &&
+            selectedImages.length < MAX_IMAGES && (
+              <button
+                type="button"
+                onClick={handleCaptureCameraPhoto}
+                disabled={isCameraCapturing}
+                className="aspect-square rounded-2xl bg-neutral-100 text-sm font-medium text-neutral-800 disabled:opacity-40 dark:bg-neutral-800 dark:text-white"
+              >
+                继续拍照
+              </button>
+            )}
         </div>
       </div>
 
@@ -1815,7 +1847,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
               {' '}
               {selectedImages.length}{' '}
             </span>
-            张，批量导入不进入编辑
+            {selectedImages.length > 1 ? '张，批量导入不进入编辑' : '张'}
           </p>
         )}
       </ActionDrawer.Content>
@@ -1837,7 +1869,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
         <motion.button
           whileTap={isMultiRecognizing ? undefined : { scale: 0.98 }}
           onClick={handleMultiRecognition}
-          disabled={isMultiRecognizing}
+          disabled={isMultiRecognizing || isCameraCapturing}
           className={`flex-1 rounded-full px-4 py-3 text-sm font-medium transition-colors ${
             isMultiRecognizing
               ? 'bg-neutral-200 text-neutral-500 dark:bg-neutral-700 dark:text-neutral-400'
@@ -1860,6 +1892,7 @@ const BeanImportModal: React.FC<BeanImportModalProps> = ({
       case 'camera-preview':
         return cameraPreviewContent;
       case 'multi-preview':
+      case 'system-camera':
         return multiPreviewContent;
       default:
         return mainContent;

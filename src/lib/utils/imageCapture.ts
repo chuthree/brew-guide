@@ -111,6 +111,7 @@ function captureImageWithHtmlInput(
   return new Promise((resolve, reject) => {
     try {
       const fileInput = document.createElement('input');
+      const supportsCancelEvent = 'oncancel' in fileInput;
       fileInput.type = 'file';
       fileInput.accept = IMAGE_FILE_ACCEPT;
       fileInput.style.display = 'none';
@@ -174,8 +175,11 @@ function captureImageWithHtmlInput(
         }
       };
 
-      window.addEventListener('focus', handleFocus);
-      window.addEventListener('blur', handleBlur);
+      // 系统相机可能先归还焦点，再交付照片。支持 cancel 的环境等待明确结果。
+      if (!supportsCancelEvent) {
+        window.addEventListener('focus', handleFocus);
+        window.addEventListener('blur', handleBlur);
+      }
 
       // 清理事件监听器
       const originalCleanup = cleanup;
