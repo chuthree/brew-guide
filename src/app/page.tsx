@@ -118,6 +118,7 @@ import { showToast } from '@/components/common/feedback/LightToast';
 import { showErrorReport } from '@/lib/feedback/errorReport';
 import BackupReminderModal from '@/components/common/modals/BackupReminderModal';
 import BeanReadyReminderDrawer from '@/components/common/modals/BeanReadyReminderDrawer';
+import FarewellDrawer from '@/components/common/modals/FarewellDrawer';
 import SupportDrawer, {
   supportShownKey,
 } from '@/components/common/modals/SupportDrawer';
@@ -4448,6 +4449,7 @@ const PourOverRecipes = ({ initialHasBeans }: { initialHasBeans: boolean }) => {
           onBeanClick={handleBeanReadyReminderBeanClick}
         />
         <SupportDrawer isOpen={showSupport} onClose={closeSupport} />
+        {storeInitialized && <FarewellDrawer />}
       </div>
 
       {/* 页面级别的视图选择覆盖层 - 独立渲染，不受父容器转场影响 */}

@@ -45,27 +45,101 @@ const illustrations = [
   { file: 'mist-heart.webp', name: '雾蓝爱心' },
 ];
 
-function SupportContent({ onClose }: { onClose: () => void }) {
-  const username = useSettingsStore(state => state.settings.username?.trim());
-  const thanksMessage = username ? `${username}，${thanksText}` : thanksText;
-  const firstMessage = Array.from(thanksMessage);
-  const secondMessage = Array.from(coffeeWish);
-  const firstLength = firstMessage.length;
-  const totalLength = firstLength + secondMessage.length;
-  const [step, setStep] = useState<'intro' | 'code' | 'thanks'>('intro');
+export function AuthorMessage({
+  messages,
+  readingPace = false,
+  compact = false,
+  reply,
+  onClose,
+}: {
+  messages: string[];
+  readingPace?: boolean;
+  compact?: boolean;
+  reply: string;
+  onClose: () => void;
+}) {
+  let totalLength = 0;
+  const rows = [];
+  for (const message of messages) {
+    const start = totalLength;
+    const characters = Array.from(message);
+    totalLength += characters.length;
+    rows.push({ start, characters });
+  }
   const [typedCount, setTypedCount] = useState(1);
   const reduceMotion = useReducedMotion();
   const count = reduceMotion ? totalLength + 1 : typedCount;
   const canReply = count > totalLength;
-  useEffect(() => {
-    if (step !== 'thanks' || canReply) return;
-    const betweenMessages = count === firstLength || count === totalLength;
-    const timer = window.setTimeout(
-      () => setTypedCount(count + 1),
-      betweenMessages ? 320 : characterInterval
+  const betweenMessages =
+    rows.some(row => row.start === count) || count === totalLength;
+  let delay = betweenMessages ? 320 : characterInterval;
+  if (readingPace) {
+    const row = rows.find(
+      row => count > row.start && count <= row.start + row.characters.length
     );
+    const lastCharacter = row?.characters[count - row.start - 1] ?? '';
+    delay = betweenMessages
+      ? 300
+      : /[，。！？～……]/u.test(lastCharacter)
+        ? 150
+        : 80;
+  }
+  useEffect(() => {
+    if (canReply) return;
+    const timer = window.setTimeout(() => setTypedCount(count + 1), delay);
     return () => window.clearTimeout(timer);
-  }, [step, count, firstLength, totalLength, canReply]);
+  }, [count, delay, canReply]);
+  return (
+    <>
+      <div className="grid place-items-center pb-6">
+        <Image
+          src="/images/content/support/author-avatar.webp"
+          alt="开发者 chu3 的头像"
+          width={compact ? 68 : 80}
+          height={compact ? 68 : 80}
+          className="rounded-full"
+        />
+      </div>
+      <div
+        aria-live="polite"
+        className={`flex flex-col items-start gap-2 text-left ${compact ? 'text-base' : 'text-xl'} leading-7 font-medium text-neutral-900 dark:text-neutral-100`}
+      >
+        {rows.map(({ start, characters }, row) => {
+          const visible = count - start;
+          if (visible <= 0) return null;
+          return (
+            <p key={row} className={styles.message}>
+              <span className="sr-only">{characters.join('')}</span>
+              <span aria-hidden="true">
+                {characters.slice(0, visible).map((character, index) => (
+                  <span key={index} className={styles.revealedCharacter}>
+                    {character}
+                  </span>
+                ))}
+              </span>
+            </p>
+          );
+        })}
+        {canReply && (
+          <button
+            type="button"
+            onClick={onClose}
+            className={`${styles.message} ${styles.reply} mt-4 cursor-pointer self-end text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-600`}
+          >
+            {reply}
+            <span className="sr-only">关闭抽屉</span>
+          </button>
+        )}
+      </div>
+    </>
+  );
+}
+
+function SupportContent({ onClose }: { onClose: () => void }) {
+  const username = useSettingsStore(state => state.settings.username?.trim());
+  const thanksMessage = username ? `${username}，${thanksText}` : thanksText;
+  const [step, setStep] = useState<'intro' | 'code' | 'thanks'>('intro');
+  const reduceMotion = useReducedMotion();
   const [index, setIndex] = useState(() =>
     Math.floor(Math.random() * illustrations.length)
   );
@@ -106,111 +180,77 @@ function SupportContent({ onClose }: { onClose: () => void }) {
       </button>
       <div className="relative">
         <ActionDrawer.Switcher activeKey={step}>
-          <div
-            className={`grid place-items-center pb-6 ${step === 'thanks' ? '' : 'pt-8'}`}
-          >
-            {step === 'code' ? (
-              <Image
-                src="/images/content/appreciation-code.jpg"
-                alt="微信赞赏码"
-                onLoad={markSupportCodeViewed}
-                width={200}
-                height={200}
-                className="h-auto w-44 rounded-xl"
-              />
-            ) : step === 'thanks' ? (
-              <Image
-                src="/images/content/support/author-avatar.webp"
-                alt="开发者 chu3 的头像"
-                width={80}
-                height={80}
-                className="size-20 rounded-full"
-              />
-            ) : (
-              <button
-                type="button"
-                onPointerDown={handleIllustrationPress}
-                onClick={handleIllustrationClick}
-                aria-label={`当前插画：${illustration.name}，点击切换下一张`}
-                className="grid size-32 cursor-pointer place-items-center rounded-2xl focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-rose-500"
-              >
-                <span className={styles.artwork}>
-                  {illustrations.map((item, i) => (
-                    <Image
-                      key={item.file}
-                      src={`/images/content/support/${item.file}`}
-                      alt=""
-                      draggable={false}
-                      loading="eager"
-                      width={120}
-                      height={120}
-                      data-active={i === index}
-                      className={styles.illustration}
-                    />
-                  ))}
-                </span>
-              </button>
-            )}
-          </div>
           {step === 'thanks' ? (
-            <div
-              aria-live="polite"
-              className="flex flex-col items-start gap-2 text-left text-xl leading-7 font-medium text-neutral-900 dark:text-neutral-100"
-            >
-              {[firstMessage, secondMessage].map((characters, row) => {
-                const visible = row === 0 ? count : count - firstLength;
-                if (visible <= 0) return null;
-                return (
-                  <p key={row} className={styles.message}>
-                    <span className="sr-only">{characters.join('')}</span>
+            <AuthorMessage
+              messages={[thanksMessage, coffeeWish]}
+              reply="好！"
+              onClose={onClose}
+            />
+          ) : (
+            <>
+              <div className="grid place-items-center pt-8 pb-6">
+                {step === 'code' ? (
+                  <Image
+                    src="/images/content/appreciation-code.jpg"
+                    alt="微信赞赏码"
+                    onLoad={markSupportCodeViewed}
+                    width={200}
+                    height={200}
+                    className="h-auto w-44 rounded-xl"
+                  />
+                ) : (
+                  <button
+                    type="button"
+                    onPointerDown={handleIllustrationPress}
+                    onClick={handleIllustrationClick}
+                    aria-label={`当前插画：${illustration.name}，点击切换下一张`}
+                    className="grid size-32 cursor-pointer place-items-center rounded-2xl focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-rose-500"
+                  >
+                    <span className={styles.artwork}>
+                      {illustrations.map((item, i) => (
+                        <Image
+                          key={item.file}
+                          src={`/images/content/support/${item.file}`}
+                          alt=""
+                          draggable={false}
+                          loading="eager"
+                          width={120}
+                          height={120}
+                          data-active={i === index}
+                          className={styles.illustration}
+                        />
+                      ))}
+                    </span>
+                  </button>
+                )}
+              </div>
+              <p className="mb-8 text-center text-xl leading-7 font-medium text-neutral-900 dark:text-neutral-100">
+                {step === 'code' ? (
+                  '微信扫码，可以请我喝杯咖啡 ww'
+                ) : (
+                  <>
+                    <span className="sr-only">{supportLines.join('')}</span>
                     <span aria-hidden="true">
-                      {characters.slice(0, visible).map((character, index) => (
-                        <span key={index} className={styles.revealedCharacter}>
-                          {character}
+                      {supportLines.map((line, row) => (
+                        <span key={line} className="block">
+                          {Array.from(line, (character, column) => (
+                            <span
+                              key={column}
+                              className={styles.character}
+                              style={{
+                                animationDelay: `${350 + row * 110 + column * 50}ms`,
+                              }}
+                            >
+                              {character}
+                            </span>
+                          ))}
                         </span>
                       ))}
                     </span>
-                  </p>
-                );
-              })}
-              {canReply && (
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className={`${styles.message} ${styles.reply} mt-4 cursor-pointer self-end text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-600`}
-                >
-                  好！
-                  <span className="sr-only">关闭抽屉</span>
-                </button>
-              )}
-            </div>
-          ) : (
-            <p className="mb-8 text-center text-xl leading-7 font-medium text-neutral-900 dark:text-neutral-100">
-              {step === 'code' ? (
-                '微信扫码，可以请我喝杯咖啡 ww'
-              ) : (
-                <>
-                  <span className="sr-only">{supportLines.join('')}</span>
-                  <span aria-hidden="true">
-                    {supportLines.map((line, row) => (
-                      <span key={line} className="block">
-                        {Array.from(line, (character, column) => (
-                          <span
-                            key={column}
-                            className={styles.character}
-                            style={{
-                              animationDelay: `${350 + row * 110 + column * 50}ms`,
-                            }}
-                          >
-                            {character}
-                          </span>
-                        ))}
-                      </span>
-                    ))}
-                  </span>
-                </>
-              )}
-            </p>
+                  </>
+                )}
+              </p>
+            </>
           )}
           {step !== 'thanks' && (
             <ActionDrawer.Actions>

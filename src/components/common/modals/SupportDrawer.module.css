@@ -19,7 +19,7 @@
 }
 
 /* Both tails extend 7px below the bubble's layout box. */
-.message:nth-of-type(2),
+p.message:last-of-type,
 .reply {
   margin-bottom: 7px;
 }
@@ -38,7 +38,7 @@
   --reply-highlight: #42adff;
 }
 
-.message:nth-of-type(2)::after,
+p.message:last-of-type::after,
 .reply::after {
   content: '';
   position: absolute;
@@ -50,7 +50,7 @@
   mask: var(--bubble-shape) left bottom / 64px 48px no-repeat;
 }
 
-.message:nth-of-type(2)::after {
+p.message:last-of-type::after {
   left: 0;
 }
 
@@ -88,6 +88,7 @@
 
   .revealedCharacter {
     display: inline-block;
+    white-space: pre;
     animation: character-in 300ms ease-in-out;
   }
 
