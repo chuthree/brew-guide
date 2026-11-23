@@ -9,6 +9,7 @@ import { AuthorMessage } from './SupportDrawer';
 import { useSettingsStore } from '@/lib/stores/settingsStore';
 
 const dismissedKey = 'farewellDrawerDismissed';
+const eligibilityCutoff = Date.parse('2026-10-01T00:00:00+08:00');
 const day = 24 * 60 * 60 * 1000;
 const title = '短暂的离别为了更好的相见';
 
@@ -46,10 +47,6 @@ export default function FarewellDrawer() {
         )
       : null
   );
-  const elapsed =
-    firstBean === null || firstNote === null
-      ? 0
-      : now - Math.min(firstBean, firstNote);
   const close = useCallback(() => {
     setDismissed(true);
     try {
@@ -58,7 +55,10 @@ export default function FarewellDrawer() {
       // 存储不可写时，本次打开首页仍然可以关闭。
     }
   }, []);
-  if (elapsed <= 30 * day) return null;
+  if (firstBean === null || firstNote === null) return null;
+  const firstRecord = Math.min(firstBean, firstNote);
+  if (firstRecord >= eligibilityCutoff) return null;
+  const elapsed = now - firstRecord;
 
   return (
     <ActionDrawer
