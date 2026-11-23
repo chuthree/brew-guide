@@ -135,6 +135,7 @@ export interface SyncProtectionOptions {
  * 同步结果
  */
 export interface SyncResult {
+  overwriteStop?: 'blocked' | 'cancelled';
   /** 是否成功 */
   success: boolean;
   /** 结果消息 */

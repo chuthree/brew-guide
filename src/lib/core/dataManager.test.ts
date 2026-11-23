@@ -11,6 +11,9 @@ const mocks = vi.hoisted(() => {
 
   return {
     storageSet,
+    recoveryGet: vi.fn(),
+    recoverySet: vi.fn(),
+    syncActive: false,
     normalizeCoffeeBeans: vi.fn((beans: unknown[]) => beans),
     replaceCoffeeBeansWithSplitImages: vi.fn(
       (_records: unknown, _options: unknown) => Promise.resolve(true)
@@ -91,6 +94,9 @@ vi.mock('@/lib/stores/grinderStore', () => ({
 }));
 
 vi.mock('@/lib/stores/syncStatusStore', () => ({
+  getSyncStatusStore: () => ({
+    supabaseSyncProgress: { active: mocks.syncActive },
+  }),
   useSyncStatusStore: {
     getState: () => ({ reset: vi.fn() }),
     setState: vi.fn(),
@@ -137,6 +143,7 @@ vi.mock('@/lib/data/repositories', () => ({
     },
   },
   appSettingsRepository: {
+    get: vi.fn(),
     clear: mocks.clearAppSettings,
     save: vi.fn(() => Promise.resolve()),
   },
@@ -149,9 +156,14 @@ vi.mock('@/lib/data/repositories', () => ({
     replaceAll: mocks.replaceGrinders,
   },
   legacySettingsRepository: {
+    get: mocks.recoveryGet,
+    set: mocks.recoverySet,
     clear: mocks.clearLegacySettings,
   },
-  offlineQueueRepository: { clear: vi.fn(() => Promise.resolve()) },
+  offlineQueueRepository: {
+    clear: vi.fn(() => Promise.resolve()),
+    count: async () => 0,
+  },
   imageSourcePayloadValidator: {
     validateCoffeeBeans: mocks.validateCoffeeBeans,
     validateBrewingNotes: mocks.validateBrewingNotes,
@@ -183,6 +195,163 @@ vi.mock('@/lib/app/crashDiagnostics', () => ({
 }));
 
 import { DataManager } from './dataManager';
+import {
+  isOlderOverwrite,
+  useOverwriteConfirmation,
+} from '@/lib/data/overwriteBackup';
+import { exportDataAsJsonFile } from '@/lib/utils/dataExportUtils';
+
+vi.mock('@/lib/utils/dataExportUtils', () => ({
+  exportDataAsJsonFile: vi.fn(),
+}));
+
+describe('覆盖导入', () => {
+  it.each([Date.UTC(2099, 0, 1), 'unknown'])(
+    'falls back to neutral for contradictory incoming record time %s',
+    async updatedAt => {
+      const current = {
+        coffeeBeans: [{ id: 'a', timestamp: Date.UTC(2025, 2, 1) }],
+        brewingNotes: [],
+        grinders: [],
+        customEquipments: [],
+      };
+      const json = JSON.stringify({
+        exportDate: '2025-01-01T00:00:00Z',
+        data: { coffeeBeans: [{ id: 'a', updatedAt }] },
+      });
+      expect(await isOlderOverwrite(current, json, [])).toBe(false);
+    }
+  );
+  it.each([
+    ['2025-01-01T00:00:00.000Z', 'affected', true],
+    ['2025-01-01T08:00:00+08:00', 'affected', true],
+    [undefined, 'affected', false],
+    ['2025-02-30T00:00:00Z', 'affected', false],
+    ['2025-01-01', 'affected', false],
+    ['2025-01-01T00:00:00Z', 'unaffected', false],
+    ['2025-01-01T00:00:00Z', 'contradictory', false],
+  ] as const)(
+    'compares embedded export time %s only to affected records (%s)',
+    async (exportDate, kind, expected) => {
+      const row = { id: 'a', name: '本机豆', timestamp: Date.UTC(2025, 2, 1) };
+      const current = {
+        coffeeBeans: [row],
+        brewingNotes: [],
+        customEquipments: [],
+        grinders: [],
+      };
+      const data = {
+        coffeeBeans: [
+          kind === 'unaffected'
+            ? row
+            : {
+                id: 'a',
+                name: '备份豆',
+                timestamp:
+                  kind === 'contradictory'
+                    ? Date.UTC(2025, 1, 1)
+                    : Date.UTC(2024, 11, 1),
+              },
+        ],
+      };
+      const json = JSON.stringify({ exportDate, data });
+      for (const input of [json, new Blob([json])]) {
+        expect(await isOlderOverwrite(current, input, [])).toBe(expected);
+      }
+    }
+  );
+  it.each([
+    ['自定义方案', { customMethodsByEquipment: {} }],
+    [
+      '磨豆机',
+      { brewGuideSettings: { state: { settings: { grinders: [] } } } },
+    ],
+    ['自定义预设', { customPresets: { unknown: ['忽略'] } }],
+  ] as const)('阻止旧备份清空%s', async (label, data) => {
+    const current = {
+      coffeeBeans: [],
+      brewingNotes: [],
+      customEquipments: [],
+      grinders: [{ id: 'g', name: '合成磨豆机' }],
+      customMethodsByEquipment: { cup: [{ id: 'm' }] },
+      customPresets: { origins: ['测试产地'] },
+    };
+    await expect(
+      isOlderOverwrite(current, new Blob([JSON.stringify({ data })]), [
+        'origins',
+      ])
+    ).rejects.toMatchObject({
+      reason: 'blocked',
+      message: expect.stringContaining(label),
+    });
+  });
+  const local = JSON.stringify({
+    data: {
+      coffeeBeans: [
+        { id: 'a', name: '新豆' },
+        { id: 'b', name: '保留' },
+      ],
+      brewingNotes: [],
+      customEquipments: [],
+      grinders: [],
+    },
+  });
+  const older = JSON.stringify({
+    data: { coffeeBeans: [{ id: 'a', name: '旧豆' }] },
+  });
+
+  it.each([
+    'empty',
+    'cancel',
+    'changed',
+    'backup failed',
+    'sync active',
+    'confirmed',
+  ])('%s', async scenario => {
+    vi.clearAllMocks();
+    const snapshot = vi
+      .spyOn(DataManager, 'exportAllData')
+      .mockResolvedValue(local);
+    mocks.syncActive = scenario === 'sync active';
+    mocks.recoveryGet.mockResolvedValue(
+      scenario === 'backup failed' ? undefined : local
+    );
+    vi.mocked(exportDataAsJsonFile).mockResolvedValue({
+      mode: 'web-download',
+      fileName: 'test.json',
+    });
+    try {
+      const result = DataManager.importAllData(
+        scenario === 'empty' ? '{"data":{"coffeeBeans":[]}}' : older,
+        { confirmOverwrite: true }
+      );
+      if (scenario !== 'empty') {
+        await vi.waitFor(() =>
+          expect(useOverwriteConfirmation.getState().pending?.older).toBe(false)
+        );
+        if (scenario === 'changed') snapshot.mockResolvedValue(older);
+        const pending = useOverwriteConfirmation.getState().pending!;
+        if (scenario === 'cancel') pending.cancel();
+        else pending.confirm();
+      }
+      const outcome = await result;
+      expect(outcome.success).toBe(scenario === 'confirmed');
+      expect(mocks.replaceCoffeeBeansWithSplitImages).toHaveBeenCalledTimes(
+        scenario === 'confirmed' ? 1 : 0
+      );
+      if (scenario === 'cancel' || scenario === 'empty')
+        expect(exportDataAsJsonFile).not.toHaveBeenCalled();
+      if (scenario === 'confirmed')
+        expect(mocks.recoverySet).toHaveBeenCalledWith(
+          'data-import-recovery-v1',
+          local
+        );
+    } finally {
+      snapshot.mockRestore();
+      mocks.syncActive = false;
+    }
+  });
+});
 
 describe('DataManager.exportAllData upgrade snapshot', () => {
   it('stores duplicate legacy payloads by reference and preserves the complete raw snapshot', async () => {

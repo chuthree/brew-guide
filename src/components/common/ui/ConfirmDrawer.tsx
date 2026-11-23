@@ -5,6 +5,7 @@ import ActionDrawer from '@/components/common/ui/ActionDrawer';
 import DeleteIcon from '@public/images/icons/ui/delete.svg';
 
 export interface ConfirmDrawerProps {
+  title?: string;
   isOpen: boolean;
   onClose: () => void;
   onConfirm: () => void;
@@ -28,6 +29,7 @@ const ConfirmDrawer: React.FC<ConfirmDrawerProps> = ({
   onClose,
   onConfirm,
   message,
+  title,
   confirmText = '确认',
   isDanger = false,
   icon: Icon = DeleteIcon,
@@ -43,10 +45,14 @@ const ConfirmDrawer: React.FC<ConfirmDrawerProps> = ({
       isOpen={isOpen}
       onClose={onClose}
       historyId="confirm-drawer"
+      title={title}
       onExitComplete={onExitComplete}
     >
       <ActionDrawer.Icon icon={Icon} />
       <ActionDrawer.Content>
+        {title && (
+          <p className="text-neutral-800 dark:text-neutral-200">{title}</p>
+        )}
         <p className="text-neutral-500 dark:text-neutral-400">{message}</p>
       </ActionDrawer.Content>
       <ActionDrawer.Actions>

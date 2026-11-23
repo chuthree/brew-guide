@@ -17,6 +17,7 @@ import type {
   BackupRecord,
 } from '@/lib/s3/types';
 import { BackupManager } from './BackupManager';
+import { OverwriteStop } from '@/lib/data/overwriteStop';
 import { formatSyncDiagnostic, type SyncDiagnostic } from './types';
 import { syncDataEqual, mergeSyncData, parseSyncDocument } from './mergeData';
 import { useSyncStatusStore } from '@/lib/stores/syncStatusStore';
@@ -448,6 +449,13 @@ export abstract class BaseSyncManager {
     }
 
     // 下载文件
+    const keys = Object.keys(remoteMetadata.files);
+    if (
+      keys.length !== 1 ||
+      !['brew-guide-data.json', 'brew-guide-data'].includes(keys[0])
+    ) {
+      throw new Error('云端文件列表不是单份完整备份，已停止覆盖');
+    }
     for (const [key] of Object.entries(remoteMetadata.files)) {
       try {
         addLog(`正在下载: ${key}`);
@@ -465,6 +473,11 @@ export abstract class BaseSyncManager {
         result.downloadedFiles++;
         addLog(`下载成功: ${key}`);
       } catch (error) {
+        if (error instanceof OverwriteStop) {
+          result.overwriteStop = error.reason;
+          result.message = error.message;
+          return;
+        }
         const errorMsg = error instanceof Error ? error.message : String(error);
         result.errors.push(`下载 ${key} 失败: ${errorMsg}`);
       }
@@ -550,7 +563,10 @@ export abstract class BaseSyncManager {
       const { DataManager } = await import('@/lib/core/dataManager');
       const imported = await DataManager.importAllData(content, {
         preserveDeviceSettings: true,
+        confirmOverwrite: true,
       });
+      if (imported.overwriteStop)
+        throw new OverwriteStop(imported.message, imported.overwriteStop);
       if (!imported.success) throw new Error(imported.message);
     } else {
       await Storage.set(key, content);

@@ -40,6 +40,13 @@ class Manager extends BaseSyncManager {
   async initialize() {
     return true;
   }
+  enableManualDownload() {
+    const files = { 'brew-guide-data.json': {} };
+    vi.mocked(this.metadataManager!.getRemoteMetadata).mockResolvedValue({
+      files,
+    } as never);
+    return this.metadataManager!;
+  }
   getServiceName() {
     return 'test';
   }
@@ -66,6 +73,42 @@ function setup() {
 }
 
 describe('safe cloud sync', () => {
+  it.each(['download', 'history'])(
+    'requires the same confirmation for %s and never records a cancelled replacement',
+    async entry => {
+      const { manager, client } = setup();
+      const metadata = manager.enableManualDownload();
+      const content = document('old');
+      client.downloadFile.mockResolvedValue(content);
+      mocks.importAllData.mockResolvedValue({
+        success: false,
+        message: '已取消覆盖',
+        overwriteStop: 'cancelled',
+      });
+      if (entry === 'history') {
+        await expect(
+          manager.restoreFromBackup('backups/mock.json')
+        ).rejects.toMatchObject({ reason: 'cancelled' });
+      } else {
+        await expect(
+          manager.sync({ preferredDirection: 'download' })
+        ).resolves.toMatchObject({
+          success: false,
+          overwriteStop: 'cancelled',
+          downloadedFiles: 0,
+          errors: [],
+        });
+      }
+      expect(mocks.importAllData).toHaveBeenCalledWith(content, {
+        preserveDeviceSettings: true,
+        confirmOverwrite: true,
+      });
+      expect(client.uploadFile).not.toHaveBeenCalled();
+      expect(mocks.set).not.toHaveBeenCalled();
+      expect(metadata.saveRemoteMetadata).not.toHaveBeenCalled();
+      expect(metadata.saveLocalMetadata).not.toHaveBeenCalled();
+    }
+  );
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.get.mockResolvedValue(document('base'));

@@ -9,6 +9,7 @@ export interface ISyncOptions {
 }
 
 export interface ISyncResult {
+  readonly overwriteStop?: 'blocked' | 'cancelled';
   readonly success: boolean;
   readonly message: string;
   readonly uploadedCount: number;
@@ -47,6 +48,7 @@ export class BaseSyncManagerAdapter implements ISyncManager {
 
     return {
       success: result.success,
+      overwriteStop: result.overwriteStop,
       message: result.message,
       uploadedCount: result.uploadedFiles,
       downloadedCount: result.downloadedFiles,

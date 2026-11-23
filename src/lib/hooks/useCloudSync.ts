@@ -40,6 +40,10 @@ export function useCloudSyncConnection(
       setIsSyncing(true);
       try {
         const result = await syncService.sync(settings, direction);
+        if (result.overwriteStop) {
+          showToast({ type: 'info', title: result.message });
+          return;
+        }
 
         if (result.success) {
           const n =

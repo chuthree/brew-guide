@@ -154,6 +154,7 @@ export const DataManagementSection: React.FC<DataManagementSectionProps> = ({
     try {
       let lastProgress = '';
       const result = await DataManagerUtil.importAllData(file, {
+        confirmOverwrite: true,
         onProgress: (phase, fraction) => {
           const message = `${phase === 'checking' ? '正在检查备份' : '正在导入数据'} ${Math.floor(fraction * 100)}%。请保持应用打开。`;
           if (message === lastProgress) return;
@@ -168,7 +169,10 @@ export const DataManagementSection: React.FC<DataManagementSectionProps> = ({
         },
         operationId
       );
-      if (result.success) {
+      if (result.overwriteStop) {
+        setImportStatus(null);
+        setStatus({ type: 'info', message: result.message, scope: 'data' });
+      } else if (result.success) {
         setImportStatus({
           phase: 'success',
           message: '数据已导入。请刷新应用，加载最新数据。',

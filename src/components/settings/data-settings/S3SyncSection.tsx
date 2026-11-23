@@ -17,6 +17,7 @@ import { useSyncSection } from '@/lib/hooks/useSyncSection';
 import { SettingsOptions } from '../Settings';
 import { showToast } from '@/components/common/feedback/LightToast';
 import { showErrorReport } from '@/lib/feedback/errorReport';
+import { OverwriteStop } from '@/lib/data/overwriteStop';
 import { SyncHeaderButton, SyncButtons, BackupHistoryDrawer } from './shared';
 
 type S3SyncSettings = NonNullable<SettingsOptions['s3Sync']>;
@@ -232,6 +233,10 @@ export const S3SyncSection: React.FC<S3SyncSectionProps> = ({
         },
       });
 
+      if (result.overwriteStop) {
+        showToast({ type: 'info', title: result.message });
+        return;
+      }
       if (result.success) {
         if (result.downloadedFiles > 0) {
           reloadApp();
@@ -347,6 +352,10 @@ export const S3SyncSection: React.FC<S3SyncSectionProps> = ({
       setTimeout(reloadApp, 2000);
       return true;
     } catch (error) {
+      if (error instanceof OverwriteStop) {
+        showToast({ type: 'info', title: error.message });
+        return false;
+      }
       showErrorReport({ title: '恢复备份失败', source: 's3:restore', error });
       return false;
     } finally {

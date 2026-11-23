@@ -1,5 +1,6 @@
 import { callStoreActionInMutation } from '@/lib/data/storeMutationBoundary';
 import { withDataMutation } from '@/lib/data/mutationCoordinator';
+import { OverwriteStop } from '@/lib/data/overwriteStop';
 import { readCustomPresets } from '@/lib/settings/customPresets';
 import {
   Method as _Method,
@@ -397,11 +398,36 @@ export const DataManager = {
     options: {
       preserveDeviceSettings?: boolean;
       expectedSyncData?: Record<string, unknown>;
+      confirmOverwrite?: boolean;
       onProgress?: (phase: 'checking' | 'importing', fraction: number) => void;
     } = {}
-  ): Promise<{ success: boolean; message: string }> {
+  ): Promise<{
+    success: boolean;
+    message: string;
+    overwriteStop?: 'blocked' | 'cancelled';
+  }> {
     let committed = false;
     try {
+      let recovery: string | undefined;
+      if (options.confirmOverwrite) {
+        const { isOlderOverwrite, confirmAndExportBackup } =
+          await import('@/lib/data/overwriteBackup');
+        recovery = await this.exportAllData({
+          strict: true,
+          readPersistedSettings: true,
+        });
+        const older = await isOlderOverwrite(
+          JSON.parse(recovery).data,
+          jsonString,
+          CUSTOM_PRESETS_KEYS
+        );
+        if (!(await confirmAndExportBackup(older, recovery)))
+          return {
+            success: false,
+            overwriteStop: 'cancelled',
+            message: '已取消覆盖',
+          };
+      }
       return await withDataMutation(async () => {
         if (options.expectedSyncData) {
           const { syncDataEqual, parseSyncDocument } =
@@ -498,7 +524,10 @@ export const DataManager = {
         if (Array.isArray(data.grinders))
           plan.grinders = data.grinders as Grinder[];
 
-        const currentSettings = getSettingsStore().settings;
+        const currentSettings =
+          (options.confirmOverwrite
+            ? await appSettingsRepository.get()
+            : undefined) ?? getSettingsStore().settings;
         if (Object.hasOwn(data, 'brewGuideSettings')) {
           let incoming = data.brewGuideSettings as Record<string, unknown>;
           if (
@@ -716,6 +745,38 @@ export const DataManager = {
             })(),
           };
         }
+        if (recovery) {
+          const { syncDataEqual } = await import('@/lib/sync/mergeData');
+          const latest = await this.exportAllData({
+            strict: true,
+            readPersistedSettings: true,
+          });
+          if (
+            !syncDataEqual(JSON.parse(latest).data, JSON.parse(recovery).data)
+          )
+            throw new OverwriteStop('确认期间本机数据已变化，请重新检查备份');
+          const { getSyncStatusStore } =
+            await import('@/lib/stores/syncStatusStore');
+          const assertIdle = () => {
+            const state = getSyncStatusStore();
+            if (
+              state.isInitialSyncing ||
+              state.supabaseSyncProgress.active ||
+              (!options.preserveDeviceSettings && state.manualSyncInProgress)
+            )
+              throw new OverwriteStop('同步正在进行，请稍后重试');
+          };
+          assertIdle();
+          if (await offlineQueueRepository.count())
+            throw new OverwriteStop('还有待同步的本机变更，请先完成同步');
+          // A browser download/share cannot attest that the OS saved the file.
+          // Verify a second, device-local copy before replacing any records.
+          const recoveryKey = 'data-import-recovery-v1';
+          await legacySettingsRepository.set(recoveryKey, recovery);
+          if ((await legacySettingsRepository.get(recoveryKey)) !== recovery)
+            throw new Error('无法验证覆盖前备份，已停止导入');
+          assertIdle();
+        }
         await dataImportPersistence.importData(plan);
         committed = true;
 
@@ -758,6 +819,12 @@ export const DataManager = {
         };
       });
     } catch (error) {
+      if (error instanceof OverwriteStop)
+        return {
+          success: false,
+          overwriteStop: error.reason,
+          message: error.message,
+        };
       if (committed) {
         console.error('数据已导入，会话清理失败:', error);
         return {
