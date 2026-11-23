@@ -321,9 +321,12 @@ describe('覆盖导入', () => {
       fileName: 'test.json',
     });
     try {
+      const withOverwriteConfirmation = vi.fn(
+        (confirm: () => Promise<boolean>) => confirm()
+      );
       const result = DataManager.importAllData(
         scenario === 'empty' ? '{"data":{"coffeeBeans":[]}}' : older,
-        { confirmOverwrite: true }
+        { confirmOverwrite: true, withOverwriteConfirmation }
       );
       if (scenario !== 'empty') {
         await vi.waitFor(() =>
@@ -335,6 +338,9 @@ describe('覆盖导入', () => {
         else pending.confirm();
       }
       const outcome = await result;
+      expect(withOverwriteConfirmation).toHaveBeenCalledTimes(
+        scenario === 'empty' ? 0 : 1
+      );
       expect(outcome.success).toBe(scenario === 'confirmed');
       expect(mocks.replaceCoffeeBeansWithSplitImages).toHaveBeenCalledTimes(
         scenario === 'confirmed' ? 1 : 0

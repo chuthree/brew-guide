@@ -14,6 +14,7 @@ import CrashDiagnosticsProvider from '@/providers/CrashDiagnosticsProvider';
 import DataIntegrityDrawer from '@/components/common/feedback/DataIntegrityDrawer';
 import ErrorReportHost from '@/components/common/feedback/ErrorReportDrawer';
 import OverwriteConfirmation from '@/components/common/feedback/OverwriteConfirmation';
+import FirstSupabaseSyncDrawer from '@/components/common/feedback/FirstSupabaseSyncDrawer';
 import StorageInit from '@/providers/StorageProvider';
 import ModalHistoryInit from '@/providers/ModalHistoryProvider';
 import { DataLayerProvider } from '@/providers/DataLayerProvider';
@@ -273,6 +274,7 @@ export default function RootLayout({
           <CrashDiagnosticsProvider />
           <ErrorReportHost />
           <OverwriteConfirmation />
+          <FirstSupabaseSyncDrawer />
           <DataLayerProvider>
             <DataIntegrityDrawer />
             <TauriDragRegion />

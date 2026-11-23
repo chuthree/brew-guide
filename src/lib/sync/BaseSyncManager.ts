@@ -18,6 +18,7 @@ import type {
 } from '@/lib/s3/types';
 import { BackupManager } from './BackupManager';
 import { OverwriteStop } from '@/lib/data/overwriteStop';
+import { retainScreenWakeLock } from '@/lib/hooks/useScreenWakeLock';
 import { formatSyncDiagnostic, type SyncDiagnostic } from './types';
 import { syncDataEqual, mergeSyncData, parseSyncDocument } from './mergeData';
 import { useSyncStatusStore } from '@/lib/stores/syncStatusStore';
@@ -58,6 +59,26 @@ export interface IMetadataManager {
   saveLocalMetadata(metadata: SyncMetadataV2): Promise<void>;
   saveRemoteMetadata(metadata: SyncMetadataV2): Promise<void>;
 }
+
+function beginTransferWakeLock() {
+  let release: (() => void) | undefined = retainScreenWakeLock();
+  const stop = () => {
+    release?.();
+    release = undefined;
+  };
+  return {
+    stop,
+    async duringConfirmation(confirm: () => Promise<boolean>) {
+      // Waiting on the drawer or the system save picker is not a transfer.
+      stop();
+      const confirmed = await confirm();
+      if (confirmed) release = retainScreenWakeLock();
+      return confirmed;
+    },
+  };
+}
+
+type TransferWakeLock = ReturnType<typeof beginTransferWakeLock>;
 
 /**
  * 同步管理器基类
@@ -107,6 +128,7 @@ export abstract class BaseSyncManager {
     }
 
     this.syncInProgress = true;
+    const wakeLock = beginTransferWakeLock();
     useSyncStatusStore.getState().setManualSyncInProgress(true);
     const debugLogs: string[] = [];
     const addLog = (msg: string) => {
@@ -142,7 +164,8 @@ export abstract class BaseSyncManager {
         await this.performDownload(
           result,
           await this.metadataManager.getRemoteMetadata(),
-          addLog
+          addLog,
+          wakeLock
         );
       } else {
         await this.performMerge(result, addLog);
@@ -159,6 +182,7 @@ export abstract class BaseSyncManager {
       this.appendResultDiagnostics(result, addLogLines);
       result.debugLogs = debugLogs;
     } finally {
+      wakeLock.stop();
       this.syncInProgress = false;
       useSyncStatusStore.getState().setManualSyncInProgress(false);
     }
@@ -438,7 +462,8 @@ export abstract class BaseSyncManager {
   private async performDownload(
     result: SyncResult,
     remoteMetadata: SyncMetadataV2 | null,
-    addLog: (msg: string) => void
+    addLog: (msg: string) => void,
+    wakeLock: TransferWakeLock
   ): Promise<void> {
     addLog('执行强制下载');
 
@@ -465,7 +490,7 @@ export abstract class BaseSyncManager {
           continue;
         }
         addLog(`下载完成，正在导入: ${key}`);
-        await this.saveFileContent(key, content);
+        await this.saveFileContent(key, content, wakeLock);
         if (key === 'brew-guide-data.json' || key === 'brew-guide-data') {
           addLog('导入完成，正在保存同步基线');
           await Storage.set(this.baselineKey, content);
@@ -558,12 +583,17 @@ export abstract class BaseSyncManager {
   /**
    * 保存文件内容
    */
-  protected async saveFileContent(key: string, content: string): Promise<void> {
+  protected async saveFileContent(
+    key: string,
+    content: string,
+    wakeLock: TransferWakeLock
+  ): Promise<void> {
     if (key === 'brew-guide-data.json' || key === 'brew-guide-data') {
       const { DataManager } = await import('@/lib/core/dataManager');
       const imported = await DataManager.importAllData(content, {
         preserveDeviceSettings: true,
         confirmOverwrite: true,
+        withOverwriteConfirmation: wakeLock.duringConfirmation,
       });
       if (imported.overwriteStop)
         throw new OverwriteStop(imported.message, imported.overwriteStop);
@@ -668,6 +698,7 @@ export abstract class BaseSyncManager {
     if (useSyncStatusStore.getState().manualSyncInProgress)
       throw new Error('同步正在进行中，请稍后恢复备份');
 
+    const wakeLock = beginTransferWakeLock();
     useSyncStatusStore.getState().setManualSyncInProgress(true);
     try {
       this.client.clearDiagnostic?.();
@@ -675,11 +706,12 @@ export abstract class BaseSyncManager {
         this.client,
         backupKey
       );
-      await this.saveFileContent('brew-guide-data.json', content);
+      await this.saveFileContent('brew-guide-data.json', content, wakeLock);
       console.warn(
         `✅ [${this.getServiceName()}] 数据已从备份恢复: ${backupKey}`
       );
     } finally {
+      wakeLock.stop();
       useSyncStatusStore.getState().setManualSyncInProgress(false);
     }
   }

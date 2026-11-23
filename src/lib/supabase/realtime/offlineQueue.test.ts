@@ -228,7 +228,12 @@ describe('OfflineQueueManager repository behavior', () => {
       '[OfflineQueue] 存在当前版本无法执行的队列项，已保留:',
       { id: 'unknown-op', table: 'historical_table', type: 'historical_action' }
     );
-    expect(result).toEqual({ processed: 1, failed: 0, blocked: 1 });
+    expect(result).toEqual({
+      processed: 1,
+      failed: 0,
+      blocked: 1,
+      firstError: '当前版本无法处理此离线变更',
+    });
   });
 
   it('increments retry state and sets failedAt only when the retry limit is reached', async () => {
@@ -274,6 +279,7 @@ describe('OfflineQueueManager repository behavior', () => {
       processed: 0,
       failed: 0,
       blocked: 1,
+      firstError: '离线变更已达到重试次数上限',
     });
     expect(processor).not.toHaveBeenCalled();
   });
@@ -305,7 +311,12 @@ describe('OfflineQueueManager repository behavior', () => {
       offlineQueue.processQueue(async () => {
         throw new Error('upload failed');
       })
-    ).resolves.toEqual({ processed: 0, failed: 1, blocked: 1 });
+    ).resolves.toEqual({
+      processed: 0,
+      failed: 1,
+      blocked: 1,
+      firstError: 'upload failed',
+    });
 
     expect(mocks.repository.update).toHaveBeenCalledWith(
       'op-1',
@@ -315,6 +326,33 @@ describe('OfflineQueueManager repository behavior', () => {
         failedAt: expect.any(Number),
       },
       1
+    );
+  });
+
+  it('retries an exhausted operation once on explicit request and preserves unrecognized operations', async () => {
+    const known = operation('op-1', 3);
+    mocks.repository.listOrdered.mockResolvedValue([
+      known,
+      storedUnknownOperation('future-op'),
+    ]);
+    mocks.repository.get.mockResolvedValue(known);
+    const processor = vi.fn().mockResolvedValue(true);
+    expect(await offlineQueue.processQueue(processor)).toEqual({
+      processed: 0,
+      failed: 0,
+      blocked: 2,
+      firstError: '离线变更已达到重试次数上限',
+    });
+    expect(await offlineQueue.processQueue(processor, true)).toEqual({
+      processed: 1,
+      failed: 0,
+      blocked: 1,
+      firstError: '当前版本无法处理此离线变更',
+    });
+    expect(processor).toHaveBeenCalledExactlyOnceWith(known);
+    expect(mocks.repository.delete).toHaveBeenCalledExactlyOnceWith(
+      known.id,
+      known.timestamp
     );
   });
 

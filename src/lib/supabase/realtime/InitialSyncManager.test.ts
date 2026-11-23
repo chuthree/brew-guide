@@ -1,6 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { InitialSyncManager } from './InitialSyncManager';
+import { RealtimeSyncService } from './RealtimeSyncService';
+import {
+  clearFirstSupabaseSync,
+  useFirstSupabaseSync,
+} from '@/lib/stores/firstSupabaseSync';
 import { useSyncStatusStore } from '@/lib/stores/syncStatusStore';
 import {
   SYNC_TABLES,
@@ -144,6 +149,12 @@ describe('InitialSyncManager settings sync', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.clearAllMocks();
+    vi.mocked(batchResolveConflicts).mockReturnValue({
+      merged: [],
+      toUpload: [],
+      toDownload: [],
+      toDeleteLocal: [],
+    });
     vi.mocked(
       mocks.repositories.coffeeBeanImageRepository.mergeBeans
     ).mockImplementation(async records => records);
@@ -182,7 +193,103 @@ describe('InitialSyncManager settings sync', () => {
 
   afterEach(() => {
     vi.useRealTimers();
+    clearFirstSupabaseSync();
     useSyncStatusStore.getState().reset();
+  });
+
+  it('shows first-run progress, defers refresh, and advances the cursor only after the queue successfully retries', async () => {
+    vi.mocked(hydrateLastSyncTime).mockResolvedValue(0);
+    vi.mocked(fetchRemoteLatestTimestamp).mockResolvedValue({
+      success: true,
+      data: 2000,
+      affectedCount: 1,
+    });
+    vi.mocked(downloadSettingsData).mockResolvedValue({
+      success: true,
+      data: 1,
+      affectedCount: 1,
+    });
+    const service = RealtimeSyncService.getInstance();
+    Object.assign(service, {
+      client: {},
+      config: { enableOfflineQueue: true },
+      state: { connectionStatus: 'connected' },
+    });
+    let firstQueue!: (error: Error) => void;
+    let secondQueue!: () => void;
+    const queue = vi
+      .spyOn(
+        service as unknown as { processOfflineQueue(): Promise<void> },
+        'processOfflineQueue'
+      )
+      .mockImplementationOnce(
+        () =>
+          new Promise((_, reject) => {
+            firstQueue = reject;
+          })
+      )
+      .mockImplementationOnce(
+        () =>
+          new Promise(resolve => {
+            secondQueue = resolve;
+          })
+      );
+    const syncing = service.manualSync();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(useFirstSupabaseSync.getState().run).toMatchObject({
+      phase: 'running',
+      downloaded: 1,
+    });
+    expect(useFirstSupabaseSync.getState().run!.percent).toBeLessThan(100);
+    expect(setLastSyncTime).not.toHaveBeenCalled();
+    firstQueue(new Error('network request refused'));
+    await syncing;
+    expect(useFirstSupabaseSync.getState().run).toMatchObject({
+      phase: 'error',
+      error: 'network request refused',
+    });
+    expect(setLastSyncTime).not.toHaveBeenCalled();
+    const retry = service.retryFirstSync();
+    const duplicate = service.retryFirstSync();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(useFirstSupabaseSync.getState().run?.phase).toBe('running');
+    secondQueue();
+    await Promise.all([retry, duplicate]);
+    expect(queue).toHaveBeenCalledTimes(2);
+    queue.mockRestore();
+    expect(useFirstSupabaseSync.getState().run).toMatchObject({
+      phase: 'complete',
+      percent: 100,
+      error: undefined,
+    });
+    expect(setLastSyncTime).toHaveBeenCalledOnce();
+    expect(mocks.refreshAllStores).not.toHaveBeenCalled();
+    expect(mocks.refreshSettingsStores).not.toHaveBeenCalled();
+    expect(showToast).not.toHaveBeenCalled();
+  });
+
+  it('counts only local removals successfully executed by the existing conflict resolution', async () => {
+    const onTransfer = vi.fn();
+    const bean = { id: 'old-bean', name: 'Local', timestamp: 2 };
+    mocks.repositories.coffeeBeanRepository.list
+      .mockResolvedValueOnce([bean])
+      .mockResolvedValueOnce([bean]);
+    vi.mocked(batchResolveConflicts).mockReturnValueOnce({
+      merged: [],
+      toUpload: [],
+      toDownload: [],
+      toDeleteLocal: [bean.id],
+    });
+    const manager = new InitialSyncManager({} as SupabaseClient, {
+      onTransfer,
+    });
+    await expect(
+      manager['syncTable'](SYNC_TABLES.COFFEE_BEANS, 0)
+    ).resolves.toMatchObject({ deleted: 1 });
+    expect(
+      mocks.repositories.coffeeBeanPersistence.deleteManyWithImages
+    ).toHaveBeenCalledWith([bean.id]);
+    expect(onTransfer).toHaveBeenCalledExactlyOnceWith('removed', 1);
   });
 
   it('defers background settings download timeouts without failing the full sync', async () => {

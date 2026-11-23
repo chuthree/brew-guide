@@ -2,6 +2,7 @@
 
 import { useCallback, useRef, useState } from 'react';
 import ActionDrawer from '@/components/common/ui/ActionDrawer';
+import DiagnosticDetails from './DiagnosticDetails';
 import DataAlertIcon from '@public/images/icons/ui/data-alert.svg';
 import { copyToClipboard } from '@/lib/utils/exportUtils';
 import {
@@ -80,14 +81,7 @@ export function ErrorReportDrawer({
         <p className="text-base font-semibold text-neutral-900 dark:text-neutral-100">
           {title}
         </p>
-        <textarea
-          ref={textArea}
-          aria-label="错误诊断日志"
-          readOnly
-          value={text}
-          data-vaul-no-drag
-          className="h-48 max-h-[32dvh] w-full resize-none overscroll-contain rounded-xl bg-neutral-100 p-3 font-mono text-xs leading-relaxed select-text dark:bg-neutral-800"
-        />
+        <DiagnosticDetails ref={textArea} value={text} />
       </ActionDrawer.Content>
       <ActionDrawer.Actions>
         <ActionDrawer.SecondaryButton

@@ -54,7 +54,16 @@ import {
   recordSupabaseDiagnosticEvent,
 } from '../syncDiagnostics';
 import { offlineQueue } from './offlineQueue';
-import { hydrateLastSyncTime } from './conflictResolver';
+import { hydrateLastSyncTime, setLastSyncTime } from './conflictResolver';
+import {
+  clearFirstSupabaseSync,
+  countFirstSyncTransfer,
+  finishFirstSupabaseSync,
+  startFirstSupabaseSync,
+  useFirstSupabaseSync,
+} from '@/lib/stores/firstSupabaseSync';
+import { duringScreenWakeLock } from '@/lib/hooks/useScreenWakeLock';
+import { sanitizeDiagnosticText } from '@/lib/feedback/sanitizeDiagnosticText';
 import { InitialSyncManager } from './InitialSyncManager';
 import {
   localChangeListener,
@@ -203,6 +212,9 @@ export class RealtimeSyncService {
   private remoteSettingsApplyPromise: Promise<void> | null = null;
   private isInitialized = false;
   private syncRunPromise: Promise<void> | null = null;
+  private activeScan: InitialSyncManager | null = null;
+  private syncRunClient: SupabaseClient | null = null;
+  private processQueueWithScan = false;
   private remoteChangeQueue: Promise<void> = Promise.resolve();
   private connectionAttempt: {
     url: string;
@@ -260,7 +272,7 @@ export class RealtimeSyncService {
           // A newer connection or disconnect takes precedence over this retry.
           const config = this.config;
           const revision = this.connectionRevision + 1;
-          await this.disconnect();
+          await this.disconnect(true);
           if (config && this.connectionRevision === revision)
             await this.connect(config);
           return;
@@ -339,7 +351,10 @@ export class RealtimeSyncService {
     }
     // 清理旧连接（包括失败后的残留 client/channel）
     if (this.client || this.channel) {
-      await this.disconnect();
+      await this.disconnect(
+        this.config?.url === config.url &&
+          this.config?.anonKey === config.anonKey
+      );
     }
 
     // 确保服务已初始化（监听器已启动）
@@ -388,10 +403,20 @@ export class RealtimeSyncService {
     }
   }
 
-  async disconnect(): Promise<void> {
+  async disconnect(reconnecting = false): Promise<void> {
     this.connectionRevision++;
     this.isDisconnecting = true;
     this.clearReconnectTimer();
+    this.activeScan?.abort();
+    if (reconnecting) {
+      finishFirstSupabaseSync(
+        useFirstSupabaseSync.getState().run?.id,
+        'error',
+        '同步连接已断开'
+      );
+    } else {
+      clearFirstSupabaseSync();
+    }
 
     try {
       if (this.channel && this.client) {
@@ -430,6 +455,12 @@ export class RealtimeSyncService {
     }
 
     await this.performBackgroundSync(true, 'manual-sync');
+  }
+
+  async retryFirstSync(): Promise<void> {
+    if (useFirstSupabaseSync.getState().run?.phase !== 'error') return;
+    if (this.isConnected()) await this.manualSync();
+    else if (this.config && this.isOnline) await this.connect(this.config);
   }
 
   /**
@@ -611,7 +642,9 @@ export class RealtimeSyncService {
     payload: PostgresPayload
   ): Promise<void> {
     const nextChange = this.remoteChangeQueue.then(async () => {
-      const success = await remoteChangeHandler.handleChange(table, payload);
+      const success = await duringScreenWakeLock(() =>
+        remoteChangeHandler.handleChange(table, payload)
+      );
 
       if (success) {
         this.setState({ lastSyncTime: Date.now() });
@@ -632,14 +665,14 @@ export class RealtimeSyncService {
     if (this.isProcessingRemoteSettings) return;
 
     this.isProcessingRemoteSettings = true;
-    const remoteApply = (async () => {
+    const remoteApply = duringScreenWakeLock(async () => {
       if (!this.client) return;
 
       const result = await downloadSettingsData(this.client);
       assertSyncSuccess(result, '下载远端设置失败');
       await refreshSettingsStores();
       this.setState({ lastSyncTime: Date.now() });
-    })();
+    });
     this.remoteSettingsApplyPromise = remoteApply;
 
     try {
@@ -692,18 +725,28 @@ export class RealtimeSyncService {
     processQueue: boolean,
     phase: SupabaseSyncPhase = 'background-sync'
   ): Promise<void> {
-    if (!this.client) return;
+    const client = this.client;
+    if (!client) return;
 
     if (this.syncRunPromise) {
+      const differentClient = this.syncRunClient !== client;
+      if (!differentClient && processQueue) this.processQueueWithScan = true;
       await this.syncRunPromise;
-      if (processQueue) {
-        await this.processOfflineQueue();
+      if (differentClient && client === this.client) {
+        await this.performBackgroundSync(processQueue, phase);
       }
       return;
     }
 
-    this.syncRunPromise = (async () => {
+    this.syncRunClient = client;
+    this.processQueueWithScan = processQueue;
+    const retryFailedQueue =
+      phase === 'manual-sync' &&
+      useFirstSupabaseSync.getState().run?.phase === 'error';
+    this.syncRunPromise = duringScreenWakeLock(async () => {
       const syncStore = useSyncStatusStore.getState();
+      let first: symbol | undefined;
+      let firstScanTime: number | undefined;
 
       // 确保 UI 状态更新
       this.setState({ isInitialSyncing: true, error: null });
@@ -725,14 +768,30 @@ export class RealtimeSyncService {
         const settingsDirtyToken = getSettingsDirtyToken();
         const settingsDirty = Boolean(settingsDirtyToken);
         const settingsMode = getSettingsSyncMode(phase, settingsDirty);
-        const syncManager = new InitialSyncManager(this.client!, {
+        const syncManager = new InitialSyncManager(client, {
           settingsMode,
           settingsDirty,
+          onFirstSync: () => {
+            first = startFirstSupabaseSync();
+          },
+          onTransfer: (field, count) =>
+            countFirstSyncTransfer(first, field, count),
+          onFirstScanComplete: startedAt => {
+            firstScanTime = startedAt;
+          },
         });
+        this.activeScan = syncManager;
         await syncManager.performSync();
-        if (processQueue) {
-          await this.processOfflineQueue();
-        }
+        if (syncManager.cancelled || client !== this.client) return;
+        if (
+          this.processQueueWithScan ||
+          (first && this.config?.enableOfflineQueue !== false)
+        )
+          await this.processOfflineQueue(first, retryFailedQueue);
+        if (syncManager.cancelled || client !== this.client) return;
+        if (first && firstScanTime === undefined)
+          throw new Error('首次同步尚未完成');
+        if (firstScanTime !== undefined) setLastSyncTime(firstScanTime);
         if (settingsMode === 'bidirectional') {
           clearSettingsDirty(settingsDirtyToken);
         }
@@ -740,21 +799,27 @@ export class RealtimeSyncService {
         this.setState({ lastSyncTime: now, error: null });
         syncStore.finishSupabaseSyncProgress('同步完成');
         syncStore.setSyncSuccess();
+        finishFirstSupabaseSync(first, 'complete');
       } catch (error) {
+        if (this.activeScan?.cancelled || client !== this.client) return;
         const message = getErrorMessage(error);
+        finishFirstSupabaseSync(first, 'error', message);
         console.error('[RealtimeSync] 后台同步失败:', error);
         this.setState({ error: message });
         syncStore.failSupabaseSyncProgress(message);
         syncStore.setSyncError(message);
       } finally {
+        this.activeScan = null;
         this.setState({ isInitialSyncing: false });
       }
-    })();
+    });
 
     try {
       await this.syncRunPromise;
     } finally {
       this.syncRunPromise = null;
+      this.syncRunClient = null;
+      this.processQueueWithScan = false;
     }
   }
 
@@ -805,10 +870,12 @@ export class RealtimeSyncService {
     this.isProcessingRemoteSettings = true;
     try {
       const settingsDirtyToken = getSettingsDirtyToken();
-      const result = await withTimeout(
-        uploadSettingsData(this.client, { skipIfUnchanged: true }),
-        SYNC_TIMING.SETTINGS_UPLOAD_TIMEOUT,
-        '上传设置超时'
+      const result = await duringScreenWakeLock(() =>
+        withTimeout(
+          uploadSettingsData(this.client!, { skipIfUnchanged: true }),
+          SYNC_TIMING.SETTINGS_UPLOAD_TIMEOUT,
+          '上传设置超时'
+        )
       );
       assertSyncSuccess(result, '上传设置失败');
       clearSettingsDirty(settingsDirtyToken);
@@ -843,16 +910,29 @@ export class RealtimeSyncService {
     }
   }
 
-  private processOfflineQueue(): Promise<void> {
-    const run = this.uploadQueue.then(() => this.processOfflineQueueNow());
+  private processOfflineQueue(
+    first?: symbol,
+    retryFailedQueue = false
+  ): Promise<void> {
+    const client = this.client;
+    const run = this.uploadQueue.then(() => {
+      if (client && client === this.client)
+        return duringScreenWakeLock(() =>
+          this.processOfflineQueueNow(client, first, retryFailedQueue)
+        );
+    });
     this.uploadQueue = run.catch(() => undefined);
     return run;
   }
 
-  private async processOfflineQueueNow(): Promise<void> {
-    if (!this.client) return;
-
+  private async processOfflineQueueNow(
+    client: SupabaseClient,
+    first?: symbol,
+    retryFailedQueue = false
+  ): Promise<void> {
+    const isCurrent = () => client === this.client && !this.isDisconnecting;
     const pendingCount = await offlineQueue.getPendingCount();
+    if (!isCurrent()) return;
     if (pendingCount === 0) {
       useSyncStatusStore.getState().updateSupabaseSyncTask('offline_queue', {
         label: TASK_LABELS.offline_queue,
@@ -894,12 +974,13 @@ export class RealtimeSyncService {
         if (!current || current.timestamp !== op.timestamp) return undefined;
         return this.prepareRecordForUpload(op.table, op.recordId);
       });
+      if (!isCurrent()) throw new Error('同步连接已关闭');
       // An invalidated queue item is not a valid deletion of a missing record.
       if (record === undefined) return true;
       if (!record) {
         if (op.type !== 'delete') return true;
         const result = await markRecordsAsDeleted(
-          this.client!,
+          client,
           op.table,
           [op.recordId],
           op.timestamp
@@ -909,22 +990,35 @@ export class RealtimeSyncService {
       }
 
       const result = await upsertRecords(
-        this.client!,
+        client,
         op.table,
         [record],
         this.createMapFn(op.table)
       );
       assertSyncSuccess(result, `补传上传失败: ${op.table}/${op.recordId}`);
+      countFirstSyncTransfer(first, 'uploaded', result.affectedCount);
       return true;
     };
 
-    const result = await offlineQueue.processQueue(processor);
+    const result = await offlineQueue.processQueue(
+      processor,
+      retryFailedQueue,
+      isCurrent
+    );
+    if (!isCurrent()) return;
     await this.updatePendingCount();
 
     const remainingCount = await offlineQueue.getPendingCount();
-    if (result.failed > 0 || result.blocked > 0) {
+    if (
+      result.failed > 0 ||
+      result.blocked > 0 ||
+      (first && remainingCount > 0)
+    ) {
       syncStore.updateSupabaseSyncTask('offline_queue', {
         status: 'warning',
+        ...(first && result.firstError
+          ? { error: sanitizeDiagnosticText(result.firstError) }
+          : {}),
         detail: `${result.processed} 项已补传，${remainingCount} 项仍待处理`,
         total: pendingCount,
         completed: result.processed,

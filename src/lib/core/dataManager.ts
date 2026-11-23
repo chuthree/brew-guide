@@ -399,6 +399,9 @@ export const DataManager = {
       preserveDeviceSettings?: boolean;
       expectedSyncData?: Record<string, unknown>;
       confirmOverwrite?: boolean;
+      withOverwriteConfirmation?: (
+        confirm: () => Promise<boolean>
+      ) => Promise<boolean>;
       onProgress?: (phase: 'checking' | 'importing', fraction: number) => void;
     } = {}
   ): Promise<{
@@ -421,7 +424,11 @@ export const DataManager = {
           jsonString,
           CUSTOM_PRESETS_KEYS
         );
-        if (!(await confirmAndExportBackup(older, recovery)))
+        const confirm = confirmAndExportBackup.bind(null, older, recovery);
+        const confirmed = await (options.withOverwriteConfirmation
+          ? options.withOverwriteConfirmation(confirm)
+          : confirm());
+        if (!confirmed)
           return {
             success: false,
             overwriteStop: 'cancelled',

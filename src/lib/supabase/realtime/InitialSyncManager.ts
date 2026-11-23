@@ -1,5 +1,5 @@
 import { withDataMutation } from '@/lib/data/mutationCoordinator';
-import { reloadApp } from '@/lib/app/reload';
+import type { FirstSyncCount } from '@/lib/stores/firstSupabaseSync';
 /**
  * 初始同步管理器
  *
@@ -160,6 +160,9 @@ type SettingsSyncMode = 'bidirectional' | 'pull-only';
 interface InitialSyncOptions {
   settingsMode?: SettingsSyncMode;
   settingsDirty?: boolean;
+  onFirstSync?: () => void;
+  onTransfer?: (field: FirstSyncCount, count: number) => void;
+  onFirstScanComplete?: (startedAt: number) => void;
 }
 
 interface SettingsSyncOutcome {
@@ -417,7 +420,10 @@ export class InitialSyncManager {
   private settingsMode: SettingsSyncMode;
   private settingsDirty: boolean;
 
-  constructor(client: SupabaseClient, options: InitialSyncOptions = {}) {
+  constructor(
+    client: SupabaseClient,
+    private readonly options: InitialSyncOptions = {}
+  ) {
     this.client = client;
     this.settingsMode = options.settingsMode ?? 'bidirectional';
     this.settingsDirty = options.settingsDirty ?? false;
@@ -466,6 +472,10 @@ export class InitialSyncManager {
     this.aborted = true;
   }
 
+  get cancelled() {
+    return this.aborted;
+  }
+
   /**
    * 执行完整的初始同步
    */
@@ -475,6 +485,8 @@ export class InitialSyncManager {
 
     const startTime = Date.now();
     const lastSyncTime = await hydrateLastSyncTime();
+    if (this.aborted) return emptyStats;
+    const firstSync = lastSyncTime === 0;
 
     console.log(
       `[InitialSync] 开始同步, lastSync=${lastSyncTime ? new Date(lastSyncTime).toLocaleString() : '首次'}`
@@ -491,11 +503,7 @@ export class InitialSyncManager {
       );
     }
 
-    // 仅在首次同步时显示提示，避免后台静默同步打扰用户
-    // lastSyncTime 为 0 表示首次同步（或数据被重置）
-    if (typeof window !== 'undefined' && lastSyncTime === 0) {
-      showToast({ type: 'info', title: '正在同步云端数据...', duration: 3000 });
-    }
+    if (firstSync) this.options.onFirstSync?.();
 
     // iOS Safari 在应用从后台恢复时容易让重叠的 IndexedDB 事务提前失效。
     // 顺序同步表，保留单表失败后继续后续表的容错行为。
@@ -505,6 +513,7 @@ export class InitialSyncManager {
       () => this.syncTable(SYNC_TABLES.CUSTOM_EQUIPMENTS, lastSyncTime),
       () => this.syncTableMethods(lastSyncTime),
     ]);
+    if (this.aborted) return emptyStats;
 
     // 统计结果
     const stats: SyncStats = { uploaded: 0, downloaded: 0, deleted: 0 };
@@ -532,25 +541,24 @@ export class InitialSyncManager {
       settingsFailed = true;
       errorCount++;
     }
+    if (this.aborted) return stats;
 
     const totalTaskCount = results.length + 1;
 
-    // 刷新所有 Store
-    console.log('[InitialSync] 刷新所有 Store...');
-    await refreshAllStores();
+    // The first-sync drawer owns refresh; reload also runs the usual migrations.
+    if (!firstSync) {
+      await refreshAllStores();
+      try {
+        const { migrateRoasterField } =
+          await import('@/lib/utils/roasterMigration');
+        await migrateRoasterField();
+      } catch (e) {
+        console.error('[InitialSync] 烘焙商字段迁移失败:', e);
+      }
 
-    // 执行烘焙商字段迁移（按需迁移同步下载的数据）
-    try {
-      const { migrateRoasterField } =
-        await import('@/lib/utils/roasterMigration');
-      await migrateRoasterField();
-    } catch (e) {
-      console.error('[InitialSync] 烘焙商字段迁移失败:', e);
-    }
-
-    // 强制触发一次全局 UI 更新事件，确保组件重绘
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('syncCompleted'));
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('syncCompleted'));
+      }
     }
 
     // 同步完成提示
@@ -559,7 +567,7 @@ export class InitialSyncManager {
       !settingsFailed &&
       shouldSilenceBackgroundNoopFailure({ lastSyncTime, stats });
 
-    if (typeof window !== 'undefined') {
+    if (!firstSync && typeof window !== 'undefined') {
       if (errorCount > 0 && !silenceBackgroundFailure) {
         // 如果有错误发生
         const state = getSyncStatusStore();
@@ -600,11 +608,6 @@ export class InitialSyncManager {
           type: 'success',
           title: `同步完成 ${parts.join(' ')}`,
         });
-      } else {
-        // 仅在首次同步时显示“数据已是最新”，避免日常使用中频繁打扰
-        if (lastSyncTime === 0) {
-          showToast({ type: 'success', title: '数据已是最新' });
-        }
       }
     }
 
@@ -615,8 +618,12 @@ export class InitialSyncManager {
     }
 
     // Only a complete scan advances the cursor; changes during it remain eligible.
-    if (errorCount === 0 && !settingsDeferred) {
-      setLastSyncTime(startTime);
+    if (!this.aborted && errorCount === 0 && !settingsDeferred) {
+      if (firstSync && this.options.onFirstScanComplete) {
+        this.options.onFirstScanComplete(startTime);
+      } else {
+        setLastSyncTime(startTime);
+      }
     }
 
     console.log(
@@ -625,15 +632,6 @@ export class InitialSyncManager {
 
     if (errorCount > 0) {
       throw new Error(`Supabase 同步未完全完成，失败项目 ${errorCount} 个`);
-    }
-
-    // 先记录同步时间，再刷新，避免下次启动重复执行首次同步。
-    if (
-      typeof window !== 'undefined' &&
-      lastSyncTime === 0 &&
-      stats.downloaded > 0
-    ) {
-      reloadApp();
     }
 
     return stats;
@@ -646,6 +644,7 @@ export class InitialSyncManager {
     table: Exclude<RealtimeSyncTable, 'custom_methods'>,
     lastSyncTime: number
   ): Promise<SyncStats> {
+    this.throwIfAborted();
     try {
       this.updateProgressTask(table, {
         status: 'preparing',
@@ -875,6 +874,7 @@ export class InitialSyncManager {
               )
             : hydratedRecordsForUpload;
 
+        this.throwIfAborted();
         const uploadResult = await upsertRecords(
           this.client,
           table,
@@ -901,6 +901,7 @@ export class InitialSyncManager {
             },
           }
         );
+        this.options.onTransfer?.('uploaded', uploadResult.affectedCount);
         assertSyncSuccess(uploadResult, `上传 ${table} 失败`);
 
         this.updateProgressTask(table, {
@@ -913,6 +914,7 @@ export class InitialSyncManager {
       }
 
       await withDataMutation(async () => {
+        this.throwIfAborted();
         const currentRecords =
           table === SYNC_TABLES.CUSTOM_EQUIPMENTS
             ? await customEquipmentRepository.list()
@@ -961,6 +963,7 @@ export class InitialSyncManager {
             );
             if (table === SYNC_TABLES.COFFEE_BEANS) {
               for (let index = 0; index < validRecords.length; index++) {
+                this.throwIfAborted();
                 const record = validRecords[index] as CoffeeBean;
                 await writeLocalRecordWithDiagnostics(
                   table,
@@ -972,9 +975,11 @@ export class InitialSyncManager {
                       generateThumbnails: false,
                     })
                 );
+                this.options.onTransfer?.('downloaded', 1);
               }
             } else if (table === SYNC_TABLES.BREWING_NOTES) {
               for (let index = 0; index < validRecords.length; index++) {
+                this.throwIfAborted();
                 const record = validRecords[index] as BrewingNote;
                 await writeLocalRecordWithDiagnostics(
                   table,
@@ -983,11 +988,13 @@ export class InitialSyncManager {
                   validRecords.length,
                   () => brewingNotePersistence.saveWithImages(record)
                 );
+                this.options.onTransfer?.('downloaded', 1);
               }
             } else if (table === SYNC_TABLES.CUSTOM_EQUIPMENTS) {
               await customEquipmentRepository.upsertMany(
                 validRecords as CustomEquipment[]
               );
+              this.options.onTransfer?.('downloaded', validRecords.length);
             }
             if (
               table === SYNC_TABLES.COFFEE_BEANS ||
@@ -1008,6 +1015,7 @@ export class InitialSyncManager {
 
         // 执行本地删除
         if (toDeleteLocal.length > 0) {
+          this.throwIfAborted();
           console.log(
             `[InitialSync] ${table} 删除 ${toDeleteLocal.length} 条本地记录`
           );
@@ -1018,6 +1026,7 @@ export class InitialSyncManager {
           } else {
             await brewingNotePersistence.deleteManyWithImages(toDeleteLocal);
           }
+          this.options.onTransfer?.('removed', toDeleteLocal.length);
           if (
             table === SYNC_TABLES.COFFEE_BEANS ||
             table === SYNC_TABLES.BREWING_NOTES
@@ -1055,6 +1064,7 @@ export class InitialSyncManager {
    * 同步方案表（特殊处理）
    */
   private async syncTableMethods(lastSyncTime: number): Promise<SyncStats> {
+    this.throwIfAborted();
     try {
       this.updateProgressTask(SYNC_TABLES.CUSTOM_METHODS, {
         status: 'preparing',
@@ -1186,6 +1196,7 @@ export class InitialSyncManager {
           completed: 0,
         });
 
+        this.throwIfAborted();
         const uploadResult = await upsertRecords(
           this.client,
           SYNC_TABLES.CUSTOM_METHODS,
@@ -1207,6 +1218,7 @@ export class InitialSyncManager {
             },
           }
         );
+        this.options.onTransfer?.('uploaded', uploadResult.affectedCount);
         assertSyncSuccess(uploadResult, '上传 custom_methods 失败');
 
         this.updateProgressTask(SYNC_TABLES.CUSTOM_METHODS, {
@@ -1219,6 +1231,7 @@ export class InitialSyncManager {
       }
 
       await withDataMutation(async () => {
+        this.throwIfAborted();
         const currentById = new Map(
           (await customMethodRepository.list()).map(record => [
             record.equipmentId,
@@ -1257,6 +1270,7 @@ export class InitialSyncManager {
             methods: item.methods,
           }));
           await customMethodRepository.upsertMany(recordsForStore);
+          this.options.onTransfer?.('downloaded', recordsForStore.length);
 
           this.updateProgressTask(SYNC_TABLES.CUSTOM_METHODS, {
             status: 'writing',
@@ -1269,7 +1283,9 @@ export class InitialSyncManager {
 
         // 执行本地删除
         if (toDeleteLocal.length > 0) {
+          this.throwIfAborted();
           await customMethodRepository.deleteMany(toDeleteLocal);
+          this.options.onTransfer?.('removed', toDeleteLocal.length);
         }
       });
 
@@ -1301,6 +1317,7 @@ export class InitialSyncManager {
    * 同步设置（双向）
    */
   private async syncSettings(): Promise<SettingsSyncOutcome> {
+    this.throwIfAborted();
     try {
       this.updateProgressTask(SYNC_TABLES.USER_SETTINGS, {
         status: 'fetching',
@@ -1325,6 +1342,7 @@ export class InitialSyncManager {
       // - 云端有设置：下载
       // - 云端无设置：上传本地设置（uploadSettingsData 内部有空数据保护）
       if (lastSyncTime === 0) {
+        this.throwIfAborted();
         if (remoteTimestamp > 0) {
           this.updateProgressTask(SYNC_TABLES.USER_SETTINGS, {
             status: 'downloading',
@@ -1336,7 +1354,7 @@ export class InitialSyncManager {
             '下载设置超时'
           );
           assertSyncSuccess(result, '下载设置失败');
-          await refreshSettingsStores();
+          this.options.onTransfer?.('downloaded', result.affectedCount);
           this.updateProgressTask(SYNC_TABLES.USER_SETTINGS, {
             status: 'success',
             detail: `已下载 ${result.affectedCount} 项设置`,
@@ -1354,6 +1372,7 @@ export class InitialSyncManager {
             '上传设置超时'
           );
           assertSyncSuccess(result, '上传设置失败');
+          this.options.onTransfer?.('uploaded', result.affectedCount);
           this.updateProgressTask(SYNC_TABLES.USER_SETTINGS, {
             status: 'success',
             detail:
@@ -1469,5 +1488,9 @@ export class InitialSyncManager {
       });
       throw error;
     }
+  }
+
+  private throwIfAborted() {
+    if (this.aborted) throw new Error('同步已取消');
   }
 }

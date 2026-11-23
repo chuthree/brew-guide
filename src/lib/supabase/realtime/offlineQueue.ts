@@ -240,8 +240,15 @@ export class OfflineQueueManager {
    * @returns 处理结果统计
    */
   async processQueue(
-    processor: (operation: PendingOperation) => Promise<boolean>
-  ): Promise<{ processed: number; failed: number; blocked: number }> {
+    processor: (operation: PendingOperation) => Promise<boolean>,
+    retryExhausted = false,
+    isCurrent: () => boolean = () => true
+  ): Promise<{
+    processed: number;
+    failed: number;
+    blocked: number;
+    firstError?: string;
+  }> {
     if (this.isProcessing) {
       return { processed: 0, failed: 0, blocked: 0 };
     }
@@ -250,12 +257,15 @@ export class OfflineQueueManager {
     let processed = 0;
     let failed = 0;
     let blocked = 0;
+    let firstError: string | undefined;
 
     try {
       const operations = await this.getPendingOperations();
 
       for (const operation of operations) {
+        if (!isCurrent()) break;
         if (!isExecutablePendingOperation(operation)) {
+          firstError ??= '当前版本无法处理此离线变更';
           console.error(
             '[OfflineQueue] 存在当前版本无法执行的队列项，已保留:',
             operationDiagnostic(operation)
@@ -264,7 +274,8 @@ export class OfflineQueueManager {
           continue;
         }
 
-        if (operation.retryCount >= this.maxRetries) {
+        if (operation.retryCount >= this.maxRetries && !retryExhausted) {
+          firstError ??= operation.lastError || '离线变更已达到重试次数上限';
           blocked++;
           continue;
         }
@@ -286,10 +297,14 @@ export class OfflineQueueManager {
             }
           }
         } catch (error) {
+          if (!isCurrent()) break;
           console.error(`[OfflineQueue] 处理操作 ${operation.id} 失败:`, error);
+          const message =
+            error instanceof Error ? error.message : String(error);
+          firstError ??= message;
           const canRetry = await this.markFailed(
             operation.id,
-            error instanceof Error ? error.message : String(error),
+            message,
             operation.timestamp
           );
           if (!canRetry) {
@@ -302,7 +317,7 @@ export class OfflineQueueManager {
       this.isProcessing = false;
     }
 
-    return { processed, failed, blocked };
+    return { processed, failed, blocked, firstError };
   }
 
   /**

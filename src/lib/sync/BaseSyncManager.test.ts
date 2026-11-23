@@ -5,6 +5,10 @@ const mocks = vi.hoisted(() => ({
   get: vi.fn(),
   set: vi.fn(),
   importAllData: vi.fn(),
+  retainScreenWakeLock: vi.fn<() => () => void>(),
+}));
+vi.mock('@/lib/hooks/useScreenWakeLock', () => ({
+  retainScreenWakeLock: mocks.retainScreenWakeLock,
 }));
 vi.mock('@/lib/core/storage', () => ({ Storage: mocks }));
 vi.mock('@/lib/core/dataManager', () => ({
@@ -102,6 +106,7 @@ describe('safe cloud sync', () => {
       expect(mocks.importAllData).toHaveBeenCalledWith(content, {
         preserveDeviceSettings: true,
         confirmOverwrite: true,
+        withOverwriteConfirmation: expect.any(Function),
       });
       expect(client.uploadFile).not.toHaveBeenCalled();
       expect(mocks.set).not.toHaveBeenCalled();
@@ -111,9 +116,45 @@ describe('safe cloud sync', () => {
   );
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.retainScreenWakeLock.mockReturnValue(vi.fn());
     mocks.get.mockResolvedValue(document('base'));
     mocks.importAllData.mockResolvedValue({ success: true });
   });
+
+  it.each([true, false])(
+    'releases its lock while overwrite is pending and only reacquires on success (%s)',
+    async confirmed => {
+      const { client, manager } = setup();
+      manager.enableManualDownload();
+      client.downloadFile.mockResolvedValue(document('old'));
+      const release = vi.fn();
+      const finish = vi.fn();
+      mocks.retainScreenWakeLock
+        .mockReturnValueOnce(release)
+        .mockReturnValueOnce(finish);
+      mocks.importAllData.mockImplementationOnce(async (_input, options) => {
+        expect(release).not.toHaveBeenCalled();
+        const consent = await options.withOverwriteConfirmation(async () => {
+          expect(release).toHaveBeenCalledOnce();
+          expect(mocks.retainScreenWakeLock).toHaveBeenCalledOnce();
+          return confirmed;
+        });
+        expect(consent).toBe(confirmed);
+        expect(mocks.retainScreenWakeLock).toHaveBeenCalledTimes(
+          confirmed ? 2 : 1
+        );
+        expect(finish).not.toHaveBeenCalled();
+        return consent
+          ? { success: true }
+          : { success: false, overwriteStop: 'cancelled' };
+      });
+      await expect(
+        manager.sync({ preferredDirection: 'download' })
+      ).resolves.toMatchObject({ success: confirmed });
+      expect(release).toHaveBeenCalledOnce();
+      expect(finish).toHaveBeenCalledTimes(confirmed ? 1 : 0);
+    }
+  );
 
   it('does not write either side or advance the baseline on conflict', async () => {
     const { client, manager } = setup();
