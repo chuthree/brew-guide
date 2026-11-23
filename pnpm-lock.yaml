@@ -244,6 +244,12 @@ importers:
       '@floating-ui/react':
         specifier: ^0.27.16
         version: 0.27.16(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
+      '@gsap/react':
+        specifier: ^2.1.2
+        version: 2.1.2(gsap@3.14.2)(react@19.2.3)
+      '@paper-design/shaders-react':
+        specifier: ^0.0.67
+        version: 0.0.67(@types/react@19.2.7)(react@19.2.3)
       '@radix-ui/react-popover':
         specifier: ^1.1.14
         version: 1.1.15(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
@@ -1659,6 +1665,12 @@ packages:
   '@floating-ui/utils@0.2.10':
     resolution: {integrity: sha512-aGTxbpbg8/b5JfU1HXSrbH3wXZuLPJcNEcZQFMxLs3oSzgtVu6nFPkbbGGUvBcUjKV2YyB9Wxxabo+HEH9tcRQ==}
 
+  '@gsap/react@2.1.2':
+    resolution: {integrity: sha512-JqliybO1837UcgH2hVOM4VO+38APk3ECNrsuSM4MuXp+rbf+/2IG2K1YJiqfTcXQHH7XlA0m3ykniFYstfq0Iw==}
+    peerDependencies:
+      gsap: ^3.12.5
+      react: '>=17'
+
   '@humanfs/core@0.19.1':
     resolution: {integrity: sha512-5DyQ4+1JEUzejeK1JGICcideyfUbGixgS9jNgex5nqkW+cY7WZhxBigmieN5Qnw9ZosSNVC9KQKyb+GUaGyKUA==}
     engines: {node: '>=18.18.0'}
@@ -2475,6 +2487,18 @@ packages:
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [x64]
     os: [win32]
+
+  '@paper-design/shaders-react@0.0.67':
+    resolution: {integrity: sha512-GQF5TMBiQu7jXMlZ9P0fuzGFWPmaAAwwFV7m+5zG614OJi5tGRhmh+svhFy11bLYtikGcFAyi9TugYjCJuBGPg==}
+    peerDependencies:
+      '@types/react': ^18 || ^19
+      react: ^18 || ^19
+    peerDependenciesMeta:
+      '@types/react':
+        optional: true
+
+  '@paper-design/shaders@0.0.67':
+    resolution: {integrity: sha512-PTJX2hWqerzRjOnhsbr4hxFRykku2xEtiYDSrybr3+/iwBbp5JVE0ffeKBa3VWTjpKPfhGilIx+qg3zCZui0Sg==}
 
   '@radix-ui/number@1.1.1':
     resolution: {integrity: sha512-MkKCwxlXTgz6CFoJx3pCwn07GKp36+aZyu/u2Ln2VrA5DcdyCZkASEDBTd8x5whTQQL5CiYf4prXKLcgQdv29g==}
@@ -7923,6 +7947,11 @@ snapshots:
 
   '@floating-ui/utils@0.2.10': {}
 
+  '@gsap/react@2.1.2(gsap@3.14.2)(react@19.2.3)':
+    dependencies:
+      gsap: 3.14.2
+      react: 19.2.3
+
   '@humanfs/core@0.19.1': {}
 
   '@humanfs/node@0.16.7':
@@ -8475,6 +8504,15 @@ snapshots:
 
   '@oxlint/binding-win32-x64-msvc@1.67.0':
     optional: true
+
+  '@paper-design/shaders-react@0.0.67(@types/react@19.2.7)(react@19.2.3)':
+    dependencies:
+      '@paper-design/shaders': 0.0.67
+      react: 19.2.3
+    optionalDependencies:
+      '@types/react': 19.2.7
+
+  '@paper-design/shaders@0.0.67': {}
 
   '@radix-ui/number@1.1.1': {}
 

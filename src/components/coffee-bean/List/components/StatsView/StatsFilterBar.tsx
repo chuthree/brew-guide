@@ -1,6 +1,12 @@
 'use client';
 
-import React from 'react';
+import React, { lazy, Suspense, useState } from 'react';
+import { REPLAY_TITLE, REVIEW_YEAR } from './YearlyReview/constants';
+import { useYearlyReviewAvailable } from './YearlyReview/availability';
+import { Storage } from '@/lib/core/storage';
+import { X } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { GrainGradient } from '@paper-design/shaders-react';
 import { differenceInCalendarDays } from 'date-fns/differenceInCalendarDays';
 import TabButton from '@/components/common/ui/TabButton';
 import {
@@ -19,6 +25,11 @@ import {
   useNavigationSwipe,
   type NavigationSwipeControl,
 } from '@/lib/navigation/navigationSwipe';
+
+const YearlyReviewDrawer = lazy(
+  () => import('./YearlyReview/YearlyReviewDrawer')
+);
+const PREVIEW_CARD_COLORS = ['#00B894', '#55EFC4', '#00CEC9', '#81ECEC'];
 
 export const getNextDateGroupingMode = (
   currentMode: DateGroupingMode
@@ -111,11 +122,29 @@ const StatsFilterBar: React.FC<StatsFilterBarProps> = ({
   const {
     isOpen: isFilterExpanded,
     handleTriggerClick,
+    setIsOpen: setFilterOpen,
     interactionProps,
     panelProps,
   } = useFilterPanel();
   const navigationSwipeHandlers = useNavigationSwipe(navigationSwipeControl);
   const now = new Date();
+  const reviewAvailable = useYearlyReviewAvailable();
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [cardVisible, setCardVisible] = useState(false);
+  const dismissKey = `yearlyReviewPreviewDismissed-${REVIEW_YEAR}`;
+  React.useEffect(() => {
+    Storage.get(dismissKey)
+      .then(value => setCardVisible(value !== 'true'))
+      .catch(() => setCardVisible(true));
+  }, [dismissKey]);
+  const openReview = () => {
+    setFilterOpen(false);
+    setReviewOpen(true);
+  };
+  const dismissCard = () => {
+    setCardVisible(false);
+    void Storage.set(dismissKey, 'true').catch(() => setCardVisible(true));
+  };
 
   return (
     <div
@@ -244,8 +273,62 @@ const StatsFilterBar: React.FC<StatsFilterBarProps> = ({
               ))}
             </div>
           </div>
+          {reviewAvailable && (
+            <FilterButton isActive={false} onClick={openReview}>
+              {REVIEW_YEAR} 年度回顾
+            </FilterButton>
+          )}
         </FilterPanel>
       </ListFilterBar>
+      {reviewAvailable && !selectedDate && cardVisible && (
+        <motion.div
+          className="relative isolate mx-6 mt-3 overflow-hidden rounded-md bg-[#00CEC9] text-white shadow"
+          whileTap={{ scale: 0.98 }}
+          transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+        >
+          <GrainGradient
+            colors={PREVIEW_CARD_COLORS}
+            colorBack={PREVIEW_CARD_COLORS[2]}
+            shape="wave"
+            speed={0.6}
+            softness={0.8}
+            intensity={0.5}
+            noise={0.08}
+            scale={2}
+            rotation={90}
+            style={{
+              position: 'absolute',
+              inset: 0,
+              width: '100%',
+              height: '100%',
+              pointerEvents: 'none',
+            }}
+          />
+          <button
+            type="button"
+            onClick={openReview}
+            aria-label={`查看 ${REVIEW_YEAR} 年度回顾`}
+            className="relative z-1 h-[72px] w-full cursor-pointer px-4 text-left text-xl font-bold tracking-tight"
+          >
+            {REPLAY_TITLE}
+          </button>
+          <motion.button
+            type="button"
+            onClick={dismissCard}
+            aria-label="收起年度回顾入口"
+            className="absolute top-2 right-2 z-2 flex h-6 w-6 items-center justify-center rounded-full bg-white/15 text-white/70 backdrop-blur-sm transition-colors hover:bg-white/25 hover:text-white"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <X size={12} />
+          </motion.button>
+        </motion.div>
+      )}
+      {reviewAvailable && reviewOpen && (
+        <Suspense fallback={null}>
+          <YearlyReviewDrawer isOpen onClose={() => setReviewOpen(false)} />
+        </Suspense>
+      )}
     </div>
   );
 };

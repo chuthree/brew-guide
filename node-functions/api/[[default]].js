@@ -25,6 +25,8 @@ const FIRST_PARTY_APP_ORIGINS = [
 ];
 
 const QINIU_CHAT_COMPLETIONS = 'https://api.qnaigc.com/v1/chat/completions';
+const YEARLY_REPORT_MODEL = 'deepseek/deepseek-v4-flash-20260731';
+
 const MODEL_REQUEST_TIMEOUT_MS = 105000;
 const DEFAULT_VISION_RECOGNITION_MODEL = 'doubao-seed-2.0-mini';
 const BEAN_RECOGNITION_MAX_TOKENS = 1200;
@@ -83,6 +85,32 @@ function buildBeanRecognitionPrompt(fieldConfig) {
     enabledFields
   )}`;
 }
+
+const YEARLY_REPORT_PROMPT = `你是一位专业的咖啡品鉴师和文案作家。请根据用户一年的咖啡消费数据，撰写一份温暖、有趣、个性化的年度咖啡报告。
+
+## 写作风格
+- 温暖亲切，像老朋友聊天
+- 适度幽默，有咖啡文化底蕴
+- 数据与故事结合
+- 简洁有力，每段不超过两句话
+
+## 输出格式
+直接输出5-7个自然段落，每段之间用空行分隔。不要使用任何标题、标签、编号或特殊格式。
+
+## 内容要点（按顺序，自然融入段落中）
+1. 开场问候，提及用户名和年份
+2. 年度亮点数据（豆子数量、总重量等）
+3. 最爱的烘焙商或产地
+4. 口味偏好画像（处理法、品种等）
+5. 冲煮习惯（时间、器具等）
+6. 一个有趣的发现或计算
+7. 结语祝福，期待新一年
+
+## 注意事项
+1. 必须使用提供的真实数据，不要编造
+2. 如果某项数据为0或缺失，自然跳过不提
+3. 保持积极温暖的语调
+4. 纯文本输出，不要 JSON、不要 markdown`;
 
 const runtimeConfigCache = {
   allowedOriginsRaw: null,
@@ -789,6 +817,45 @@ async function parseImageFromRequest(request) {
   };
 }
 
+function buildYearlyDataSummary(username, year, stats) {
+  const displayName = username || '咖啡爱好者';
+  const currentYear = year || new Date().getFullYear();
+  return `
+## 用户信息
+- 用户名: ${displayName}
+- 统计年份: ${currentYear}
+
+## 咖啡豆数据
+- 购买豆子数量: ${stats.beanCount || 0} 款
+- 总重量: ${stats.totalWeight || 0} 克
+- 总花费: ${stats.totalCost || 0} 元
+- 平均单价: ${stats.avgPrice || 0} 元/包
+
+## 偏好分析
+- 最爱烘焙商: ${stats.favoriteRoaster || '暂无数据'}（购买 ${stats.favoriteRoasterCount || 0} 次）
+- 最爱产地 TOP3: ${(stats.topOrigins || []).join('、') || '暂无数据'}
+- 最爱品种 TOP3: ${(stats.topVarieties || []).join('、') || '暂无数据'}
+- 最爱处理法 TOP3: ${(stats.topProcesses || []).join('、') || '暂无数据'}
+- 烘焙度偏好: ${stats.roastPreference || '暂无数据'}
+
+## 冲煮数据
+- 冲煮次数: ${stats.brewCount || 0} 次
+- 常用器具: ${(stats.topEquipments || []).join('、') || '暂无数据'}
+- 最早冲煮时间: ${stats.earliestBrewTime || '暂无数据'}
+- 最晚冲煮时间: ${stats.latestBrewTime || '暂无数据'}
+- 平均评分: ${stats.avgRating || '暂无数据'}
+`;
+}
+
+function createSSEHeaders() {
+  return {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    Connection: 'keep-alive',
+    'X-Accel-Buffering': 'no',
+  };
+}
+
 async function handleBeanRecognition(context) {
   const { request, env } = context;
   if (request.method === 'OPTIONS') return noContentResponse(request, env);
@@ -916,6 +983,129 @@ async function handleMethodRecognition(context) {
   }
 }
 
+async function handleYearlyReport(context) {
+  const { request, env } = context;
+  if (request.method === 'OPTIONS') return noContentResponse(request, env);
+  if (request.method !== 'POST') {
+    return errorResponse(request, env, 'Method Not Allowed', 405);
+  }
+  const apiKey = getQiniuApiKey(env);
+  if (!apiKey) {
+    return errorResponse(request, env, '缺少 QINIU_API_KEY 环境变量', 500);
+  }
+
+  let body;
+  try {
+    body = await request.json();
+  } catch {
+    return errorResponse(request, env, '请求体必须为 JSON', 400);
+  }
+
+  const { username, year, stats } = body || {};
+  if (!stats || typeof stats !== 'object') {
+    return errorResponse(request, env, '缺少统计数据', 400);
+  }
+
+  const summary = buildYearlyDataSummary(username, year, stats);
+  const payload = {
+    model: YEARLY_REPORT_MODEL,
+    messages: [
+      { role: 'system', content: YEARLY_REPORT_PROMPT },
+      { role: 'user', content: `请根据以下数据生成年度咖啡报告：\n${summary}` },
+    ],
+    temperature: 0.7,
+    max_tokens: 2000,
+    stream: true,
+  };
+
+  const upstream = await fetch(QINIU_CHAT_COMPLETIONS, {
+    signal: timeoutSignal(MODEL_REQUEST_TIMEOUT_MS),
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!upstream.ok) {
+    const errorText = await upstream.text();
+    return errorResponse(
+      request,
+      env,
+      `报告生成失败: ${errorText || upstream.status}`,
+      upstream.status
+    );
+  }
+
+  const encoder = new TextEncoder();
+  const decoder = new TextDecoder();
+
+  const stream = new ReadableStream({
+    async start(controller) {
+      const reader = upstream.body?.getReader();
+      if (!reader) {
+        controller.enqueue(
+          encoder.encode(`data: ${JSON.stringify({ error: '无法读取上游流' })}\n\n`)
+        );
+        controller.close();
+        return;
+      }
+
+      let buffer = '';
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            const current = line.trim();
+            if (!current.startsWith('data:')) continue;
+
+            const raw = current.slice(5).trim();
+            if (!raw || raw === '[DONE]') continue;
+
+            try {
+              const parsed = JSON.parse(raw);
+              const content = parsed?.choices?.[0]?.delta?.content || '';
+              if (content) {
+                controller.enqueue(
+                  encoder.encode(`data: ${JSON.stringify({ content })}\n\n`)
+                );
+              }
+            } catch {
+              // ignore parse errors from partial chunks
+            }
+          }
+        }
+
+        controller.enqueue(
+          encoder.encode(`data: ${JSON.stringify({ done: true })}\n\n`)
+        );
+      } catch {
+        controller.enqueue(
+          encoder.encode(`data: ${JSON.stringify({ error: '生成过程中断' })}\n\n`)
+        );
+      } finally {
+        controller.close();
+      }
+    },
+  });
+
+  return withCors(
+    request,
+    env,
+    new Response(stream, {
+      status: 200,
+      headers: createSSEHeaders(),
+    })
+  );
+}
+
 export default async function onRequest(context) {
   const { request, env } = context;
 
@@ -928,6 +1118,10 @@ export default async function onRequest(context) {
   try {
     if (pathname === '/api/recognize-bean') {
       return await handleBeanRecognition(context);
+    }
+
+    if (pathname === '/api/yearly-report') {
+      return await handleYearlyReport(context);
     }
 
     if (pathname === '/api/recognize-method') {
